@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Globe, Clock, TrendingUp, TrendingDown, AlertTriangle,
   ChevronRight, User, MessageSquare, FileText, Map, BarChart3, X, ExternalLink,
-  Mic
+  Mic, Check, Edit2, Save
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +15,29 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+
+type SentimentType = 'Positive' | 'Neutral' | 'Negative';
+type RoleType = 'Champion' | 'Decision Maker' | 'Influencer' | 'Blocker' | 'User' | 'Evaluator';
+
+const ALL_ROLES: RoleType[] = ['Champion', 'Decision Maker', 'Influencer', 'Blocker', 'User', 'Evaluator'];
+const ALL_SENTIMENTS: SentimentType[] = ['Positive', 'Neutral', 'Negative'];
+
+const sentimentConfig: Record<SentimentType, { label: string; dot: string; bg: string; text: string; border: string }> = {
+  Positive: { label: 'Positive', dot: '#10b981', bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/30' },
+  Neutral:  { label: 'Neutral',  dot: '#f59e0b', bg: 'bg-amber-500/10',   text: 'text-amber-400',   border: 'border-amber-500/30'  },
+  Negative: { label: 'Negative', dot: '#ef4444', bg: 'bg-red-500/10',     text: 'text-red-400',     border: 'border-red-500/30'    },
+};
+
+const roleConfig: Record<RoleType, { bg: string; text: string; border: string }> = {
+  'Champion':       { bg: 'bg-blue-500/10',    text: 'text-blue-400',    border: 'border-blue-500/30'    },
+  'Decision Maker': { bg: 'bg-purple-500/10',  text: 'text-purple-400',  border: 'border-purple-500/30'  },
+  'Influencer':     { bg: 'bg-cyan-500/10',    text: 'text-cyan-400',    border: 'border-cyan-500/30'    },
+  'Blocker':        { bg: 'bg-red-500/10',     text: 'text-red-400',     border: 'border-red-500/30'     },
+  'User':           { bg: 'bg-green-500/10',   text: 'text-green-400',   border: 'border-green-500/30'   },
+  'Evaluator':      { bg: 'bg-orange-500/10',  text: 'text-orange-400',  border: 'border-orange-500/30'  },
+};
 
 export default function DealDetail() {
   const [, params] = useRoute('/deal/:id');
@@ -23,6 +45,16 @@ export default function DealDetail() {
   const [selectedStakeholder, setSelectedStakeholder] = useState<Stakeholder | null>(null);
   const [activeTab, setActiveTab] = useState('map');
   const [showSummary, setShowSummary] = useState(true);
+
+  // Local editable stakeholder state (per-deal, in-memory)
+  const [localStakeholders, setLocalStakeholders] = useState<Stakeholder[]>(deal?.stakeholders ?? []);
+
+  // Editing state for the profile panel
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editTitle, setEditTitle] = useState('');
+  const [editSentiment, setEditSentiment] = useState<SentimentType>('Neutral');
+  const [editRoles, setEditRoles] = useState<RoleType[]>([]);
 
   if (!deal) {
     return (
@@ -40,6 +72,50 @@ export default function DealDetail() {
   const latestSnapshot = deal.snapshots[0];
   const statusLabel = deal.confidenceScore >= 75 ? 'On Track' : deal.confidenceScore >= 50 ? 'Need Attention' : 'At Risk';
   const statusColor = deal.confidenceScore >= 75 ? 'text-status-success' : deal.confidenceScore >= 50 ? 'text-status-warning' : 'text-status-danger';
+
+  // Open stakeholder profile panel
+  const handleStakeholderClick = (s: Stakeholder) => {
+    // Find the latest local version
+    const latest = localStakeholders.find(ls => ls.id === s.id) || s;
+    setSelectedStakeholder(latest);
+    setIsEditingProfile(false);
+    setEditName(latest.name);
+    setEditTitle(latest.title);
+    setEditSentiment(latest.sentiment as SentimentType);
+    // role can be a single string in current data — normalize to array
+    const currentRoles = Array.isArray((latest as any).roles)
+      ? (latest as any).roles
+      : [latest.role];
+    setEditRoles(currentRoles as RoleType[]);
+  };
+
+  // Save edits back to local state
+  const handleSaveProfile = () => {
+    if (!selectedStakeholder) return;
+    const updated = localStakeholders.map(s => {
+      if (s.id !== selectedStakeholder.id) return s;
+      return {
+        ...s,
+        name: editName.trim() || s.name,
+        title: editTitle.trim() || s.title,
+        sentiment: editSentiment,
+        role: editRoles[0] || s.role, // primary role for backward compat
+        // store full roles array
+        roles: editRoles,
+      } as Stakeholder;
+    });
+    setLocalStakeholders(updated);
+    const updatedS = updated.find(s => s.id === selectedStakeholder.id)!;
+    setSelectedStakeholder(updatedS);
+    setIsEditingProfile(false);
+    toast.success('Stakeholder profile updated');
+  };
+
+  const toggleRole = (role: RoleType) => {
+    setEditRoles(prev =>
+      prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]
+    );
+  };
 
   return (
     <div className="h-full flex flex-col">
@@ -122,14 +198,14 @@ export default function DealDetail() {
 
             <TabsContent value="map" className="flex-1 m-0 relative">
               <div className="absolute inset-0 flex">
-                {/* Stakeholder Map takes full space */}
                 <div className="flex-1 relative">
                   <StakeholderMap
-                    deal={deal}
-                    onStakeholderClick={(s) => setSelectedStakeholder(s)}
+                    deal={{ ...deal, stakeholders: localStakeholders }}
+                    onStakeholderClick={handleStakeholderClick}
+                    onStakeholdersChange={setLocalStakeholders}
                   />
 
-                  {/* Deal Summary — collapsible floating panel, positioned bottom-left above legend */}
+                  {/* Deal Summary floating panel */}
                   <AnimatePresence>
                     {showSummary && latestSnapshot && (
                       <motion.div
@@ -223,7 +299,6 @@ export default function DealDetail() {
                     )}
                   </AnimatePresence>
 
-                  {/* Toggle summary button when collapsed */}
                   {!showSummary && (
                     <button
                       onClick={() => setShowSummary(true)}
@@ -312,73 +387,213 @@ export default function DealDetail() {
           </Tabs>
         </div>
 
-        {/* Stakeholder detail panel */}
+        {/* ── Stakeholder Profile Panel ── */}
         <AnimatePresence>
           {selectedStakeholder && (
             <motion.div
               initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 280, opacity: 1 }}
+              animate={{ width: 300, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.25 }}
               className="border-l border-border/50 bg-card/50 shrink-0 overflow-hidden"
             >
               <ScrollArea className="h-full">
                 <div className="p-4">
+                  {/* Panel header */}
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="font-display text-sm font-semibold">Stakeholder Profile</h3>
-                    <button
-                      onClick={() => setSelectedStakeholder(null)}
-                      className="w-6 h-6 rounded flex items-center justify-center hover:bg-muted transition-colors"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  <div className="flex items-center gap-3 mb-4">
-                    <img
-                      src={selectedStakeholder.avatar}
-                      alt={selectedStakeholder.name}
-                      className="w-14 h-14 rounded-full object-cover border-2 border-border"
-                    />
-                    <div className="min-w-0">
-                      <div className="text-sm font-medium">{selectedStakeholder.name}</div>
-                      <div className="text-xs text-muted-foreground">{selectedStakeholder.title}</div>
+                    <div className="flex items-center gap-1">
+                      {isEditingProfile ? (
+                        <>
+                          <button
+                            onClick={handleSaveProfile}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-primary text-primary-foreground text-[10px] font-medium hover:bg-primary/90 transition-colors"
+                          >
+                            <Save className="w-3 h-3" />
+                            Save
+                          </button>
+                          <button
+                            onClick={() => setIsEditingProfile(false)}
+                            className="w-6 h-6 rounded flex items-center justify-center hover:bg-muted transition-colors"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => setIsEditingProfile(true)}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-muted text-muted-foreground text-[10px] font-medium hover:bg-muted/80 hover:text-foreground transition-colors"
+                          >
+                            <Edit2 className="w-3 h-3" />
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => setSelectedStakeholder(null)}
+                            className="w-6 h-6 rounded flex items-center justify-center hover:bg-muted transition-colors"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
 
-                  <div className="space-y-3">
-                    <div className="flex flex-wrap gap-1.5">
-                      <Badge variant="outline" className={`text-[10px] ${getRoleColor(selectedStakeholder.role)}`}>
-                        {selectedStakeholder.role}
-                      </Badge>
-                      <Badge variant="outline" className={`text-[10px] ${
-                        selectedStakeholder.sentiment === 'Positive' ? 'bg-status-success/10 text-status-success border-status-success/30' :
-                        selectedStakeholder.sentiment === 'Neutral' ? 'bg-status-warning/10 text-status-warning border-status-warning/30' :
-                        'bg-status-danger/10 text-status-danger border-status-danger/30'
-                      }`}>
-                        {selectedStakeholder.sentiment}
-                      </Badge>
+                  {/* Avatar + Name/Title */}
+                  <div className="flex items-center gap-3 mb-5">
+                    <img
+                      src={selectedStakeholder.avatar}
+                      alt={selectedStakeholder.name}
+                      className="w-14 h-14 rounded-full object-cover border-2 border-border shrink-0"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedStakeholder.name)}&background=1a1f36&color=fff&size=56`;
+                      }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      {isEditingProfile ? (
+                        <div className="space-y-1.5">
+                          <Input
+                            value={editName}
+                            onChange={e => setEditName(e.target.value)}
+                            className="h-7 text-xs font-medium"
+                            placeholder="Full name"
+                          />
+                          <Input
+                            value={editTitle}
+                            onChange={e => setEditTitle(e.target.value)}
+                            className="h-7 text-xs text-muted-foreground"
+                            placeholder="Job title"
+                          />
+                        </div>
+                      ) : (
+                        <>
+                          <div className="text-sm font-medium">{selectedStakeholder.name}</div>
+                          <div className="text-xs text-muted-foreground">{selectedStakeholder.title}</div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* ── Decision Stance (single select) ── */}
+                  <div className="mb-4">
+                    <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                      Decision Stance
+                    </div>
+                    {isEditingProfile ? (
+                      <div className="flex gap-2">
+                        {ALL_SENTIMENTS.map(s => {
+                          const cfg = sentimentConfig[s];
+                          const isActive = editSentiment === s;
+                          return (
+                            <button
+                              key={s}
+                              onClick={() => setEditSentiment(s)}
+                              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg border text-[10px] font-medium transition-all ${
+                                isActive
+                                  ? `${cfg.bg} ${cfg.text} ${cfg.border} ring-1 ring-current/30`
+                                  : 'border-border/40 text-muted-foreground hover:border-border/70'
+                              }`}
+                            >
+                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cfg.dot }} />
+                              {s}
+                              {isActive && <Check className="w-2.5 h-2.5" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        {(() => {
+                          const cfg = sentimentConfig[selectedStakeholder.sentiment as SentimentType] || sentimentConfig.Neutral;
+                          return (
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
+                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cfg.dot }} />
+                              {selectedStakeholder.sentiment}
+                            </span>
+                          );
+                        })()}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ── Role (multi-select) ── */}
+                  <div className="mb-4">
+                    <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                      Role {isEditingProfile && <span className="text-muted-foreground/60 normal-case font-normal">(select all that apply)</span>}
+                    </div>
+                    {isEditingProfile ? (
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {ALL_ROLES.map(role => {
+                          const cfg = roleConfig[role];
+                          const isActive = editRoles.includes(role);
+                          return (
+                            <button
+                              key={role}
+                              onClick={() => toggleRole(role)}
+                              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[10px] font-medium transition-all ${
+                                isActive
+                                  ? `${cfg.bg} ${cfg.text} ${cfg.border} ring-1 ring-current/20`
+                                  : 'border-border/40 text-muted-foreground hover:border-border/70'
+                              }`}
+                            >
+                              {isActive && <Check className="w-2.5 h-2.5 shrink-0" />}
+                              {role}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5">
+                        {(() => {
+                          const roles: RoleType[] = Array.isArray((selectedStakeholder as any).roles)
+                            ? (selectedStakeholder as any).roles
+                            : [selectedStakeholder.role];
+                          return roles.map(role => {
+                            const cfg = roleConfig[role as RoleType] || roleConfig.Influencer;
+                            return (
+                              <span
+                                key={role}
+                                className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-medium border ${cfg.bg} ${cfg.text} ${cfg.border}`}
+                              >
+                                {role}
+                              </span>
+                            );
+                          });
+                        })()}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Engagement */}
+                  {!isEditingProfile && (
+                    <div className="mb-4">
+                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Engagement</div>
                       <Badge variant="outline" className="text-[10px]">
                         {selectedStakeholder.engagement} Engagement
                       </Badge>
                     </div>
+                  )}
 
-                    {selectedStakeholder.keyInsights && (
-                      <div>
-                        <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">Key Insights</div>
-                        <p className="text-xs text-foreground/80 leading-relaxed">{selectedStakeholder.keyInsights}</p>
-                      </div>
-                    )}
+                  {/* Key Insights */}
+                  {selectedStakeholder.keyInsights && !isEditingProfile && (
+                    <div className="mb-4">
+                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Key Insights</div>
+                      <p className="text-xs text-foreground/80 leading-relaxed">{selectedStakeholder.keyInsights}</p>
+                    </div>
+                  )}
 
-                    {selectedStakeholder.email && (
-                      <div>
-                        <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">Contact</div>
-                        <p className="text-xs text-primary">{selectedStakeholder.email}</p>
-                      </div>
-                    )}
+                  {/* Contact */}
+                  {selectedStakeholder.email && !isEditingProfile && (
+                    <div className="mb-4">
+                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Contact</div>
+                      <p className="text-xs text-primary">{selectedStakeholder.email}</p>
+                    </div>
+                  )}
 
+                  {/* Related Interactions */}
+                  {!isEditingProfile && (
                     <div className="border-t border-border/30 pt-3">
-                      <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2">Related Interactions</div>
+                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Related Interactions</div>
                       {deal.interactions
                         .filter(i => i.keyParticipant === selectedStakeholder.name)
                         .map(interaction => (
@@ -395,7 +610,7 @@ export default function DealDetail() {
                         <p className="text-[10px] text-muted-foreground/60 italic">No direct interactions recorded.</p>
                       )}
                     </div>
-                  </div>
+                  )}
                 </div>
               </ScrollArea>
             </motion.div>
@@ -418,15 +633,15 @@ export default function DealDetail() {
           </div>
           <button
             onClick={() => toast('File upload coming soon')}
-            className="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground"
+            className="w-9 h-9 rounded-lg border border-border/50 flex items-center justify-center hover:bg-muted transition-colors"
           >
-            <FileText className="w-4 h-4" />
+            <FileText className="w-4 h-4 text-muted-foreground" />
           </button>
           <button
             onClick={() => toast('Voice input coming soon')}
-            className="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground"
+            className="w-9 h-9 rounded-lg border border-border/50 flex items-center justify-center hover:bg-muted transition-colors"
           >
-            <Mic className="w-4 h-4" />
+            <Mic className="w-4 h-4 text-muted-foreground" />
           </button>
         </div>
       </div>

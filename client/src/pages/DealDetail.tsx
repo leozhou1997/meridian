@@ -375,190 +375,126 @@ export default function DealDetail() {
               </TabsList>
             </div>
 
-            <TabsContent value="map" className="flex-1 m-0 relative">
-              <div className="absolute inset-0 flex">
-                <div className="flex-1 relative">
+            <TabsContent value="map" className="flex-1 m-0">
+              <div className="h-full flex overflow-hidden">
+
+                {/* ── Deal Summary — fixed left sidebar ── */}
+                {latestSnapshot && (
+                  <div className="w-64 shrink-0 border-r border-border/30 bg-card/60 flex flex-col overflow-hidden">
+                    <ScrollArea className="flex-1">
+                      <div className="p-4">
+                        {/* Header */}
+                        <div className="flex items-center gap-2 mb-4">
+                          <AlertTriangle className="w-3.5 h-3.5 text-status-warning shrink-0" />
+                          <span className="text-xs font-display font-semibold">Deal Summary</span>
+                        </div>
+
+                        {/* Key metrics grid */}
+                        <div className="grid grid-cols-2 gap-1.5 mb-3">
+                          <div className="bg-muted/30 rounded-lg px-2.5 py-2">
+                            <div className="text-[9px] text-muted-foreground uppercase tracking-wider mb-0.5">Status</div>
+                            <div className={`text-[11px] font-semibold ${statusColor}`}>{statusLabel}</div>
+                          </div>
+                          <div className="bg-muted/30 rounded-lg px-2.5 py-2">
+                            <div className="text-[9px] text-muted-foreground uppercase tracking-wider mb-0.5">Confidence</div>
+                            <div className={`text-[11px] font-semibold font-mono ${getConfidenceColor(deal.confidenceScore)}`}>
+                              {deal.confidenceScore}%
+                              {latestSnapshot.confidenceChange !== 0 && (
+                                <span className="text-[9px] text-muted-foreground ml-1">
+                                  {latestSnapshot.confidenceChange > 0 ? '↑' : '↓'}{Math.abs(latestSnapshot.confidenceChange)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="bg-muted/30 rounded-lg px-2.5 py-2">
+                            <div className="text-[9px] text-muted-foreground uppercase tracking-wider mb-0.5">Stage</div>
+                            <div className="text-[10px] font-medium">{deal.stage}</div>
+                          </div>
+                          <div className="bg-muted/30 rounded-lg px-2.5 py-2">
+                            <div className="text-[9px] text-muted-foreground uppercase tracking-wider mb-0.5">ACV</div>
+                            <div className="text-[10px] font-semibold font-mono">{formatCurrency(deal.value)}</div>
+                          </div>
+                        </div>
+
+                        {/* Confidence bar */}
+                        <div className="mb-4">
+                          <div className="h-1.5 rounded-full bg-muted/60 overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all"
+                              style={{
+                                width: `${deal.confidenceScore}%`,
+                                background: deal.confidenceScore >= 75 ? '#10b981' : deal.confidenceScore >= 50 ? '#f59e0b' : '#ef4444'
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="border-t border-border/25 mb-3" />
+
+                        {/* What's Happening — always fully visible */}
+                        <div className="mb-3">
+                          <div className="text-[9px] font-semibold text-status-info uppercase tracking-wider mb-1.5">What's Happening</div>
+                          <p className="text-[11px] text-muted-foreground leading-relaxed">
+                            {latestSnapshot.whatsHappening}
+                          </p>
+                        </div>
+
+                        {/* Key Risks */}
+                        {latestSnapshot.keyRisks.length > 0 && (
+                          <div className="mb-3">
+                            <div className="text-[9px] font-semibold text-status-danger uppercase tracking-wider mb-1.5">Key Risks</div>
+                            <div className="space-y-1">
+                              {latestSnapshot.keyRisks.map((risk, i) => (
+                                <div key={i} className="flex items-start gap-1.5 text-[11px] text-muted-foreground">
+                                  <span className="text-status-danger mt-0.5 shrink-0">•</span>
+                                  <span className="leading-snug">{risk}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* What's Next */}
+                        <div className="mb-4">
+                          <div className="text-[9px] font-semibold text-status-success uppercase tracking-wider mb-1.5">What's Next</div>
+                          <p className="text-[11px] text-muted-foreground leading-relaxed">
+                            {latestSnapshot.whatsNext}
+                          </p>
+                        </div>
+
+                        <div className="border-t border-border/25 pt-3 space-y-1.5">
+                          <Button
+                            size="sm"
+                            variant="default"
+                            className="w-full text-[10px] h-7 font-display"
+                            onClick={() => setActiveTab('signals')}
+                          >
+                            Account Signals
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full text-[10px] h-7 font-display"
+                            onClick={() => setActiveTab('discussions')}
+                          >
+                            All Interactions
+                          </Button>
+                        </div>
+                      </div>
+                    </ScrollArea>
+                  </div>
+                )}
+
+                {/* ── Stakeholder Map canvas ── */}
+                <div className="flex-1 relative overflow-hidden">
                   <StakeholderMap
                     key={deal.id}
                     deal={deal}
                     onStakeholderClick={handleStakeholderClick}
                     onStakeholdersChange={setLocalStakeholders}
                   />
-
-                  {/* Deal Summary floating panel */}
-                  <AnimatePresence>
-                    {showSummary && latestSnapshot && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 20, scale: 0.95 }}
-                        transition={{ duration: 0.2 }}
-                        className="absolute z-30"
-                        style={{ left: summaryPos.x, top: summaryPos.y }}
-                      >
-                        <Card className="bg-card/95 backdrop-blur-md border-border/40 shadow-xl shadow-black/25" style={{ width: 264 }}>
-                          {/* Drag handle bar */}
-                          <div
-                            className="flex items-center justify-center py-1.5 cursor-grab active:cursor-grabbing border-b border-border/20 hover:bg-muted/30 transition-colors rounded-t-xl"
-                            onMouseDown={handleSummaryMouseDown}
-                          >
-                            <GripHorizontal className="w-4 h-4 text-muted-foreground/50" />
-                          </div>
-
-                          <CardContent className="p-3 pt-2.5">
-                            {/* Header row */}
-                            <div className="flex items-center justify-between mb-2.5">
-                              <span className="text-[11px] font-display font-semibold select-none">Deal Summary</span>
-                              <button
-                                onClick={() => setShowSummary(false)}
-                                className="w-5 h-5 rounded flex items-center justify-center hover:bg-muted/60 transition-colors"
-                              >
-                                <X className="w-3 h-3 text-muted-foreground" />
-                              </button>
-                            </div>
-
-                            {/* Key metrics grid */}
-                            <div className="grid grid-cols-2 gap-1.5 mb-2.5">
-                              <div className="bg-muted/30 rounded-lg px-2 py-1.5">
-                                <div className="text-[9px] text-muted-foreground uppercase tracking-wider mb-0.5">Status</div>
-                                <div className={`text-[11px] font-semibold ${statusColor}`}>{statusLabel}</div>
-                              </div>
-                              <div className="bg-muted/30 rounded-lg px-2 py-1.5">
-                                <div className="text-[9px] text-muted-foreground uppercase tracking-wider mb-0.5">Confidence</div>
-                                <div className={`text-[11px] font-semibold font-mono ${getConfidenceColor(deal.confidenceScore)}`}>
-                                  {deal.confidenceScore}%
-                                  {latestSnapshot.confidenceChange !== 0 && (
-                                    <span className="text-[9px] text-muted-foreground ml-1">
-                                      {latestSnapshot.confidenceChange > 0 ? '↑' : '↓'}{Math.abs(latestSnapshot.confidenceChange)}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="bg-muted/30 rounded-lg px-2 py-1.5">
-                                <div className="text-[9px] text-muted-foreground uppercase tracking-wider mb-0.5">Stage</div>
-                                <div className="text-[10px] font-medium truncate">{deal.stage}</div>
-                              </div>
-                              <div className="bg-muted/30 rounded-lg px-2 py-1.5">
-                                <div className="text-[9px] text-muted-foreground uppercase tracking-wider mb-0.5">ACV</div>
-                                <div className="text-[10px] font-semibold font-mono">{formatCurrency(deal.value)}</div>
-                              </div>
-                            </div>
-
-                            {/* Confidence bar */}
-                            <div className="mb-2.5">
-                              <div className="h-1.5 rounded-full bg-muted/60 overflow-hidden">
-                                <div
-                                  className="h-full rounded-full transition-all"
-                                  style={{
-                                    width: `${deal.confidenceScore}%`,
-                                    background: deal.confidenceScore >= 75 ? '#10b981' : deal.confidenceScore >= 50 ? '#f59e0b' : '#ef4444'
-                                  }}
-                                />
-                              </div>
-                            </div>
-
-                            <div className="border-t border-border/25 my-2" />
-
-                            {/* Expandable sections */}
-                            <div className="space-y-1.5">
-                              {/* What's Happening */}
-                              <div>
-                                <button
-                                  className="w-full flex items-center justify-between group"
-                                  onClick={() => setSummaryExpandedSection(s => s === 'happening' ? null : 'happening')}
-                                >
-                                  <span className="text-[9px] font-semibold text-status-info uppercase tracking-wider">What's Happening</span>
-                                  {summaryExpandedSection === 'happening'
-                                    ? <ChevronUp className="w-3 h-3 text-muted-foreground" />
-                                    : <ChevronDown className="w-3 h-3 text-muted-foreground" />
-                                  }
-                                </button>
-                                <p className={`text-[10px] text-muted-foreground leading-relaxed mt-0.5 ${summaryExpandedSection === 'happening' ? '' : 'line-clamp-2'}`}>
-                                  {latestSnapshot.whatsHappening}
-                                </p>
-                              </div>
-
-                              {/* Key Risks */}
-                              {latestSnapshot.keyRisks.length > 0 && (
-                                <div>
-                                  <button
-                                    className="w-full flex items-center justify-between group"
-                                    onClick={() => setSummaryExpandedSection(s => s === 'risks' ? null : 'risks')}
-                                  >
-                                    <span className="text-[9px] font-semibold text-status-danger uppercase tracking-wider">Key Risks</span>
-                                    {summaryExpandedSection === 'risks'
-                                      ? <ChevronUp className="w-3 h-3 text-muted-foreground" />
-                                      : <ChevronDown className="w-3 h-3 text-muted-foreground" />
-                                    }
-                                  </button>
-                                  <div className="mt-0.5 space-y-0.5">
-                                    {(summaryExpandedSection === 'risks'
-                                      ? latestSnapshot.keyRisks
-                                      : latestSnapshot.keyRisks.slice(0, 2)
-                                    ).map((risk, i) => (
-                                      <div key={i} className="flex items-start gap-1 text-[10px] text-muted-foreground">
-                                        <span className="text-status-danger mt-px shrink-0">•</span>
-                                        <span>{risk}</span>
-                                      </div>
-                                    ))}
-                                    {summaryExpandedSection !== 'risks' && latestSnapshot.keyRisks.length > 2 && (
-                                      <div className="text-[9px] text-muted-foreground/50 pl-3">+{latestSnapshot.keyRisks.length - 2} more</div>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* What's Next */}
-                              <div>
-                                <button
-                                  className="w-full flex items-center justify-between group"
-                                  onClick={() => setSummaryExpandedSection(s => s === 'next' ? null : 'next')}
-                                >
-                                  <span className="text-[9px] font-semibold text-status-success uppercase tracking-wider">What's Next</span>
-                                  {summaryExpandedSection === 'next'
-                                    ? <ChevronUp className="w-3 h-3 text-muted-foreground" />
-                                    : <ChevronDown className="w-3 h-3 text-muted-foreground" />
-                                  }
-                                </button>
-                                <p className={`text-[10px] text-muted-foreground leading-relaxed mt-0.5 ${summaryExpandedSection === 'next' ? '' : 'line-clamp-2'}`}>
-                                  {latestSnapshot.whatsNext}
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="border-t border-border/25 mt-2.5 pt-2 flex gap-1.5">
-                              <Button
-                                size="sm"
-                                variant="default"
-                                className="text-[10px] h-6 px-2 flex-1 font-display"
-                                onClick={() => toast('Deal map view coming soon')}
-                              >
-                                View Deal Map
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-[10px] h-6 px-2 flex-1 font-display"
-                                onClick={() => setActiveTab('discussions')}
-                              >
-                                All Interactions
-                              </Button>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {!showSummary && (
-                    <button
-                      onClick={handleOpenSummary}
-                      className="absolute top-4 left-4 z-30 w-8 h-8 rounded-lg bg-card/90 backdrop-blur-sm border border-border/50 flex items-center justify-center hover:bg-muted transition-colors shadow-md"
-                    >
-                      <AlertTriangle className="w-3.5 h-3.5 text-status-warning" />
-                    </button>
-                  )}
                 </div>
+
               </div>
             </TabsContent>
 

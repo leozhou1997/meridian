@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Globe, Clock, TrendingUp, TrendingDown, AlertTriangle,
   ChevronRight, User, MessageSquare, FileText, Map, BarChart3, X, ExternalLink,
-  Mic, Check, Edit2, Save, Camera
+  Mic, Check, Edit2, Save, Camera, GripHorizontal, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -48,6 +48,8 @@ export default function DealDetail() {
   // Draggable Deal Summary panel
   const [summaryPos, setSummaryPos] = useState({ x: 16, y: 16 });
   const summaryDragRef = useRef<{ mx: number; my: number; px: number; py: number } | null>(null);
+  // Expandable text sections in Deal Summary
+  const [summaryExpandedSection, setSummaryExpandedSection] = useState<string | null>(null);
 
   const handleSummaryMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -271,73 +273,140 @@ export default function DealDetail() {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 20, scale: 0.95 }}
                         transition={{ duration: 0.2 }}
-                        className="absolute z-30 w-60"
+                        className="absolute z-30"
                         style={{ left: summaryPos.x, top: summaryPos.y }}
                       >
-                        <Card className="bg-card/95 backdrop-blur-md border-status-warning/25 shadow-lg shadow-black/20">
-                          <CardContent className="p-3">
-                            <div
-                              className="flex items-center justify-between mb-2 cursor-grab active:cursor-grabbing"
-                              onMouseDown={handleSummaryMouseDown}
-                            >
-                              <span className="text-[11px] font-display font-semibold select-none">⠿ Deal Summary</span>
-                              <div className="flex items-center gap-1">
-                                <span className="font-mono text-[10px] font-medium">{formatCurrency(deal.value)} ACV</span>
-                                <button
-                                  onClick={() => setShowSummary(false)}
-                                  className="w-4 h-4 rounded flex items-center justify-center hover:bg-muted/50 transition-colors ml-1"
-                                >
-                                  <X className="w-3 h-3 text-muted-foreground" />
-                                </button>
-                              </div>
+                        <Card className="bg-card/95 backdrop-blur-md border-border/40 shadow-xl shadow-black/25" style={{ width: 264 }}>
+                          {/* Drag handle bar */}
+                          <div
+                            className="flex items-center justify-center py-1.5 cursor-grab active:cursor-grabbing border-b border-border/20 hover:bg-muted/30 transition-colors rounded-t-xl"
+                            onMouseDown={handleSummaryMouseDown}
+                          >
+                            <GripHorizontal className="w-4 h-4 text-muted-foreground/50" />
+                          </div>
+
+                          <CardContent className="p-3 pt-2.5">
+                            {/* Header row */}
+                            <div className="flex items-center justify-between mb-2.5">
+                              <span className="text-[11px] font-display font-semibold select-none">Deal Summary</span>
+                              <button
+                                onClick={() => setShowSummary(false)}
+                                className="w-5 h-5 rounded flex items-center justify-center hover:bg-muted/60 transition-colors"
+                              >
+                                <X className="w-3 h-3 text-muted-foreground" />
+                              </button>
                             </div>
-                            <div className="space-y-0.5 text-[10px]">
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Status:</span>
-                                <span className={`font-medium ${statusColor}`}>{statusLabel}</span>
+
+                            {/* Key metrics grid */}
+                            <div className="grid grid-cols-2 gap-1.5 mb-2.5">
+                              <div className="bg-muted/30 rounded-lg px-2 py-1.5">
+                                <div className="text-[9px] text-muted-foreground uppercase tracking-wider mb-0.5">Status</div>
+                                <div className={`text-[11px] font-semibold ${statusColor}`}>{statusLabel}</div>
                               </div>
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Stage:</span>
-                                <span>{deal.stage}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Confidence:</span>
-                                <span className={getConfidenceColor(deal.confidenceScore)}>
+                              <div className="bg-muted/30 rounded-lg px-2 py-1.5">
+                                <div className="text-[9px] text-muted-foreground uppercase tracking-wider mb-0.5">Confidence</div>
+                                <div className={`text-[11px] font-semibold font-mono ${getConfidenceColor(deal.confidenceScore)}`}>
                                   {deal.confidenceScore}%
                                   {latestSnapshot.confidenceChange !== 0 && (
-                                    <span className="text-muted-foreground ml-1">
-                                      ({latestSnapshot.confidenceChange > 0 ? '+' : ''}{latestSnapshot.confidenceChange})
+                                    <span className="text-[9px] text-muted-foreground ml-1">
+                                      {latestSnapshot.confidenceChange > 0 ? '↑' : '↓'}{Math.abs(latestSnapshot.confidenceChange)}
                                     </span>
                                   )}
-                                </span>
+                                </div>
+                              </div>
+                              <div className="bg-muted/30 rounded-lg px-2 py-1.5">
+                                <div className="text-[9px] text-muted-foreground uppercase tracking-wider mb-0.5">Stage</div>
+                                <div className="text-[10px] font-medium truncate">{deal.stage}</div>
+                              </div>
+                              <div className="bg-muted/30 rounded-lg px-2 py-1.5">
+                                <div className="text-[9px] text-muted-foreground uppercase tracking-wider mb-0.5">ACV</div>
+                                <div className="text-[10px] font-semibold font-mono">{formatCurrency(deal.value)}</div>
                               </div>
                             </div>
 
-                            <div className="border-t border-border/30 my-2" />
-
-                            <div className="space-y-1.5">
-                              <div>
-                                <div className="text-[9px] font-semibold text-status-info uppercase tracking-wider mb-0.5">What's Happening</div>
-                                <p className="text-[10px] text-muted-foreground leading-relaxed line-clamp-3">{latestSnapshot.whatsHappening}</p>
+                            {/* Confidence bar */}
+                            <div className="mb-2.5">
+                              <div className="h-1.5 rounded-full bg-muted/60 overflow-hidden">
+                                <div
+                                  className="h-full rounded-full transition-all"
+                                  style={{
+                                    width: `${deal.confidenceScore}%`,
+                                    background: deal.confidenceScore >= 75 ? '#10b981' : deal.confidenceScore >= 50 ? '#f59e0b' : '#ef4444'
+                                  }}
+                                />
                               </div>
+                            </div>
+
+                            <div className="border-t border-border/25 my-2" />
+
+                            {/* Expandable sections */}
+                            <div className="space-y-1.5">
+                              {/* What's Happening */}
+                              <div>
+                                <button
+                                  className="w-full flex items-center justify-between group"
+                                  onClick={() => setSummaryExpandedSection(s => s === 'happening' ? null : 'happening')}
+                                >
+                                  <span className="text-[9px] font-semibold text-status-info uppercase tracking-wider">What's Happening</span>
+                                  {summaryExpandedSection === 'happening'
+                                    ? <ChevronUp className="w-3 h-3 text-muted-foreground" />
+                                    : <ChevronDown className="w-3 h-3 text-muted-foreground" />
+                                  }
+                                </button>
+                                <p className={`text-[10px] text-muted-foreground leading-relaxed mt-0.5 ${summaryExpandedSection === 'happening' ? '' : 'line-clamp-2'}`}>
+                                  {latestSnapshot.whatsHappening}
+                                </p>
+                              </div>
+
+                              {/* Key Risks */}
                               {latestSnapshot.keyRisks.length > 0 && (
                                 <div>
-                                  <div className="text-[9px] font-semibold text-status-danger uppercase tracking-wider mb-0.5">Key Risks</div>
-                                  {latestSnapshot.keyRisks.slice(0, 3).map((risk, i) => (
-                                    <div key={i} className="flex items-start gap-1 text-[10px] text-muted-foreground">
-                                      <span className="text-status-danger mt-px shrink-0">•</span>
-                                      <span className="line-clamp-1">{risk}</span>
-                                    </div>
-                                  ))}
+                                  <button
+                                    className="w-full flex items-center justify-between group"
+                                    onClick={() => setSummaryExpandedSection(s => s === 'risks' ? null : 'risks')}
+                                  >
+                                    <span className="text-[9px] font-semibold text-status-danger uppercase tracking-wider">Key Risks</span>
+                                    {summaryExpandedSection === 'risks'
+                                      ? <ChevronUp className="w-3 h-3 text-muted-foreground" />
+                                      : <ChevronDown className="w-3 h-3 text-muted-foreground" />
+                                    }
+                                  </button>
+                                  <div className="mt-0.5 space-y-0.5">
+                                    {(summaryExpandedSection === 'risks'
+                                      ? latestSnapshot.keyRisks
+                                      : latestSnapshot.keyRisks.slice(0, 2)
+                                    ).map((risk, i) => (
+                                      <div key={i} className="flex items-start gap-1 text-[10px] text-muted-foreground">
+                                        <span className="text-status-danger mt-px shrink-0">•</span>
+                                        <span>{risk}</span>
+                                      </div>
+                                    ))}
+                                    {summaryExpandedSection !== 'risks' && latestSnapshot.keyRisks.length > 2 && (
+                                      <div className="text-[9px] text-muted-foreground/50 pl-3">+{latestSnapshot.keyRisks.length - 2} more</div>
+                                    )}
+                                  </div>
                                 </div>
                               )}
+
+                              {/* What's Next */}
                               <div>
-                                <div className="text-[9px] font-semibold text-status-success uppercase tracking-wider mb-0.5">What's Next</div>
-                                <p className="text-[10px] text-muted-foreground leading-relaxed line-clamp-2">{latestSnapshot.whatsNext}</p>
+                                <button
+                                  className="w-full flex items-center justify-between group"
+                                  onClick={() => setSummaryExpandedSection(s => s === 'next' ? null : 'next')}
+                                >
+                                  <span className="text-[9px] font-semibold text-status-success uppercase tracking-wider">What's Next</span>
+                                  {summaryExpandedSection === 'next'
+                                    ? <ChevronUp className="w-3 h-3 text-muted-foreground" />
+                                    : <ChevronDown className="w-3 h-3 text-muted-foreground" />
+                                  }
+                                </button>
+                                <p className={`text-[10px] text-muted-foreground leading-relaxed mt-0.5 ${summaryExpandedSection === 'next' ? '' : 'line-clamp-2'}`}>
+                                  {latestSnapshot.whatsNext}
+                                </p>
                               </div>
                             </div>
 
-                            <div className="border-t border-border/30 mt-2 pt-2 flex gap-2">
+                            <div className="border-t border-border/25 mt-2.5 pt-2 flex gap-1.5">
                               <Button
                                 size="sm"
                                 variant="default"
@@ -352,7 +421,7 @@ export default function DealDetail() {
                                 className="text-[10px] h-6 px-2 flex-1 font-display"
                                 onClick={() => setActiveTab('discussions')}
                               >
-                                View All Interactions
+                                All Interactions
                               </Button>
                             </div>
                           </CardContent>

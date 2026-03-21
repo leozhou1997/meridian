@@ -1,15 +1,14 @@
 /**
  * StakeholderMap — Intelligence Cartography design system
- * v6 Features:
- * - Larger node cards with engagement heat bar (L7D / L14D / L30D switchable)
- * - Hover tooltip: rich info panel near the card
- * - Click: full-screen modal with blurred backdrop (edit mode)
- * - View / Edit mode toggle
- * - Drag nodes (edit mode)
- * - Add / Remove stakeholders
- * - Draw, re-route, and type-label connections
- * - Connection types: Reports To | Influences | Collaborates | Blocks
- * - localStorage persistence per deal
+ * v7 Features (2026-03):
+ * - FIX: Drag-to-edit bug — modal only opens on true click (movement < 5px)
+ * - FIX: Collision detection — iterative multi-pass resolution prevents overlap
+ * - NEW: Connection line labels shown in BOTH View and Edit modes
+ * - NEW: Expandable interaction history at bottom of each card (mini accordion)
+ * - NEW: Drag handle icon visible in Edit mode on each card
+ * - NEW: Edit mode activates dotted background pattern (stronger visual cue)
+ * - NEW: Stage column dividers are more prominent with colored zone headers
+ * - KEEP: All v6 features (heat bars, hover tooltip, click modal, zoom, localStorage)
  */
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -20,7 +19,8 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
   ZoomIn, ZoomOut, Maximize2, Edit2, Eye, Plus, Trash2,
-  Link2, Link2Off, Save, X, Check, Camera, Mail, Flame
+  Link2, Link2Off, Save, X, Check, Camera, Mail, Flame,
+  GripVertical, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { nanoid } from 'nanoid';
@@ -45,14 +45,15 @@ export interface Connection {
 type HeatWindow = 'L7D' | 'L14D' | 'L30D';
 
 const CONNECTION_TYPES: { value: ConnectionType; label: string; color: string; dash?: string }[] = [
-  { value: 'reports_to',   label: 'Reports To',   color: 'rgba(99,130,255,0.55)',  dash: 'none' },
-  { value: 'influences',   label: 'Influences',   color: 'rgba(16,185,129,0.5)',   dash: 'none' },
-  { value: 'collaborates', label: 'Collaborates', color: 'rgba(245,158,11,0.5)',   dash: '6 3' },
-  { value: 'blocks',       label: 'Blocks',       color: 'rgba(239,68,68,0.5)',    dash: '4 3' },
+  { value: 'reports_to',   label: 'Reports To',   color: 'rgba(99,130,255,0.7)',   dash: 'none' },
+  { value: 'influences',   label: 'Influences',   color: 'rgba(16,185,129,0.65)',  dash: 'none' },
+  { value: 'collaborates', label: 'Collaborates', color: 'rgba(245,158,11,0.65)',  dash: '6 3' },
+  { value: 'blocks',       label: 'Blocks',       color: 'rgba(239,68,68,0.7)',    dash: '4 3' },
 ];
 
 const NODE_W = 200;
-const NODE_H = 140;
+const NODE_H = 140;   // base height without expanded interactions
+const CARD_GAP = 20;  // minimum gap between card edges
 
 const AVATAR_POOL = [
   'https://api.dicebear.com/7.x/avataaars/svg?seed=Mx&backgroundColor=b6e3f4',
@@ -110,10 +111,10 @@ function computeHeatScore(
 }
 
 function getHeatColor(score: number): string {
-  if (score === 0) return 'rgba(100,116,139,0.3)'; // slate-500 cold
-  if (score < 0.3) return 'rgba(59,130,246,0.6)';  // blue cool
-  if (score < 0.6) return 'rgba(245,158,11,0.7)';  // amber warm
-  return 'rgba(239,68,68,0.85)';                    // red hot
+  if (score === 0) return 'rgba(100,116,139,0.3)';
+  if (score < 0.3) return 'rgba(59,130,246,0.6)';
+  if (score < 0.6) return 'rgba(245,158,11,0.7)';
+  return 'rgba(239,68,68,0.85)';
 }
 
 function getHeatLabel(score: number): string {
@@ -147,7 +148,65 @@ function computeInitialPositions(
   });
 }
 
-// ── Sentiment dot color ───────────────────────────────────────────────────────
+// ── Collision resolution (multi-pass iterative) ───────────────────────────────
+/**
+ * Given a set of positions and the id of the card being dragged to (rawX, rawY),
+ * resolve all overlaps by pushing OTHER cards away. Returns updated positions.
+ * We run up to MAX_PASSES iterations to handle chain reactions.
+ */
+function resolveCollisions(
+  positions: NodePosition[],
+  draggingId: string,
+  rawX: number,
+  rawY: number,
+  maxX: number,
+): NodePosition[] {
+  // Start with the dragged card at its new position
+  let result = positions.map(p =>
+    p.id === draggingId ? { ...p, x: rawX, y: rawY } : p
+  );
+
+  const MAX_PASSES = 8;
+  for (let pass = 0; pass < MAX_PASSES; pass++) {
+    let anyOverlap = false;
+    for (let i = 0; i < result.length; i++) {
+      for (let j = i + 1; j < result.length; j++) {
+        const a = result[i];
+        const b = result[j];
+        const overlapX = Math.abs(a.x - b.x) < NODE_W + CARD_GAP;
+        const overlapY = Math.abs(a.y - b.y) < NODE_H + CARD_GAP;
+        if (!overlapX || !overlapY) continue;
+
+        anyOverlap = true;
+        // The dragged card is fixed; push the other one
+        // If neither is the dragged card, push both symmetrically
+        const aIsDragged = a.id === draggingId;
+        const bIsDragged = b.id === draggingId;
+
+        const sepX = NODE_W + CARD_GAP - Math.abs(a.x - b.x);
+        const sepY = NODE_H + CARD_GAP - Math.abs(a.y - b.y);
+
+        // Resolve along the axis with less penetration
+        if (sepX < sepY) {
+          const pushX = sepX / 2;
+          const dirX = a.x <= b.x ? -1 : 1;
+          if (!aIsDragged) result[i] = { ...a, x: Math.max(0, Math.min(a.x + dirX * pushX, maxX)) };
+          if (!bIsDragged) result[j] = { ...b, x: Math.max(0, Math.min(b.x - dirX * pushX, maxX)) };
+        } else {
+          const pushY = sepY / 2;
+          const dirY = a.y <= b.y ? -1 : 1;
+          if (!aIsDragged) result[i] = { ...a, y: Math.max(0, a.y + dirY * pushY) };
+          if (!bIsDragged) result[j] = { ...b, y: Math.max(0, b.y - dirY * pushY) };
+        }
+      }
+    }
+    if (!anyOverlap) break;
+  }
+
+  return result;
+}
+
+// ── Sentiment helpers ─────────────────────────────────────────────────────────
 const sentimentDot = (s: string) =>
   s === 'Positive' ? '#10b981' : s === 'Neutral' ? '#f59e0b' : '#ef4444';
 
@@ -171,6 +230,9 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [hoverPos, setHoverPos] = useState({ x: 0, y: 0 });
 
+  // ── Expanded interaction history on cards ─────────────────────────────────
+  const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
+
   // ── Click modal state ─────────────────────────────────────────────────────
   const [modalStakeholder, setModalStakeholder] = useState<Stakeholder | null>(null);
   const [isEditingModal, setIsEditingModal] = useState(false);
@@ -189,6 +251,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     setSelectedNodeId(null);
     setHoveredId(null);
     setModalStakeholder(null);
+    setExpandedCardId(null);
 
     const stks = deal.stakeholders;
     setLocalStakeholders(stks);
@@ -246,9 +309,15 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     }).length;
   };
 
+  const getStakeholderInteractions = (s: Stakeholder) =>
+    deal.interactions
+      .filter(i => i.keyParticipant.toLowerCase().includes(s.name.split(' ')[0].toLowerCase()))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
   // ── Drag state ────────────────────────────────────────────────────────────
   const [dragging, setDragging] = useState<string | null>(null);
   const [dragStart, setDragStart] = useState({ mx: 0, my: 0, nx: 0, ny: 0 });
+  const [dragMoved, setDragMoved] = useState(false); // track if significant movement occurred
   const [zoom, setZoom] = useState(1);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
@@ -280,6 +349,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     const pos = getPos(id);
     if (!pos) return;
     setDragging(id);
+    setDragMoved(false);
     setDragStart({ mx: e.clientX, my: e.clientY, nx: pos.x, ny: pos.y });
   };
 
@@ -287,43 +357,41 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     if (!dragging) return;
     const dx = (e.clientX - dragStart.mx) / zoom;
     const dy = (e.clientY - dragStart.my) / zoom;
-    const GAP = 16; // minimum gap between cards
-    const minSepX = NODE_W + GAP;
-    const minSepY = NODE_H + GAP;
-    setPositions(prev => {
-      const rawX = dragStart.nx + dx;
-      const rawY = dragStart.ny + dy;
-      // Clamp to canvas bounds (keep card inside container)
-      const maxX = (containerW / zoom) - NODE_W;
-      const clampedX = Math.max(0, Math.min(rawX, maxX));
-      const clampedY = Math.max(0, rawY);
-      // Push-away collision resolution
-      let finalX = clampedX;
-      let finalY = clampedY;
-      for (const p of prev) {
-        if (p.id === dragging) continue;
-        const overlapX = Math.abs(finalX - p.x) < minSepX;
-        const overlapY = Math.abs(finalY - p.y) < minSepY;
-        if (overlapX && overlapY) {
-          // Push in the axis with less overlap
-          const pushX = minSepX - Math.abs(finalX - p.x);
-          const pushY = minSepY - Math.abs(finalY - p.y);
-          if (pushX <= pushY) {
-            finalX += finalX >= p.x ? pushX : -pushX;
-          } else {
-            finalY += finalY >= p.y ? pushY : -pushY;
-          }
-          finalX = Math.max(0, Math.min(finalX, maxX));
-          finalY = Math.max(0, finalY);
-        }
-      }
-      return prev.map(p =>
-        p.id === dragging ? { ...p, x: finalX, y: finalY } : p
-      );
-    });
-  }, [dragging, dragStart, zoom, containerW]);
 
-  const handleMouseUp = useCallback(() => setDragging(null), []);
+    // Mark as "moved" if displacement > 5px (distinguishes click from drag)
+    if (!dragMoved && (Math.abs(e.clientX - dragStart.mx) > 5 || Math.abs(e.clientY - dragStart.my) > 5)) {
+      setDragMoved(true);
+    }
+
+    const rawX = dragStart.nx + dx;
+    const rawY = dragStart.ny + dy;
+    const maxX = (containerW / zoom) - NODE_W;
+    const clampedX = Math.max(0, Math.min(rawX, maxX));
+    const clampedY = Math.max(0, rawY);
+
+    setPositions(prev => resolveCollisions(prev, dragging, clampedX, clampedY, maxX));
+  }, [dragging, dragStart, zoom, containerW, dragMoved]);
+
+  // On mouseup: if no significant movement occurred, treat as a click → open modal
+  const handleMouseUp = useCallback((e: MouseEvent) => {
+    if (dragging && !dragMoved) {
+      // True click — find the stakeholder and open modal
+      const stakeholder = localStakeholders.find(s => s.id === dragging);
+      if (stakeholder) {
+        setHoveredId(null);
+        setModalStakeholder(stakeholder);
+        setIsEditingModal(false);
+        setEditName(stakeholder.name);
+        setEditTitle(stakeholder.title);
+        setEditSentiment(stakeholder.sentiment);
+        setEditRoles(stakeholder.roles ?? [stakeholder.role]);
+        onStakeholderClick?.(stakeholder);
+      }
+    }
+    setDragging(null);
+    setDragMoved(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dragging, dragMoved, localStakeholders]);
 
   useEffect(() => {
     if (!dragging) return;
@@ -335,7 +403,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     };
   }, [dragging, handleMouseMove, handleMouseUp]);
 
-  // ── Node click ────────────────────────────────────────────────────────────
+  // ── Node click (view mode) ────────────────────────────────────────────────
   const handleNodeClick = (e: React.MouseEvent, stakeholder: Stakeholder) => {
     e.stopPropagation();
     setConnEditPopup(null);
@@ -357,15 +425,18 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
       return;
     }
 
-    // Open modal
-    setHoveredId(null);
-    setModalStakeholder(stakeholder);
-    setIsEditingModal(false);
-    setEditName(stakeholder.name);
-    setEditTitle(stakeholder.title);
-    setEditSentiment(stakeholder.sentiment);
-    setEditRoles(stakeholder.roles ?? [stakeholder.role]);
-    onStakeholderClick?.(stakeholder);
+    // In edit mode, clicks are handled by mouseup (drag-click distinction)
+    // In view mode, open modal directly
+    if (mode === 'view') {
+      setHoveredId(null);
+      setModalStakeholder(stakeholder);
+      setIsEditingModal(false);
+      setEditName(stakeholder.name);
+      setEditTitle(stakeholder.title);
+      setEditSentiment(stakeholder.sentiment);
+      setEditRoles(stakeholder.roles ?? [stakeholder.role]);
+      onStakeholderClick?.(stakeholder);
+    }
   };
 
   // ── Modal save ────────────────────────────────────────────────────────────
@@ -460,10 +531,16 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
 
   return (
     <div className="relative h-full w-full" ref={containerRef}>
-      {/* Stage column headers */}
-      <div className="absolute top-0 left-0 right-0 flex border-b border-border/30 bg-card/80 backdrop-blur-sm z-10">
+      {/* Stage column headers — more prominent in edit mode */}
+      <div className={`absolute top-0 left-0 right-0 flex border-b z-10 transition-colors duration-300 ${
+        mode === 'edit'
+          ? 'border-primary/30 bg-primary/5 backdrop-blur-sm'
+          : 'border-border/30 bg-card/80 backdrop-blur-sm'
+      }`}>
         {stageOrder.map((stage, i) => (
-          <div key={stage} className="flex-1 text-center py-2.5 border-r border-border/20 last:border-r-0">
+          <div key={stage} className={`flex-1 text-center py-2.5 border-r last:border-r-0 transition-colors ${
+            mode === 'edit' ? 'border-primary/20' : 'border-border/20'
+          }`}>
             <div className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider">Stage {i + 1}</div>
             <div className="text-xs font-display font-medium mt-0.5">{stage}</div>
           </div>
@@ -648,20 +725,42 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
         style={{ cursor: dragging ? 'grabbing' : (connectingFrom || reroutingConn) ? 'crosshair' : 'default' }}
         onClick={() => { setConnEditPopup(null); setHoveredId(null); }}
       >
-        {/* Dot grid */}
-        <svg className="absolute inset-0 w-full h-full opacity-[0.03] pointer-events-none">
+        {/* Background: subtle dot grid always; denser + colored in edit mode */}
+        <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ opacity: mode === 'edit' ? 0.12 : 0.04 }}>
           <defs>
-            <pattern id="dotgrid" width="20" height="20" patternUnits="userSpaceOnUse">
+            <pattern id="dotgrid-view" width="20" height="20" patternUnits="userSpaceOnUse">
               <circle cx="10" cy="10" r="0.7" fill="currentColor" />
             </pattern>
+            <pattern id="dotgrid-edit" width="16" height="16" patternUnits="userSpaceOnUse">
+              <circle cx="8" cy="8" r="1" fill={mode === 'edit' ? 'hsl(var(--primary))' : 'currentColor'} />
+            </pattern>
           </defs>
-          <rect width="100%" height="100%" fill="url(#dotgrid)" />
+          <rect width="100%" height="100%" fill={`url(#${mode === 'edit' ? 'dotgrid-edit' : 'dotgrid-view'})`} />
         </svg>
 
-        {/* Column dividers */}
+        {/* Column dividers — more visible in edit mode */}
         {stageOrder.map((_, i) => i === 0 ? null : (
-          <div key={i} className="absolute top-0 bottom-0 w-px bg-border/10"
+          <div key={i}
+            className={`absolute top-0 bottom-0 transition-all duration-300 ${
+              mode === 'edit'
+                ? 'w-px bg-primary/20'
+                : 'w-px bg-border/15'
+            }`}
             style={{ left: `${(i / stageOrder.length) * 100}%` }}
+          />
+        ))}
+
+        {/* Stage zone backgrounds in edit mode */}
+        {mode === 'edit' && stageOrder.map((_, i) => (
+          <div key={i}
+            className="absolute top-0 bottom-0 transition-opacity duration-300"
+            style={{
+              left: `${(i / stageOrder.length) * 100}%`,
+              width: `${(1 / stageOrder.length) * 100}%`,
+              background: i % 2 === 0
+                ? 'rgba(var(--primary-rgb, 99,102,241), 0.015)'
+                : 'transparent',
+            }}
           />
         ))}
 
@@ -687,28 +786,36 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
               const cpx2 = x1 + (x2 - x1) * 0.6;
               const cfg = connConfig(conn.type);
               const isSelected = selectedConnId === conn.id;
-              const mx = (x1 + x2) / 2;
-              const my = (y1 + y2) / 2 - 8;
+              // Label position: midpoint of the bezier curve (approximate)
+              const mx = (x1 + cpx1 + cpx2 + x2) / 4;
+              const my = (y1 + y1 + y2 + y2) / 4 - 10;
               return (
                 <g key={conn.id}>
+                  {/* Wide invisible hit area */}
                   <path d={`M ${x1} ${y1} C ${cpx1} ${y1}, ${cpx2} ${y2}, ${x2} ${y2}`}
-                    fill="none" stroke="transparent" strokeWidth="12"
+                    fill="none" stroke="transparent" strokeWidth="14"
                     style={{ cursor: mode === 'edit' ? 'pointer' : 'default' }}
                     onClick={(e) => handleConnClick(e as unknown as React.MouseEvent, conn.id)}
                   />
+                  {/* Visible line */}
                   <path d={`M ${x1} ${y1} C ${cpx1} ${y1}, ${cpx2} ${y2}, ${x2} ${y2}`}
                     fill="none"
-                    stroke={isSelected ? 'rgba(255,255,255,0.7)' : cfg.color}
-                    strokeWidth={isSelected ? 2 : 1.5}
+                    stroke={isSelected ? 'rgba(255,255,255,0.8)' : cfg.color}
+                    strokeWidth={isSelected ? 2.5 : 1.5}
                     strokeDasharray={cfg.dash === 'none' ? undefined : cfg.dash}
                     markerEnd={`url(#arrow-${conn.type})`}
                     style={{ pointerEvents: 'none' }}
                   />
-                  {mode === 'edit' && (
-                    <text x={mx} y={my} textAnchor="middle" fontSize="9" fill={cfg.color}
-                      style={{ pointerEvents: 'none', userSelect: 'none' }}
-                    >{cfg.label}</text>
-                  )}
+                  {/* Label — shown in BOTH view and edit mode */}
+                  <text
+                    x={mx} y={my}
+                    textAnchor="middle"
+                    fontSize="9"
+                    fill={cfg.color}
+                    style={{ pointerEvents: 'none', userSelect: 'none', fontFamily: 'var(--font-mono, monospace)' }}
+                  >
+                    {cfg.label}
+                  </text>
                 </g>
               );
             })}
@@ -725,6 +832,8 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
             const heat = getHeat(stakeholder);
             const heatColor = getHeatColor(heat);
             const touchpoints = getTouchpointCount(stakeholder);
+            const interactions = getStakeholderInteractions(stakeholder);
+            const isExpanded = expandedCardId === stakeholder.id;
 
             return (
               <motion.div
@@ -761,6 +870,13 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                   }}
                 >
                   <div className="p-3.5">
+                    {/* Drag handle — only visible in edit mode */}
+                    {mode === 'edit' && (
+                      <div className="flex items-center justify-center mb-1.5 -mt-1 opacity-40 hover:opacity-70 transition-opacity">
+                        <GripVertical className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                    )}
+
                     {/* Avatar + name row */}
                     <div className="flex items-center gap-3 mb-3">
                       <div className="relative shrink-0">
@@ -822,6 +938,56 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                       </div>
                       <div className="text-[9px] text-muted-foreground">{getHeatLabel(heat)}</div>
                     </div>
+
+                    {/* Expandable interaction history */}
+                    {interactions.length > 0 && (
+                      <div className="mt-2 border-t border-border/20 pt-2">
+                        <button
+                          className="w-full flex items-center justify-between text-[9px] text-muted-foreground hover:text-foreground transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedCardId(isExpanded ? null : stakeholder.id);
+                          }}
+                          onMouseDown={(e) => e.stopPropagation()} // prevent drag from triggering
+                        >
+                          <span className="font-medium uppercase tracking-wider">
+                            {interactions.length} interaction{interactions.length !== 1 ? 's' : ''}
+                          </span>
+                          {isExpanded
+                            ? <ChevronUp className="w-3 h-3" />
+                            : <ChevronDown className="w-3 h-3" />
+                          }
+                        </button>
+                        <AnimatePresence>
+                          {isExpanded && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              transition={{ duration: 0.2 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="mt-1.5 space-y-1.5 max-h-40 overflow-y-auto pr-0.5">
+                                {interactions.slice(0, 5).map(i => (
+                                  <div key={i.id} className="p-1.5 rounded bg-muted/30 border border-border/20">
+                                    <div className="flex items-center gap-1.5 mb-0.5">
+                                      <span className="text-[9px] font-medium text-foreground/80">{i.type}</span>
+                                      <span className="text-[9px] text-muted-foreground ml-auto">{i.date.slice(5)}</span>
+                                    </div>
+                                    <p className="text-[9px] text-muted-foreground leading-relaxed line-clamp-2">{i.summary}</p>
+                                  </div>
+                                ))}
+                                {interactions.length > 5 && (
+                                  <div className="text-[9px] text-muted-foreground/60 text-center py-0.5">
+                                    +{interactions.length - 5} more — click card to view all
+                                  </div>
+                                )}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    )}
                   </div>
                 </Card>
               </motion.div>
@@ -842,7 +1008,6 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
             .slice(0, 3);
 
-          // Position tooltip to the right of cursor, flip left if near right edge
           const tooltipW = 260;
           const left = hoverPos.x + 16 + tooltipW > window.innerWidth
             ? hoverPos.x - tooltipW - 8
@@ -860,7 +1025,6 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
               style={{ left, top, width: tooltipW }}
             >
               <div className="bg-card/95 backdrop-blur-md border border-border/60 rounded-xl shadow-2xl p-4">
-                {/* Header */}
                 <div className="flex items-center gap-3 mb-3">
                   <img src={s.avatar} alt={s.name}
                     className="w-10 h-10 rounded-full object-cover border-2 border-background"
@@ -872,7 +1036,6 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                   </div>
                 </div>
 
-                {/* Sentiment + roles */}
                 <div className="flex items-center gap-2 mb-3 flex-wrap">
                   <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: sentimentDot(s.sentiment) }} />
@@ -883,7 +1046,6 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                   ))}
                 </div>
 
-                {/* Heat */}
                 <div className="mb-3 p-2 rounded-lg bg-muted/40">
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-1">
@@ -898,7 +1060,6 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                   <div className="text-[9px] text-muted-foreground mt-1">{getHeatLabel(heat)}</div>
                 </div>
 
-                {/* Key insight */}
                 {s.keyInsights && (
                   <div className="mb-3">
                     <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Key Insight</div>
@@ -906,7 +1067,6 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                   </div>
                 )}
 
-                {/* Recent interactions */}
                 {recentInteractions.length > 0 && (
                   <div>
                     <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Recent Touchpoints</div>
@@ -1054,7 +1214,6 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                 <div className="overflow-y-auto flex-1 px-6 py-4 space-y-5">
                   {/* Sentiment + Roles */}
                   <div className="grid grid-cols-2 gap-4">
-                    {/* Sentiment */}
                     <div>
                       <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Decision Stance</div>
                       {isEditingModal ? (
@@ -1081,7 +1240,6 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                       )}
                     </div>
 
-                    {/* Email */}
                     {s.email && (
                       <div>
                         <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Contact</div>
@@ -1146,7 +1304,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                     </div>
                   )}
 
-                  {/* Interaction history */}
+                  {/* Interaction history — full list in modal */}
                   {allInteractions.length > 0 && (
                     <div>
                       <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
@@ -1162,7 +1320,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                                 <span className="text-[10px] text-muted-foreground">{i.date}</span>
                                 <span className="text-[10px] text-muted-foreground ml-auto">{i.duration}m</span>
                               </div>
-                              <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">{i.summary}</p>
+                              <p className="text-[11px] text-muted-foreground leading-relaxed">{i.summary}</p>
                             </div>
                           </div>
                         ))}

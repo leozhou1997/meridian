@@ -287,10 +287,41 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     if (!dragging) return;
     const dx = (e.clientX - dragStart.mx) / zoom;
     const dy = (e.clientY - dragStart.my) / zoom;
-    setPositions(prev => prev.map(p =>
-      p.id === dragging ? { ...p, x: dragStart.nx + dx, y: dragStart.ny + dy } : p
-    ));
-  }, [dragging, dragStart, zoom]);
+    const GAP = 16; // minimum gap between cards
+    const minSepX = NODE_W + GAP;
+    const minSepY = NODE_H + GAP;
+    setPositions(prev => {
+      const rawX = dragStart.nx + dx;
+      const rawY = dragStart.ny + dy;
+      // Clamp to canvas bounds (keep card inside container)
+      const maxX = (containerW / zoom) - NODE_W;
+      const clampedX = Math.max(0, Math.min(rawX, maxX));
+      const clampedY = Math.max(0, rawY);
+      // Push-away collision resolution
+      let finalX = clampedX;
+      let finalY = clampedY;
+      for (const p of prev) {
+        if (p.id === dragging) continue;
+        const overlapX = Math.abs(finalX - p.x) < minSepX;
+        const overlapY = Math.abs(finalY - p.y) < minSepY;
+        if (overlapX && overlapY) {
+          // Push in the axis with less overlap
+          const pushX = minSepX - Math.abs(finalX - p.x);
+          const pushY = minSepY - Math.abs(finalY - p.y);
+          if (pushX <= pushY) {
+            finalX += finalX >= p.x ? pushX : -pushX;
+          } else {
+            finalY += finalY >= p.y ? pushY : -pushY;
+          }
+          finalX = Math.max(0, Math.min(finalX, maxX));
+          finalY = Math.max(0, finalY);
+        }
+      }
+      return prev.map(p =>
+        p.id === dragging ? { ...p, x: finalX, y: finalY } : p
+      );
+    });
+  }, [dragging, dragStart, zoom, containerW]);
 
   const handleMouseUp = useCallback(() => setDragging(null), []);
 

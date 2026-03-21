@@ -1,14 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRoute, Link } from 'wouter';
 import { deals, formatCurrency, getConfidenceColor, getConfidenceBg, getRoleColor, getSentimentColor, formatDate, getStageColor } from '@/lib/data';
-import type { Stakeholder } from '@/lib/data';
+import type { Stakeholder, Interaction } from '@/lib/data';
 import StakeholderMap from '@/components/StakeholderMap';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Globe, Clock, TrendingUp, TrendingDown, AlertTriangle,
   ChevronRight, User, MessageSquare, FileText, Map, BarChart3, X, ExternalLink,
-  Mic, Check, Edit2, Save, Camera, GripHorizontal, ChevronDown, ChevronUp
+  Mic, Check, Edit2, Save, Camera, GripHorizontal, ChevronDown, ChevronUp,
+  Plus, Trash2, Pencil, Calendar
 } from 'lucide-react';
+import { nanoid } from 'nanoid';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -77,10 +79,44 @@ export default function DealDetail() {
   // Local editable stakeholder state (per-deal, in-memory)
   const [localStakeholders, setLocalStakeholders] = useState<Stakeholder[]>(deal?.stakeholders ?? []);
 
+  // Local editable interactions — shared between Meeting History tab and StakeholderMap
+  const [localInteractions, setLocalInteractions] = useState<Interaction[]>(deal?.interactions ?? []);
+  const [editingInteractionId, setEditingInteractionId] = useState<string | null>(null);
+
+  const INTERACTION_TYPES = [
+    'Discovery Call', 'Demo', 'Technical Review', 'POC Check-in',
+    'Negotiation', 'Executive Briefing', 'Follow-up',
+  ] as const;
+
+  const updateInteraction = (id: string, patch: Partial<Interaction>) => {
+    setLocalInteractions(prev => prev.map(i => i.id === id ? { ...i, ...patch } : i));
+  };
+
+  const addInteraction = () => {
+    const newI: Interaction = {
+      id: nanoid(8),
+      dealId: deal!.id,
+      date: new Date().toISOString().slice(0, 10),
+      type: 'Follow-up',
+      keyParticipant: '',
+      summary: '',
+      duration: 30,
+    };
+    setLocalInteractions(prev => [newI, ...prev]);
+    setEditingInteractionId(newI.id);
+  };
+
+  const deleteInteraction = (id: string) => {
+    setLocalInteractions(prev => prev.filter(i => i.id !== id));
+    if (editingInteractionId === id) setEditingInteractionId(null);
+  };
+
   // Reset all per-deal state when deal changes
   useEffect(() => {
     if (deal) {
       setLocalStakeholders(deal.stakeholders);
+      setLocalInteractions(deal.interactions);
+      setEditingInteractionId(null);
       setSelectedStakeholder(null);
       setIsEditingProfile(false);
       setShowSummary(true);
@@ -494,25 +530,138 @@ export default function DealDetail() {
 
             <TabsContent value="discussions" className="flex-1 m-0 overflow-auto">
               <div className="p-6 max-w-3xl space-y-3">
-                <h3 className="font-display text-sm font-semibold mb-4">Meeting History</h3>
-                {deal.interactions.map(interaction => (
-                  <Card key={interaction.id} className="bg-card border-border/50">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-[10px]">{interaction.type}</Badge>
-                          <span className="text-xs font-medium">{interaction.keyParticipant}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Clock className="w-3 h-3" />
-                          <span>{interaction.duration}min</span>
-                          <span>{formatDate(interaction.date)}</span>
-                        </div>
-                      </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed">{interaction.summary}</p>
-                    </CardContent>
-                  </Card>
-                ))}
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-display text-sm font-semibold">Meeting History</h3>
+                  <button
+                    onClick={addInteraction}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
+                  >
+                    <Plus className="w-3 h-3" /> Add Meeting
+                  </button>
+                </div>
+                {localInteractions
+                  .slice()
+                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                  .map(interaction => {
+                    const isEditing = editingInteractionId === interaction.id;
+                    return (
+                      <Card key={interaction.id} className={`border-border/50 transition-colors ${
+                        isEditing ? 'bg-muted/40 border-primary/30' : 'bg-card'
+                      }`}>
+                        <CardContent className="p-4">
+                          {isEditing ? (
+                            /* ── Edit mode ── */
+                            <div className="space-y-3">
+                              {/* Type + Participant row */}
+                              <div className="flex gap-2">
+                                <select
+                                  value={interaction.type}
+                                  onChange={e => updateInteraction(interaction.id, { type: e.target.value as Interaction['type'] })}
+                                  className="flex-1 text-xs bg-background border border-border/50 rounded-md px-2.5 py-1.5 text-foreground"
+                                >
+                                  {INTERACTION_TYPES.map(t => (
+                                    <option key={t} value={t}>{t}</option>
+                                  ))}
+                                </select>
+                                <input
+                                  type="text"
+                                  value={interaction.keyParticipant}
+                                  onChange={e => updateInteraction(interaction.id, { keyParticipant: e.target.value })}
+                                  placeholder="Participant name"
+                                  className="flex-1 text-xs bg-background border border-border/50 rounded-md px-2.5 py-1.5 text-foreground"
+                                />
+                              </div>
+                              {/* Date + Duration row */}
+                              <div className="flex gap-2 items-center">
+                                <div className="flex items-center gap-1.5 flex-1">
+                                  <Calendar className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                                  <input
+                                    type="date"
+                                    value={interaction.date}
+                                    onChange={e => updateInteraction(interaction.id, { date: e.target.value })}
+                                    className="flex-1 text-xs bg-background border border-border/50 rounded-md px-2.5 py-1.5 text-foreground"
+                                  />
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                                  <input
+                                    type="number"
+                                    value={interaction.duration}
+                                    onChange={e => updateInteraction(interaction.id, { duration: Number(e.target.value) })}
+                                    min={1}
+                                    className="w-16 text-xs bg-background border border-border/50 rounded-md px-2.5 py-1.5 text-foreground"
+                                  />
+                                  <span className="text-xs text-muted-foreground">min</span>
+                                </div>
+                              </div>
+                              {/* Notes / transcript */}
+                              <div>
+                                <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Notes / Transcript</div>
+                                <textarea
+                                  value={interaction.summary}
+                                  onChange={e => updateInteraction(interaction.id, { summary: e.target.value })}
+                                  placeholder="Meeting notes, key decisions, action items..."
+                                  rows={5}
+                                  className="w-full text-xs bg-background border border-border/50 rounded-md px-2.5 py-2 text-foreground resize-y leading-relaxed"
+                                />
+                              </div>
+                              {/* Action buttons */}
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => setEditingInteractionId(null)}
+                                  className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
+                                >
+                                  <Check className="w-3 h-3" /> Done
+                                </button>
+                                <button
+                                  onClick={() => deleteInteraction(interaction.id)}
+                                  className="px-4 py-1.5 rounded-lg bg-destructive/10 text-destructive text-xs font-medium hover:bg-destructive/20 transition-colors"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            /* ── Read mode ── */
+                            <div>
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline" className="text-[10px]">{interaction.type}</Badge>
+                                  <span className="text-xs font-medium">{interaction.keyParticipant}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                    <Clock className="w-3 h-3" />
+                                    <span>{interaction.duration}min</span>
+                                    <span>{formatDate(interaction.date)}</span>
+                                  </div>
+                                  <button
+                                    onClick={() => setEditingInteractionId(interaction.id)}
+                                    className="w-6 h-6 rounded flex items-center justify-center hover:bg-muted transition-colors ml-1"
+                                    title="Edit this meeting"
+                                  >
+                                    <Pencil className="w-3 h-3 text-muted-foreground/60" />
+                                  </button>
+                                </div>
+                              </div>
+                              {interaction.summary ? (
+                                <p className="text-xs text-muted-foreground leading-relaxed">{interaction.summary}</p>
+                              ) : (
+                                <p className="text-xs text-muted-foreground/40 italic">No notes yet — click ✏ to add</p>
+                              )}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                {localInteractions.length === 0 && (
+                  <div className="text-center py-12 text-muted-foreground/60">
+                    <MessageSquare className="w-8 h-8 mx-auto mb-3 opacity-30" />
+                    <p className="text-sm">No meetings recorded yet</p>
+                    <p className="text-xs mt-1">Click "Add Meeting" to log your first interaction</p>
+                  </div>
+                )}
               </div>
             </TabsContent>
           </Tabs>

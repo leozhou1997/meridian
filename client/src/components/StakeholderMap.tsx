@@ -1,6 +1,6 @@
 /**
  * StakeholderMap — Intelligence Cartography design system
- * v8 Changes (2026-03):
+ * v9 Changes (2026-03):
  * - FIX: Card overlap — NODE_H corrected to 230 (actual rendered height), initial layout
  *        runs a full collision pass, saved positions also validated on load
  * - IMPROVED: Connection lines — source circle dot + larger bolder arrowhead,
@@ -145,40 +145,64 @@ function resolveCollisions(
   maxX: number,
   cardH: number = NODE_H,
 ): NodePosition[] {
+  // Pin the dragged card; copy all others
   let result = positions.map(p =>
     p.id === draggingId ? { ...p, x: rawX, y: rawY } : { ...p }
   );
 
-  const MAX_PASSES = 20;
+  // Separation needed to have no overlap
+  const needSepX = NODE_W + CARD_GAP;
+  const needSepY = cardH + CARD_GAP;
+
+  // Run up to 40 full sweeps — each sweep resolves every overlapping pair once.
+  // After each individual push we immediately re-read the updated positions so
+  // downstream pairs see the corrected coordinates.
+  const MAX_PASSES = 40;
   for (let pass = 0; pass < MAX_PASSES; pass++) {
     let anyOverlap = false;
     for (let i = 0; i < result.length; i++) {
       for (let j = i + 1; j < result.length; j++) {
         const a = result[i];
         const b = result[j];
-        const overlapX = Math.abs(a.x - b.x) < NODE_W + CARD_GAP;
-        const overlapY = Math.abs(a.y - b.y) < cardH + CARD_GAP;
-        if (!overlapX || !overlapY) continue;
+        const dx = Math.abs(a.x - b.x);
+        const dy = Math.abs(a.y - b.y);
+        if (dx >= needSepX || dy >= needSepY) continue; // no overlap
 
         anyOverlap = true;
         const aFixed = a.id === draggingId;
         const bFixed = b.id === draggingId;
 
-        const sepX = NODE_W + CARD_GAP - Math.abs(a.x - b.x);
-        const sepY = cardH + CARD_GAP - Math.abs(a.y - b.y);
+        const overlapX = needSepX - dx; // how much to push in X
+        const overlapY = needSepY - dy; // how much to push in Y
 
-        if (sepX < sepY) {
-          // Push horizontally
-          const dirX = a.x <= b.x ? -1 : 1;
-          const share = aFixed || bFixed ? 1 : 0.5;
-          if (!aFixed) result[i] = { ...a, x: Math.max(0, Math.min(a.x + dirX * sepX * share, maxX)) };
-          if (!bFixed) result[j] = { ...b, x: Math.max(0, Math.min(b.x - dirX * sepX * share, maxX)) };
+        // Always push along the axis with LESS required separation
+        // (i.e. the axis where cards are closest to being separated)
+        if (overlapX <= overlapY) {
+          // Push horizontally — a is to the left of b (or equal → push b right)
+          const dirA = a.x <= b.x ? -1 : 1; // direction to push a
+          if (aFixed && bFixed) continue;
+          if (aFixed) {
+            result[j] = { ...b, x: Math.max(0, Math.min(b.x - dirA * overlapX, maxX)) };
+          } else if (bFixed) {
+            result[i] = { ...a, x: Math.max(0, Math.min(a.x + dirA * overlapX, maxX)) };
+          } else {
+            const half = overlapX / 2;
+            result[i] = { ...a, x: Math.max(0, Math.min(a.x + dirA * half, maxX)) };
+            result[j] = { ...b, x: Math.max(0, Math.min(b.x - dirA * half, maxX)) };
+          }
         } else {
           // Push vertically
-          const dirY = a.y <= b.y ? -1 : 1;
-          const share = aFixed || bFixed ? 1 : 0.5;
-          if (!aFixed) result[i] = { ...a, y: Math.max(0, a.y + dirY * sepY * share) };
-          if (!bFixed) result[j] = { ...b, y: Math.max(0, b.y - dirY * sepY * share) };
+          const dirA = a.y <= b.y ? -1 : 1;
+          if (aFixed && bFixed) continue;
+          if (aFixed) {
+            result[j] = { ...b, y: Math.max(0, b.y - dirA * overlapY) };
+          } else if (bFixed) {
+            result[i] = { ...a, y: Math.max(0, a.y + dirA * overlapY) };
+          } else {
+            const half = overlapY / 2;
+            result[i] = { ...a, y: Math.max(0, a.y + dirA * half) };
+            result[j] = { ...b, y: Math.max(0, b.y - dirA * half) };
+          }
         }
       }
     }
@@ -359,7 +383,25 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
 
   // ── Drag handlers ─────────────────────────────────────────────────────────
   const handleMouseDown = (e: React.MouseEvent, id: string) => {
-    if (mode !== 'edit') return;
+    if (mode !== 'edit') {
+      // In view mode, show a hint after a short drag attempt
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const onMove = (mv: MouseEvent) => {
+        if (Math.abs(mv.clientX - startX) > 8 || Math.abs(mv.clientY - startY) > 8) {
+          toast('Switch to Edit mode to rearrange cards', { id: 'edit-hint', duration: 2500 });
+          window.removeEventListener('mousemove', onMove);
+          window.removeEventListener('mouseup', onUp);
+        }
+      };
+      const onUp = () => {
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+      };
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+      return;
+    }
     if (connectingFrom) return;
     e.preventDefault(); e.stopPropagation();
     const pos = getPos(id);
@@ -754,38 +796,52 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
         className="absolute inset-0 top-[52px] overflow-auto"
         style={{ cursor: dragging ? 'grabbing' : (connectingFrom || reroutingConn) ? 'crosshair' : 'default' }}
         onClick={() => { setConnEditPopup(null); setHoveredId(null); }}
+        onMouseDown={() => {
+          // In view mode, if user tries to drag, show a hint to switch to edit mode
+          if (mode === 'view' && !dragging) {
+            // We'll detect actual drag intent in the card's onMouseDown
+          }
+        }}
       >
-        {/* Background dot grid */}
-        <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ opacity: mode === 'edit' ? 0.12 : 0.04 }}>
+        {/* Background dot grid — always visible, denser+colored in edit mode */}
+        <svg className="absolute inset-0 w-full h-full pointer-events-none"
+          style={{ opacity: mode === 'edit' ? 0.18 : 0.07 }}
+        >
           <defs>
-            <pattern id="dotgrid-view" width="20" height="20" patternUnits="userSpaceOnUse">
-              <circle cx="10" cy="10" r="0.7" fill="currentColor" />
+            <pattern id="dotgrid-view" width="22" height="22" patternUnits="userSpaceOnUse">
+              <circle cx="11" cy="11" r="0.8" fill="currentColor" />
             </pattern>
             <pattern id="dotgrid-edit" width="16" height="16" patternUnits="userSpaceOnUse">
-              <circle cx="8" cy="8" r="1" fill={mode === 'edit' ? 'hsl(var(--primary))' : 'currentColor'} />
+              <circle cx="8" cy="8" r="1.1" fill="hsl(var(--primary))" />
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill={`url(#${mode === 'edit' ? 'dotgrid-edit' : 'dotgrid-view'})`} />
         </svg>
 
-        {/* Column dividers */}
+        {/* Column dividers — always visible, bolder in edit mode */}
         {stageOrder.map((_, i) => i === 0 ? null : (
           <div key={i}
-            className={`absolute top-0 bottom-0 transition-all duration-300 ${
-              mode === 'edit' ? 'w-px bg-primary/20' : 'w-px bg-border/15'
-            }`}
-            style={{ left: `${(i / stageOrder.length) * 100}%` }}
+            className="absolute top-0 bottom-0 transition-all duration-300"
+            style={{
+              left: `${(i / stageOrder.length) * 100}%`,
+              width: mode === 'edit' ? '2px' : '1px',
+              background: mode === 'edit'
+                ? 'linear-gradient(to bottom, transparent 0%, hsl(var(--primary)/0.35) 20%, hsl(var(--primary)/0.35) 80%, transparent 100%)'
+                : 'linear-gradient(to bottom, transparent 0%, hsl(var(--border)/0.5) 20%, hsl(var(--border)/0.5) 80%, transparent 100%)',
+            }}
           />
         ))}
 
-        {/* Stage zone backgrounds in edit mode */}
-        {mode === 'edit' && stageOrder.map((_, i) => (
+        {/* Stage zone backgrounds — subtle in both modes, more visible in edit */}
+        {stageOrder.map((_, i) => (
           <div key={i}
             className="absolute top-0 bottom-0 transition-opacity duration-300"
             style={{
               left: `${(i / stageOrder.length) * 100}%`,
               width: `${(1 / stageOrder.length) * 100}%`,
-              background: i % 2 === 0 ? 'rgba(99,102,241,0.015)' : 'transparent',
+              background: i % 2 === 0
+                ? mode === 'edit' ? 'rgba(99,102,241,0.025)' : 'rgba(99,102,241,0.01)'
+                : 'transparent',
             }}
           />
         ))}
@@ -798,12 +854,12 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                 <marker
                   key={ct.value}
                   id={`arrow-${ct.value}`}
-                  markerWidth="10" markerHeight="8"
-                  refX="9" refY="4"
+                  markerWidth="12" markerHeight="10"
+                  refX="11" refY="5"
                   orient="auto"
                 >
-                  {/* Solid filled arrowhead — larger and bolder */}
-                  <polygon points="0 0, 10 4, 0 8" fill={ct.color} />
+                  {/* Bold filled arrowhead */}
+                  <polygon points="0 0, 12 5, 0 10" fill={ct.color} />
                 </marker>
               ))}
             </defs>
@@ -812,7 +868,6 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
               const toPos = getPos(conn.to);
               if (!fromPos || !toPos) return null;
 
-              // Connect from right/left edge of card, not center
               const fx = fromPos.x + NODE_W / 2;
               const fy = fromPos.y + NODE_H / 2;
               const tx = toPos.x + NODE_W / 2;
@@ -825,9 +880,17 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
               const cfg = connConfig(conn.type);
               const isSelected = selectedConnId === conn.id;
 
-              // Label at midpoint of bezier
-              const mx = (fx + cpx1 + cpx2 + tx) / 4;
-              const my = (fy + fy + ty + ty) / 4 - 12;
+              // True midpoint of cubic bezier at t=0.5
+              const t = 0.5;
+              const mt = 1 - t;
+              const mx = mt*mt*mt*fx + 3*mt*mt*t*cpx1 + 3*mt*t*t*cpx2 + t*t*t*tx;
+              const my = mt*mt*mt*fy + 3*mt*mt*t*fy  + 3*mt*t*t*ty  + t*t*t*ty;
+
+              // Direction angle at midpoint for the arrowhead
+              // Derivative of cubic bezier at t=0.5
+              const dxdt = 3*mt*mt*(cpx1-fx) + 6*mt*t*(cpx2-cpx1) + 3*t*t*(tx-cpx2);
+              const dydt = 3*mt*mt*(fy-fy)   + 6*mt*t*(ty-fy)     + 3*t*t*(ty-ty);
+              const angle = Math.atan2(dydt, dxdt) * 180 / Math.PI;
 
               return (
                 <g key={conn.id}>
@@ -837,27 +900,43 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                     style={{ cursor: mode === 'edit' ? 'pointer' : 'default' }}
                     onClick={(e) => handleConnClick(e as unknown as React.MouseEvent, conn.id)}
                   />
-                  {/* Visible line — thicker */}
+                  {/* Visible line — no markerEnd, arrowhead drawn manually at midpoint */}
                   <path d={`M ${fx} ${fy} C ${cpx1} ${fy}, ${cpx2} ${ty}, ${tx} ${ty}`}
                     fill="none"
                     stroke={isSelected ? 'rgba(255,255,255,0.9)' : cfg.color}
                     strokeWidth={isSelected ? 3 : 2}
                     strokeDasharray={cfg.dash === 'none' ? undefined : cfg.dash}
-                    markerEnd={`url(#arrow-${conn.type})`}
                     style={{ pointerEvents: 'none' }}
                   />
-                  {/* Source dot — clearly marks the FROM end */}
+                  {/* Source dot at FROM end */}
                   <circle
                     cx={fx} cy={fy} r={isSelected ? 5 : 4}
                     fill={isSelected ? 'rgba(255,255,255,0.9)' : cfg.color}
                     style={{ pointerEvents: 'none' }}
                   />
-                  {/* Label */}
+                  {/* Arrowhead at TRUE midpoint of the bezier curve */}
+                  <polygon
+                    points="-7,-4 6,0 -7,4"
+                    fill={isSelected ? 'rgba(255,255,255,0.9)' : cfg.color}
+                    transform={`translate(${mx},${my}) rotate(${angle})`}
+                    style={{ pointerEvents: 'none' }}
+                  />
+                  {/* Label pill — slightly above midpoint */}
+                  <rect
+                    x={mx - 22} y={my - 20}
+                    width="44" height="13"
+                    rx="6"
+                    fill="hsl(var(--card)/0.85)"
+                    stroke={cfg.color}
+                    strokeWidth="0.8"
+                    style={{ pointerEvents: 'none' }}
+                  />
                   <text
-                    x={mx} y={my}
+                    x={mx} y={my - 10}
                     textAnchor="middle"
-                    fontSize="9"
+                    fontSize="8"
                     fill={cfg.color}
+                    fontWeight="600"
                     style={{ pointerEvents: 'none', userSelect: 'none', fontFamily: 'var(--font-mono, monospace)' }}
                   >
                     {cfg.label}

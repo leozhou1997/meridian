@@ -69,11 +69,35 @@ const INTERACTION_TYPES = [
 
 // ── localStorage helpers ──────────────────────────────────────────────────────
 function storageKey(dealId: string) { return `meridian_map_v3_${dealId}`; }
+function historyKey(dealId: string) { return `meridian_map_history_${dealId}`; }
 
 interface PersistedMapState {
   positions: NodePosition[];
   connections: Connection[];
   localInteractions: Interaction[];
+}
+
+interface MapVersion {
+  id: string;
+  label: string;
+  savedAt: string; // ISO string
+  state: PersistedMapState;
+}
+
+function loadHistory(dealId: string): MapVersion[] {
+  try {
+    const raw = localStorage.getItem(historyKey(dealId));
+    if (!raw) return [];
+    return JSON.parse(raw) as MapVersion[];
+  } catch { return []; }
+}
+
+function saveHistory(dealId: string, versions: MapVersion[]) {
+  try {
+    // Keep max 20 versions
+    const trimmed = versions.slice(0, 20);
+    localStorage.setItem(historyKey(dealId), JSON.stringify(trimmed));
+  } catch {}
 }
 
 function loadState(dealId: string): PersistedMapState | null {
@@ -370,10 +394,42 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
 
   const getPos = useCallback((id: string) => positions.find(p => p.id === id), [positions]);
 
+  // ── Version history state ────────────────────────────────────────────────
+  const [mapHistory, setMapHistory] = useState<MapVersion[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+
+  // Load history when deal changes
+  useEffect(() => {
+    setMapHistory(loadHistory(deal.id));
+    setShowHistory(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deal.id]);
+
   // ── Save ──────────────────────────────────────────────────────────────────
   const handleSave = () => {
-    saveState(currentDealId, { positions, connections, localInteractions });
-    toast.success('Map saved');
+    const state: PersistedMapState = { positions, connections, localInteractions };
+    saveState(currentDealId, state);
+    // Push to history
+    const version: MapVersion = {
+      id: nanoid(6),
+      label: `Version ${new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
+      savedAt: new Date().toISOString(),
+      state,
+    };
+    const updated = [version, ...mapHistory];
+    setMapHistory(updated);
+    saveHistory(currentDealId, updated);
+    toast.success('Map saved — version snapshot created');
+  };
+
+  const handleRestoreVersion = (version: MapVersion) => {
+    const { positions: p, connections: c, localInteractions: li } = version.state;
+    const maxX = containerW - NODE_W;
+    setPositions(resolveCollisions(p, null, 0, 0, maxX));
+    setConnections(c);
+    setLocalInteractions(li);
+    setShowHistory(false);
+    toast.success(`Restored: ${version.label}`);
   };
 
   const handleReset = () => {
@@ -683,6 +739,14 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
             >
               <Save className="w-3 h-3" /> Save Map
             </button>
+            <button
+              onClick={() => setShowHistory(h => !h)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium transition-colors shadow-md ${
+                showHistory ? 'bg-primary text-primary-foreground' : 'bg-muted border border-border/50 hover:bg-muted/80'
+              }`}
+            >
+              <Clock className="w-3 h-3" /> History {mapHistory.length > 0 && `(${mapHistory.length})`}
+            </button>
             <button onClick={handleAddStakeholder}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-[10px] font-medium hover:bg-primary/90 transition-colors shadow-md"
             >
@@ -791,6 +855,50 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
         )}
       </AnimatePresence>
 
+      {/* Version History Panel */}
+      <AnimatePresence>
+        {showHistory && mode === 'edit' && (
+          <motion.div
+            initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }}
+            className="absolute bottom-12 right-36 z-30 w-64 bg-card border border-border/60 rounded-xl shadow-2xl overflow-hidden"
+          >
+            <div className="flex items-center justify-between px-3 py-2.5 border-b border-border/40">
+              <div className="flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-primary" />
+                <span className="text-[11px] font-display font-semibold">Version History</span>
+              </div>
+              <button onClick={() => setShowHistory(false)} className="text-muted-foreground hover:text-foreground text-xs">✕</button>
+            </div>
+            <div className="max-h-72 overflow-y-auto">
+              {mapHistory.length === 0 ? (
+                <div className="px-3 py-6 text-center">
+                  <Clock className="w-6 h-6 mx-auto mb-2 text-muted-foreground/30" />
+                  <p className="text-[10px] text-muted-foreground/60">No saved versions yet</p>
+                  <p className="text-[9px] text-muted-foreground/40 mt-0.5">Click "Save Map" to create a snapshot</p>
+                </div>
+              ) : (
+                mapHistory.map((v, idx) => (
+                  <div key={v.id} className="flex items-center justify-between px-3 py-2 border-b border-border/20 last:border-0 hover:bg-muted/30 transition-colors">
+                    <div className="flex-1 min-w-0 mr-2">
+                      <div className="text-[10px] font-medium truncate">{v.label}</div>
+                      {idx === 0 && (
+                        <span className="text-[8px] bg-primary/15 text-primary px-1.5 py-0.5 rounded-full font-medium">Latest</span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleRestoreVersion(v)}
+                      className="shrink-0 text-[9px] px-2 py-1 rounded bg-muted hover:bg-primary/20 hover:text-primary transition-colors font-medium"
+                    >
+                      Restore
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Canvas */}
       <div
         className="absolute inset-0 top-[52px] overflow-auto"
@@ -803,45 +911,36 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
           }
         }}
       >
-        {/* Background dot grid — always visible, denser+colored in edit mode */}
-        <svg className="absolute inset-0 w-full h-full pointer-events-none"
-          style={{ opacity: mode === 'edit' ? 0.18 : 0.07 }}
-        >
+        {/* Background dot grid — always use edit-mode style (primary color, dense) */}
+        <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ opacity: 0.15 }}>
           <defs>
-            <pattern id="dotgrid-view" width="22" height="22" patternUnits="userSpaceOnUse">
-              <circle cx="11" cy="11" r="0.8" fill="currentColor" />
-            </pattern>
-            <pattern id="dotgrid-edit" width="16" height="16" patternUnits="userSpaceOnUse">
+            <pattern id="dotgrid-unified" width="16" height="16" patternUnits="userSpaceOnUse">
               <circle cx="8" cy="8" r="1.1" fill="hsl(var(--primary))" />
             </pattern>
           </defs>
-          <rect width="100%" height="100%" fill={`url(#${mode === 'edit' ? 'dotgrid-edit' : 'dotgrid-view'})`} />
+          <rect width="100%" height="100%" fill="url(#dotgrid-unified)" />
         </svg>
 
-        {/* Column dividers — always visible, bolder in edit mode */}
+        {/* Column dividers — always use edit-mode style (2px primary gradient) */}
         {stageOrder.map((_, i) => i === 0 ? null : (
           <div key={i}
-            className="absolute top-0 bottom-0 transition-all duration-300"
+            className="absolute top-0 bottom-0"
             style={{
               left: `${(i / stageOrder.length) * 100}%`,
-              width: mode === 'edit' ? '2px' : '1px',
-              background: mode === 'edit'
-                ? 'linear-gradient(to bottom, transparent 0%, hsl(var(--primary)/0.35) 20%, hsl(var(--primary)/0.35) 80%, transparent 100%)'
-                : 'linear-gradient(to bottom, transparent 0%, hsl(var(--border)/0.5) 20%, hsl(var(--border)/0.5) 80%, transparent 100%)',
+              width: '2px',
+              background: 'linear-gradient(to bottom, transparent 0%, hsl(var(--primary)/0.35) 20%, hsl(var(--primary)/0.35) 80%, transparent 100%)',
             }}
           />
         ))}
 
-        {/* Stage zone backgrounds — subtle in both modes, more visible in edit */}
+        {/* Stage zone backgrounds */}
         {stageOrder.map((_, i) => (
           <div key={i}
-            className="absolute top-0 bottom-0 transition-opacity duration-300"
+            className="absolute top-0 bottom-0"
             style={{
               left: `${(i / stageOrder.length) * 100}%`,
               width: `${(1 / stageOrder.length) * 100}%`,
-              background: i % 2 === 0
-                ? mode === 'edit' ? 'rgba(99,102,241,0.025)' : 'rgba(99,102,241,0.01)'
-                : 'transparent',
+              background: i % 2 === 0 ? 'rgba(99,102,241,0.02)' : 'transparent',
             }}
           />
         ))}
@@ -921,22 +1020,14 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                     transform={`translate(${mx},${my}) rotate(${angle})`}
                     style={{ pointerEvents: 'none' }}
                   />
-                  {/* Label pill — slightly above midpoint */}
-                  <rect
-                    x={mx - 22} y={my - 20}
-                    width="44" height="13"
-                    rx="6"
-                    fill="hsl(var(--card)/0.85)"
-                    stroke={cfg.color}
-                    strokeWidth="0.8"
-                    style={{ pointerEvents: 'none' }}
-                  />
+                  {/* Label — plain text, no background, offset above midpoint */}
                   <text
                     x={mx} y={my - 10}
                     textAnchor="middle"
-                    fontSize="8"
+                    fontSize="9"
                     fill={cfg.color}
                     fontWeight="600"
+                    opacity="0.85"
                     style={{ pointerEvents: 'none', userSelect: 'none', fontFamily: 'var(--font-mono, monospace)' }}
                   >
                     {cfg.label}

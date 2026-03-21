@@ -8,7 +8,7 @@ import {
   ArrowLeft, Globe, Clock, TrendingUp, TrendingDown, AlertTriangle,
   ChevronRight, User, MessageSquare, FileText, Map, BarChart3, X, ExternalLink,
   Mic, Check, Edit2, Save, Camera, GripHorizontal, ChevronDown, ChevronUp,
-  Plus, Trash2, Pencil, Calendar
+  Plus, Trash2, Pencil, Calendar, Lightbulb, Lock, Target
 } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,6 +25,36 @@ type RoleType = 'Champion' | 'Decision Maker' | 'Influencer' | 'Blocker' | 'User
 
 const ALL_ROLES: RoleType[] = ['Champion', 'Decision Maker', 'Influencer', 'Blocker', 'User', 'Evaluator'];
 const ALL_SENTIMENTS: SentimentType[] = ['Positive', 'Neutral', 'Negative'];
+
+// Color map for interaction type badges
+const INTERACTION_TYPE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  'Discovery Call':     { bg: 'bg-blue-500/15',    text: 'text-blue-400',    border: 'border-blue-500/30'    },
+  'Demo':               { bg: 'bg-purple-500/15',  text: 'text-purple-400',  border: 'border-purple-500/30'  },
+  'Technical Review':   { bg: 'bg-cyan-500/15',    text: 'text-cyan-400',    border: 'border-cyan-500/30'    },
+  'POC Check-in':       { bg: 'bg-amber-500/15',   text: 'text-amber-400',   border: 'border-amber-500/30'   },
+  'Negotiation':        { bg: 'bg-red-500/15',     text: 'text-red-400',     border: 'border-red-500/30'     },
+  'Executive Briefing': { bg: 'bg-emerald-500/15', text: 'text-emerald-400', border: 'border-emerald-500/30' },
+  'Follow-up':          { bg: 'bg-slate-500/15',   text: 'text-slate-400',   border: 'border-slate-500/30'   },
+};
+function getInteractionTypeColor(type: string) {
+  return INTERACTION_TYPE_COLORS[type] ?? { bg: 'bg-muted/40', text: 'text-muted-foreground', border: 'border-border/40' };
+}
+
+interface StrategyNote {
+  id: string;
+  category: 'pricing' | 'relationship' | 'competitive' | 'internal' | 'other';
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const STRATEGY_CATEGORIES: { value: StrategyNote['category']; label: string; color: string }[] = [
+  { value: 'pricing',       label: 'Pricing Flexibility', color: 'text-emerald-400' },
+  { value: 'relationship',  label: 'Relationship Strategy', color: 'text-blue-400' },
+  { value: 'competitive',   label: 'Competitive Intel', color: 'text-amber-400' },
+  { value: 'internal',      label: 'Internal Alignment', color: 'text-purple-400' },
+  { value: 'other',         label: 'Other', color: 'text-muted-foreground' },
+];
 
 const sentimentConfig: Record<SentimentType, { label: string; dot: string; bg: string; text: string; border: string }> = {
   Positive: { label: 'Positive', dot: '#10b981', bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/30' },
@@ -79,9 +109,35 @@ export default function DealDetail() {
   // Local editable stakeholder state (per-deal, in-memory)
   const [localStakeholders, setLocalStakeholders] = useState<Stakeholder[]>(deal?.stakeholders ?? []);
 
-  // Local editable interactions — shared between Meeting History tab and StakeholderMap
+  // Local editable interactions — shared between All Interactions tab and StakeholderMap
   const [localInteractions, setLocalInteractions] = useState<Interaction[]>(deal?.interactions ?? []);
   const [editingInteractionId, setEditingInteractionId] = useState<string | null>(null);
+  const [expandedTranscriptId, setExpandedTranscriptId] = useState<string | null>(null);
+
+  // Deal Strategy notes
+  const [strategyNotes, setStrategyNotes] = useState<StrategyNote[]>([]);
+  const [editingStrategyId, setEditingStrategyId] = useState<string | null>(null);
+
+  const addStrategyNote = () => {
+    const note: StrategyNote = {
+      id: nanoid(8),
+      category: 'internal',
+      content: '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setStrategyNotes(prev => [note, ...prev]);
+    setEditingStrategyId(note.id);
+  };
+
+  const updateStrategyNote = (id: string, patch: Partial<StrategyNote>) => {
+    setStrategyNotes(prev => prev.map(n => n.id === id ? { ...n, ...patch, updatedAt: new Date().toISOString() } : n));
+  };
+
+  const deleteStrategyNote = (id: string) => {
+    setStrategyNotes(prev => prev.filter(n => n.id !== id));
+    if (editingStrategyId === id) setEditingStrategyId(null);
+  };
 
   const INTERACTION_TYPES = [
     'Discovery Call', 'Demo', 'Technical Review', 'POC Check-in',
@@ -117,6 +173,9 @@ export default function DealDetail() {
       setLocalStakeholders(deal.stakeholders);
       setLocalInteractions(deal.interactions);
       setEditingInteractionId(null);
+      setExpandedTranscriptId(null);
+      setStrategyNotes([]);
+      setEditingStrategyId(null);
       setSelectedStakeholder(null);
       setIsEditingProfile(false);
       setShowSummary(true);
@@ -286,7 +345,11 @@ export default function DealDetail() {
                 </TabsTrigger>
                 <TabsTrigger value="discussions" className="data-[state=active]:bg-muted/50 data-[state=active]:shadow-none rounded-lg text-xs font-display gap-1.5 px-3 h-8">
                   <MessageSquare className="w-3.5 h-3.5" />
-                  Internal Discussions
+                  All Interactions
+                </TabsTrigger>
+                <TabsTrigger value="strategy" className="data-[state=active]:bg-muted/50 data-[state=active]:shadow-none rounded-lg text-xs font-display gap-1.5 px-3 h-8">
+                  <Target className="w-3.5 h-3.5" />
+                  Deal Strategy
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -531,12 +594,15 @@ export default function DealDetail() {
             <TabsContent value="discussions" className="flex-1 m-0 overflow-auto">
               <div className="p-6 max-w-3xl space-y-3">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-display text-sm font-semibold">Meeting History</h3>
+                  <div>
+                    <h3 className="font-display text-sm font-semibold">All Interactions</h3>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{localInteractions.length} interaction{localInteractions.length !== 1 ? 's' : ''} recorded</p>
+                  </div>
                   <button
                     onClick={addInteraction}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
                   >
-                    <Plus className="w-3 h-3" /> Add Meeting
+                    <Plus className="w-3 h-3" /> Add Interaction
                   </button>
                 </div>
                 {localInteractions
@@ -624,31 +690,84 @@ export default function DealDetail() {
                           ) : (
                             /* ── Read mode ── */
                             <div>
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                  <Badge variant="outline" className="text-[10px]">{interaction.type}</Badge>
-                                  <span className="text-xs font-medium">{interaction.keyParticipant}</span>
+                              {/* Top row: icon + type badge + meta */}
+                              <div className="flex items-start gap-3">
+                                <div className="mt-0.5 w-7 h-7 rounded-lg bg-muted/50 flex items-center justify-center shrink-0">
+                                  <MessageSquare className="w-3.5 h-3.5 text-muted-foreground/60" />
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                    <Clock className="w-3 h-3" />
-                                    <span>{interaction.duration}min</span>
-                                    <span>{formatDate(interaction.date)}</span>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center flex-wrap gap-2 mb-1.5">
+                                    {(() => {
+                                      const tc = getInteractionTypeColor(interaction.type);
+                                      return (
+                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${tc.bg} ${tc.text} ${tc.border}`}>
+                                          {interaction.type}
+                                        </span>
+                                      );
+                                    })()}
+                                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                                      <Calendar className="w-3 h-3" />
+                                      <span>{formatDate(interaction.date)}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                                      <Clock className="w-3 h-3" />
+                                      <span>{interaction.duration} min</span>
+                                    </div>
+                                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                                      <User className="w-3 h-3" />
+                                      <span>{interaction.keyParticipant || <span className="italic opacity-50">Unknown</span>}</span>
+                                    </div>
+                                    <div className="ml-auto flex items-center gap-1">
+                                      <button
+                                        onClick={() => setEditingInteractionId(interaction.id)}
+                                        className="w-6 h-6 rounded flex items-center justify-center hover:bg-muted transition-colors"
+                                        title="Edit"
+                                      >
+                                        <Pencil className="w-3 h-3 text-muted-foreground/50" />
+                                      </button>
+                                    </div>
                                   </div>
-                                  <button
-                                    onClick={() => setEditingInteractionId(interaction.id)}
-                                    className="w-6 h-6 rounded flex items-center justify-center hover:bg-muted transition-colors ml-1"
-                                    title="Edit this meeting"
-                                  >
-                                    <Pencil className="w-3 h-3 text-muted-foreground/60" />
-                                  </button>
+                                  {/* Summary line */}
+                                  {interaction.summary ? (
+                                    <p className="text-xs text-muted-foreground leading-relaxed">
+                                      {interaction.summary}
+                                    </p>
+                                  ) : (
+                                    <p className="text-xs text-muted-foreground/40 italic">No notes yet — click ✏ to add</p>
+                                  )}
+                                  {/* View Full Transcript toggle */}
+                                  {interaction.summary && interaction.summary.length > 80 && (
+                                    <button
+                                      onClick={() => setExpandedTranscriptId(id => id === interaction.id ? null : interaction.id)}
+                                      className="mt-2 flex items-center gap-1.5 text-[10px] text-primary hover:text-primary/80 font-medium transition-colors"
+                                    >
+                                      <FileText className="w-3 h-3" />
+                                      {expandedTranscriptId === interaction.id ? 'Collapse Transcript' : 'View Full Transcript'}
+                                      {expandedTranscriptId === interaction.id
+                                        ? <ChevronUp className="w-3 h-3" />
+                                        : <ChevronDown className="w-3 h-3" />
+                                      }
+                                    </button>
+                                  )}
+                                  {/* Expanded transcript */}
+                                  <AnimatePresence>
+                                    {expandedTranscriptId === interaction.id && (
+                                      <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: 'auto', opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        transition={{ duration: 0.2 }}
+                                        className="overflow-hidden"
+                                      >
+                                        <div className="mt-2 p-3 bg-muted/30 rounded-lg border border-border/30">
+                                          <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Full Transcript / Notes</div>
+                                          <p className="text-xs text-foreground/80 leading-relaxed whitespace-pre-wrap">{interaction.summary}</p>
+                                        </div>
+                                      </motion.div>
+                                    )}
+                                  </AnimatePresence>
                                 </div>
                               </div>
-                              {interaction.summary ? (
-                                <p className="text-xs text-muted-foreground leading-relaxed">{interaction.summary}</p>
-                              ) : (
-                                <p className="text-xs text-muted-foreground/40 italic">No notes yet — click ✏ to add</p>
-                              )}
                             </div>
                           )}
                         </CardContent>
@@ -658,10 +777,135 @@ export default function DealDetail() {
                 {localInteractions.length === 0 && (
                   <div className="text-center py-12 text-muted-foreground/60">
                     <MessageSquare className="w-8 h-8 mx-auto mb-3 opacity-30" />
-                    <p className="text-sm">No meetings recorded yet</p>
-                    <p className="text-xs mt-1">Click "Add Meeting" to log your first interaction</p>
+                    <p className="text-sm">No interactions recorded yet</p>
+                    <p className="text-xs mt-1">Click "Add Interaction" to log your first touchpoint</p>
                   </div>
                 )}
+              </div>
+            </TabsContent>
+
+            {/* ── Deal Strategy Tab ── */}
+            <TabsContent value="strategy" className="flex-1 m-0 overflow-auto">
+              <div className="p-6 max-w-3xl">
+                <div className="flex items-start justify-between mb-5">
+                  <div>
+                    <h3 className="font-display text-sm font-semibold">Deal Strategy</h3>
+                    <p className="text-[10px] text-muted-foreground mt-0.5 max-w-sm leading-relaxed">
+                      Internal strategy notes for this deal — pricing flexibility, relationship plays, competitive intel, and internal alignment. These notes inform the AI agent’s recommendations.
+                    </p>
+                  </div>
+                  <button
+                    onClick={addStrategyNote}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors shrink-0"
+                  >
+                    <Plus className="w-3 h-3" /> Add Note
+                  </button>
+                </div>
+
+                {/* Category legend */}
+                <div className="flex flex-wrap gap-2 mb-5">
+                  {STRATEGY_CATEGORIES.map(cat => (
+                    <span key={cat.value} className={`text-[10px] font-medium ${cat.color} flex items-center gap-1`}>
+                      <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                      {cat.label}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="space-y-3">
+                  {strategyNotes.map(note => {
+                    const isEditing = editingStrategyId === note.id;
+                    const catConfig = STRATEGY_CATEGORIES.find(c => c.value === note.category) ?? STRATEGY_CATEGORIES[4];
+                    return (
+                      <Card key={note.id} className={`border-border/50 transition-colors ${
+                        isEditing ? 'bg-muted/40 border-primary/30' : 'bg-card'
+                      }`}>
+                        <CardContent className="p-4">
+                          {isEditing ? (
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-2">
+                                <select
+                                  value={note.category}
+                                  onChange={e => updateStrategyNote(note.id, { category: e.target.value as StrategyNote['category'] })}
+                                  className="flex-1 text-xs bg-background border border-border/50 rounded-md px-2.5 py-1.5 text-foreground"
+                                >
+                                  {STRATEGY_CATEGORIES.map(cat => (
+                                    <option key={cat.value} value={cat.value}>{cat.label}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <textarea
+                                value={note.content}
+                                onChange={e => updateStrategyNote(note.id, { content: e.target.value })}
+                                placeholder="Describe the internal strategy, context, or constraints for this deal..."
+                                rows={5}
+                                className="w-full text-xs bg-background border border-border/50 rounded-md px-2.5 py-2 text-foreground resize-y leading-relaxed"
+                                autoFocus
+                              />
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => setEditingStrategyId(null)}
+                                  className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
+                                >
+                                  <Check className="w-3 h-3" /> Done
+                                </button>
+                                <button
+                                  onClick={() => deleteStrategyNote(note.id)}
+                                  className="px-4 py-1.5 rounded-lg bg-destructive/10 text-destructive text-xs font-medium hover:bg-destructive/20 transition-colors"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-start gap-3">
+                              <div className="mt-0.5 w-7 h-7 rounded-lg bg-muted/50 flex items-center justify-center shrink-0">
+                                <Lightbulb className="w-3.5 h-3.5 text-muted-foreground/60" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1.5">
+                                  <span className={`text-[10px] font-semibold ${catConfig.color}`}>{catConfig.label}</span>
+                                  <span className="text-[10px] text-muted-foreground/50">· {formatDate(note.updatedAt)}</span>
+                                  <div className="ml-auto">
+                                    <button
+                                      onClick={() => setEditingStrategyId(note.id)}
+                                      className="w-6 h-6 rounded flex items-center justify-center hover:bg-muted transition-colors"
+                                    >
+                                      <Pencil className="w-3 h-3 text-muted-foreground/50" />
+                                    </button>
+                                  </div>
+                                </div>
+                                {note.content ? (
+                                  <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap">{note.content}</p>
+                                ) : (
+                                  <p className="text-xs text-muted-foreground/40 italic">Empty note — click ✏ to add content</p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+
+                  {strategyNotes.length === 0 && (
+                    <div className="text-center py-14 text-muted-foreground/60">
+                      <div className="w-12 h-12 rounded-2xl bg-muted/30 flex items-center justify-center mx-auto mb-3">
+                        <Target className="w-6 h-6 opacity-30" />
+                      </div>
+                      <p className="text-sm font-medium">No strategy notes yet</p>
+                      <p className="text-xs mt-1 max-w-xs mx-auto leading-relaxed">
+                        Add internal context like pricing flexibility, strategic priority, or relationship plays — the AI agent will use these to tailor its recommendations.
+                      </p>
+                      <button
+                        onClick={addStrategyNote}
+                        className="mt-4 flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors mx-auto"
+                      >
+                        <Plus className="w-3 h-3" /> Add First Strategy Note
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </TabsContent>
           </Tabs>

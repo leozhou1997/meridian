@@ -131,7 +131,7 @@ function computeHeatScore(
   const days = window === 'L7D' ? 7 : window === 'L14D' ? 14 : 30;
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
-  const count = interactions.filter(i => {
+  const count = (interactions ?? []).filter(i => {
     const d = new Date(i.date);
     return d >= cutoff && i.keyParticipant.toLowerCase().includes(stakeholderName.split(' ')[0].toLowerCase());
   }).length;
@@ -330,13 +330,13 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
         setConnections(saved.connections ?? []);
         setLocalInteractions(saved.localInteractions?.length
           ? saved.localInteractions
-          : [...deal.meetings]);
+          : [...(deal.meetings ?? [])]);
         return;
       }
     }
-    setPositions(computeInitialPositions(stks, deal.buyingStages, actualW));
-    setConnections(buildDefaultConnections(stks, deal.buyingStages));
-    setLocalInteractions([...deal.meetings]);
+    setPositions(computeInitialPositions(stks, deal.buyingStages ?? [], actualW));
+    setConnections(buildDefaultConnections(stks, deal.buyingStages ?? []));
+    setLocalInteractions([...(deal.meetings ?? [])]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deal.id]);
 
@@ -433,7 +433,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
   };
 
   const handleReset = () => {
-    setPositions(computeInitialPositions(localStakeholders, deal.buyingStages, containerW));
+    setPositions(computeInitialPositions(localStakeholders, Array.isArray(deal.buyingStages) ? deal.buyingStages : [], containerW));
     setZoom(1);
   };
 
@@ -623,7 +623,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
       sentiment: 'Neutral',
       engagement: 'Medium',
       avatar: AVATAR_POOL[Math.floor(Math.random() * AVATAR_POOL.length)],
-      stage: deal.buyingStages[0],
+      stage: (Array.isArray(deal.buyingStages) ? deal.buyingStages[0] : undefined) ?? '',
     };
     const updated = [...localStakeholders, newS];
     setLocalStakeholders(updated);
@@ -659,7 +659,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
   };
 
   const connConfig = (type: ConnectionType) => CONNECTION_TYPES.find(t => t.value === type) ?? CONNECTION_TYPES[0];
-  const stageOrder = deal.buyingStages;
+  const stageOrder = Array.isArray(deal.buyingStages) ? deal.buyingStages : [];
   const ALL_ROLES = ['Champion', 'Decision Maker', 'Influencer', 'Blocker', 'User', 'Evaluator'];
 
   return (

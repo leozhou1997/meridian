@@ -24,9 +24,14 @@
 
 ## In Progress / Planned
 
+- [x] AI functionality framework with real LLM API integration (OpenAI GPT-4o)
+- [x] AI Admin backend for prompt debugging (/admin/ai route)
+- [x] Backend persistence — full database schema (12 tables: tenants, users, deals, stakeholders, meetings, snapshots, nextActions, kbDocuments, aiLogs, promptTemplates, tenantMembers)
+- [x] All pages wired to real tRPC API (Dashboard, DealDetail, Transcripts, KnowledgeBase, Stakeholders)
+- [x] Pre-meeting Brief modal wired to real OpenAI API
+- [x] Demo data seeded (5 deals, 3 stakeholders per deal, meetings, snapshots, next actions, 5 KB documents)
 - [ ] Deal Stuck warnings on Dashboard (visual alerts when daysInStage exceeds thresholds)
-- [ ] AI functionality framework with real LLM API integration
-- [ ] AI Admin backend for prompt debugging (/admin/ai route)
-- [ ] Backend persistence (move from localStorage to database)
 - [ ] Meeting upload / transcript submission to backend
 - [ ] Voice transcription integration
+- [ ] Multi-tenancy (team invite flow)
+- [ ] Stripe billing integration

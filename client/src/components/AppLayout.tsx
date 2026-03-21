@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useLocation, Link } from 'wouter';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/_core/hooks/useAuth';
 import { useTheme } from '@/contexts/ThemeContext';
-import { deals, formatCurrency, getConfidenceColor, pipelineStats } from '@/lib/data';
+import { trpc } from '@/lib/trpc';
+import { formatCurrency, getConfidenceColor } from '@/lib/data';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Compass, LayoutDashboard, Users, FileText, MessageSquare,
-  Search, LogOut, ChevronDown, ChevronRight, Settings, Sun, Moon, BookOpen
+  Search, LogOut, ChevronDown, ChevronRight, Settings, Sun, Moon, BookOpen, Plus
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -25,8 +26,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const [location, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedStages, setExpandedStages] = useState<Set<string>>(
-    new Set(stages.filter(s => deals.some(d => d.stage === s)).slice(0, 5))
+    new Set(['Discovery', 'Demo', 'Technical Evaluation', 'POC', 'Negotiation'])
   );
+
+  // Real data from API
+  const { data: deals = [] } = trpc.deals.list.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+  });
 
   const toggleStage = (stage: string) => {
     setExpandedStages(prev => {
@@ -38,9 +44,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
   };
 
   const filteredDeals = deals.filter(d =>
-    d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    d.company.toLowerCase().includes(searchQuery.toLowerCase())
+    (d.name?.toLowerCase() ?? '').includes(searchQuery.toLowerCase()) ||
+    (d.company?.toLowerCase() ?? '').includes(searchQuery.toLowerCase())
   );
+
+  // Compute pipeline stats from real data
+  const totalPipeline = deals.reduce((s, d) => s + (d.value ?? 0), 0);
+  const predictableRevenue = deals
+    .filter(d => (d.confidenceScore ?? 0) >= 70)
+    .reduce((s, d) => s + (d.value ?? 0), 0);
 
   const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
@@ -49,6 +61,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
     { icon: BookOpen, label: 'Knowledge Base', path: '/knowledge' },
     { icon: MessageSquare, label: 'Ask Meridian', path: '/ask' },
   ];
+
+  const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name ?? 'U')}&background=4f46e5&color=fff&size=64`;
 
   return (
     <div className="h-screen flex overflow-hidden bg-background">
@@ -126,7 +140,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </Tooltip>
 
           <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-sidebar-border mt-1">
-            <img src={user?.avatar} alt={user?.name} className="w-full h-full object-cover" />
+            <img src={avatarUrl} alt={user?.name ?? 'User'} className="w-full h-full object-cover" />
           </div>
         </div>
       </div>
@@ -134,7 +148,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
       {/* Pipeline sidebar */}
       <div className="w-[260px] bg-sidebar border-r border-sidebar-border flex flex-col shrink-0">
         <div className="p-4 border-b border-sidebar-border">
-          <h2 className="font-display text-sm font-semibold text-sidebar-foreground mb-3">Pipeline Overview</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-display text-sm font-semibold text-sidebar-foreground">Pipeline Overview</h2>
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => navigate('/deal/new')}
+                  className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50 transition-all"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="font-display text-xs">New Deal</TooltipContent>
+            </Tooltip>
+          </div>
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <Input
@@ -148,66 +175,78 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
         <ScrollArea className="flex-1">
           <div className="p-2">
-            {stages.map(stage => {
-              const stageDeals = filteredDeals.filter(d => d.stage === stage);
-              if (stageDeals.length === 0) return null;
-              const isExpanded = expandedStages.has(stage);
+            {deals.length === 0 ? (
+              <div className="px-3 py-8 text-center">
+                <p className="text-xs text-muted-foreground">No deals yet.</p>
+                <button
+                  onClick={() => navigate('/deal/new')}
+                  className="text-xs text-primary hover:underline mt-1"
+                >
+                  Create your first deal
+                </button>
+              </div>
+            ) : (
+              stages.map(stage => {
+                const stageDeals = filteredDeals.filter(d => d.stage === stage);
+                if (stageDeals.length === 0) return null;
+                const isExpanded = expandedStages.has(stage);
 
-              return (
-                <div key={stage} className="mb-1">
-                  <button
-                    onClick={() => toggleStage(stage)}
-                    className="w-full flex items-center gap-2 px-2 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors rounded"
-                  >
-                    {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                    <span>{stage}</span>
-                    <span className="ml-auto text-[10px] bg-muted rounded px-1.5 py-0.5">{stageDeals.length}</span>
-                  </button>
+                return (
+                  <div key={stage} className="mb-1">
+                    <button
+                      onClick={() => toggleStage(stage)}
+                      className="w-full flex items-center gap-2 px-2 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors rounded"
+                    >
+                      {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                      <span>{stage}</span>
+                      <span className="ml-auto text-[10px] bg-muted rounded px-1.5 py-0.5">{stageDeals.length}</span>
+                    </button>
 
-                  <AnimatePresence>
-                    {isExpanded && stageDeals.map(deal => {
-                      const isActive = location === `/deal/${deal.id}`;
-                      return (
-                        <motion.div
-                          key={deal.id}
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          transition={{ duration: 0.15 }}
-                        >
-                          <Link href={`/deal/${deal.id}`}>
-                            <div
-                              className={`flex items-center gap-2.5 px-2 py-2 rounded-md mx-1 mb-0.5 transition-all duration-150 ${
-                                isActive
-                                  ? 'bg-sidebar-accent border border-sidebar-border'
-                                  : 'hover:bg-sidebar-accent/50'
-                              }`}
-                            >
-                              <div className={`w-2 h-2 rounded-full shrink-0 ${
-                                deal.confidenceScore >= 75 ? 'bg-status-success' :
-                                deal.confidenceScore >= 50 ? 'bg-status-warning' : 'bg-status-danger'
-                              }`} />
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-xs font-medium text-sidebar-foreground truncate">{deal.company}</span>
-                                  <span className="text-[10px] font-mono text-muted-foreground ml-1">{formatCurrency(deal.value)}</span>
-                                </div>
-                                <div className="flex items-center justify-between mt-0.5">
-                                  <span className="text-[10px] text-muted-foreground">Day {deal.daysInStage}</span>
-                                  <span className={`text-[10px] font-mono font-medium ${getConfidenceColor(deal.confidenceScore)}`}>
-                                    {deal.confidenceScore}%
-                                  </span>
+                    <AnimatePresence>
+                      {isExpanded && stageDeals.map(deal => {
+                        const isActive = location === `/deal/${deal.id}`;
+                        return (
+                          <motion.div
+                            key={deal.id}
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.15 }}
+                          >
+                            <Link href={`/deal/${deal.id}`}>
+                              <div
+                                className={`flex items-center gap-2.5 px-2 py-2 rounded-md mx-1 mb-0.5 transition-all duration-150 ${
+                                  isActive
+                                    ? 'bg-sidebar-accent border border-sidebar-border'
+                                    : 'hover:bg-sidebar-accent/50'
+                                }`}
+                              >
+                                <div className={`w-2 h-2 rounded-full shrink-0 ${
+                                  (deal.confidenceScore ?? 0) >= 75 ? 'bg-status-success' :
+                                  (deal.confidenceScore ?? 0) >= 50 ? 'bg-status-warning' : 'bg-status-danger'
+                                }`} />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs font-medium text-sidebar-foreground truncate">{deal.company}</span>
+                                    <span className="text-[10px] font-mono text-muted-foreground ml-1">{formatCurrency(deal.value ?? 0)}</span>
+                                  </div>
+                                  <div className="flex items-center justify-between mt-0.5">
+                                    <span className="text-[10px] text-muted-foreground">Day {deal.daysInStage ?? 0}</span>
+                                    <span className={`text-[10px] font-mono font-medium ${getConfidenceColor(deal.confidenceScore ?? 0)}`}>
+                                      {deal.confidenceScore ?? 0}%
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </Link>
-                        </motion.div>
-                      );
-                    })}
-                  </AnimatePresence>
-                </div>
-              );
-            })}
+                            </Link>
+                          </motion.div>
+                        );
+                      })}
+                    </AnimatePresence>
+                  </div>
+                );
+              })
+            )}
           </div>
         </ScrollArea>
 
@@ -215,11 +254,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
         <div className="p-4 border-t border-sidebar-border space-y-2">
           <div className="flex justify-between text-xs">
             <span className="text-muted-foreground">Total Pipeline</span>
-            <span className="font-mono font-medium text-foreground">{formatCurrency(pipelineStats.totalPipeline)}</span>
+            <span className="font-mono font-medium text-foreground">{formatCurrency(totalPipeline)}</span>
           </div>
           <div className="flex justify-between text-xs">
             <span className="text-muted-foreground">Predictable Revenue</span>
-            <span className="font-mono font-medium text-status-success">{formatCurrency(pipelineStats.predictableRevenue)}</span>
+            <span className="font-mono font-medium text-status-success">{formatCurrency(predictableRevenue)}</span>
           </div>
         </div>
       </div>

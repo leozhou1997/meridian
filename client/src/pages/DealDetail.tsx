@@ -1,7 +1,53 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRoute, Link } from 'wouter';
-import { deals, formatCurrency, getConfidenceColor, getConfidenceBg, getRoleColor, getSentimentColor, formatDate, getStageColor } from '@/lib/data';
-import type { Stakeholder, Interaction, PersonalSignal, NextAction } from '@/lib/data';
+import { trpc } from '@/lib/trpc';
+import { formatCurrency, getConfidenceColor, getConfidenceBg, getRoleColor, getSentimentColor, formatDate, getStageColor } from '@/lib/data';
+import type { PersonalSignal } from '@/lib/data';
+
+// DB-backed types (numeric IDs)
+type Stakeholder = {
+  id: number;
+  dealId: number;
+  tenantId: number;
+  name: string;
+  title: string | null;
+  role: string;
+  sentiment: string;
+  engagement: string;
+  email: string | null;
+  linkedIn: string | null;
+  keyInsights: string | null;
+  personalNotes: string | null;
+  personalSignals?: PersonalSignal[] | null;
+  mapX: number | null;
+  mapY: number | null;
+  avatar?: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+type Interaction = {
+  id: number;
+  dealId: number;
+  tenantId: number;
+  date: Date | string;
+  type: string;
+  keyParticipant: string | null;
+  summary: string | null;
+  duration: number | null;
+  transcriptUrl?: string | null;
+  createdAt: Date;
+};
+type NextAction = {
+  id: number;
+  dealId: number;
+  tenantId: number;
+  text: string;
+  dueDate: Date | string | null;
+  priority: string;
+  completed: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
 import StakeholderMap from '@/components/StakeholderMap';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -73,7 +119,71 @@ const roleConfig: Record<RoleType, { bg: string; text: string; border: string }>
 
 export default function DealDetail() {
   const [, params] = useRoute('/deal/:id');
-  const deal = deals.find(d => d.id === params?.id);
+  const dealId = params?.id ? Number(params.id) : 0;
+
+  // ── Real API queries ──────────────────────────────────────────────────────
+  const { data: dealData, isLoading: dealLoading } = trpc.deals.get.useQuery(
+    { id: dealId },
+    { enabled: dealId > 0, refetchOnWindowFocus: false }
+  );
+  const { data: stakeholdersData = [] } = trpc.stakeholders.listByDeal.useQuery(
+    { dealId },
+    { enabled: dealId > 0, refetchOnWindowFocus: false }
+  );
+  const { data: meetingsData = [] } = trpc.meetings.listByDeal.useQuery(
+    { dealId },
+    { enabled: dealId > 0, refetchOnWindowFocus: false }
+  );
+  const { data: snapshotsData = [] } = trpc.snapshots.listByDeal.useQuery(
+    { dealId },
+    { enabled: dealId > 0, refetchOnWindowFocus: false }
+  );
+  const { data: actionsData = [] } = trpc.nextActions.listByDeal.useQuery(
+    { dealId },
+    { enabled: dealId > 0, refetchOnWindowFocus: false }
+  );
+
+  // ── tRPC mutations ────────────────────────────────────────────────────────
+  const utils = trpc.useUtils();
+  const createActionMutation = trpc.nextActions.create.useMutation({
+    onSuccess: () => utils.nextActions.listByDeal.invalidate({ dealId }),
+  });
+  const toggleActionMutation = trpc.nextActions.toggle.useMutation({
+    onSuccess: () => utils.nextActions.listByDeal.invalidate({ dealId }),
+  });
+  const deleteActionMutation = trpc.nextActions.delete.useMutation({
+    onSuccess: () => utils.nextActions.listByDeal.invalidate({ dealId }),
+  });
+  const updateStakeholderMutation = trpc.stakeholders.update.useMutation({
+    onSuccess: () => utils.stakeholders.listByDeal.invalidate({ dealId }),
+  });
+  const createMeetingMutation = trpc.meetings.create.useMutation({
+    onSuccess: () => utils.meetings.listByDeal.invalidate({ dealId }),
+  });
+  const updateMeetingMutation = trpc.meetings.update.useMutation({
+    onSuccess: () => utils.meetings.listByDeal.invalidate({ dealId }),
+  });
+  const deleteMeetingMutation = trpc.meetings.delete.useMutation({
+    onSuccess: () => utils.meetings.listByDeal.invalidate({ dealId }),
+  });
+
+  // Build a unified deal object that matches the UI's expected shape
+  const deal = useMemo(() => {
+    if (!dealData) return null;
+    return {
+      ...dealData,
+      // Normalize all JSON/array fields that may be null from DB
+      buyingStages: Array.isArray(dealData.buyingStages) ? dealData.buyingStages : [],
+      companyInfo: dealData.companyInfo ?? '',
+      website: dealData.website ?? '',
+      logo: dealData.logo ?? null,
+      stakeholders: stakeholdersData ?? [],
+      meetings: meetingsData ?? [],
+      snapshots: snapshotsData ?? [],
+      nextActions: actionsData ?? [],
+    };
+  }, [dealData, stakeholdersData, meetingsData, snapshotsData, actionsData]);
+
   const [selectedStakeholder, setSelectedStakeholder] = useState<Stakeholder | null>(null);
   const [activeTab, setActiveTab] = useState('map');
   const [showSummary, setShowSummary] = useState(true);
@@ -106,37 +216,43 @@ export default function DealDetail() {
     setShowSummary(true);
   };
 
-  // Local editable stakeholder state (per-deal, in-memory)
-  const [localStakeholders, setLocalStakeholders] = useState<Stakeholder[]>(deal?.stakeholders ?? []);
+  // Stakeholders come directly from API (stakeholdersData)
+  const localStakeholders = stakeholdersData;
 
   // Local editable interactions — shared between All Interactions tab and StakeholderMap
-  const [localInteractions, setLocalInteractions] = useState<Interaction[]>(deal?.meetings ?? []);
-  const [editingInteractionId, setEditingInteractionId] = useState<string | null>(null);
-  const [expandedTranscriptId, setExpandedTranscriptId] = useState<string | null>(null);
+  // Use meetingsData directly from API + allow optimistic local overrides
+  const [localInteractionOverrides, setLocalInteractionOverrides] = useState<Record<number, Partial<Interaction>>>({});
+  const localInteractions = useMemo(() =>
+    meetingsData.map(m => ({ ...m, ...localInteractionOverrides[m.id] })),
+  [meetingsData, localInteractionOverrides]);
+  const setLocalInteractions = (updater: (prev: Interaction[]) => Interaction[]) => {
+    // No-op: local overrides are handled via localInteractionOverrides
+  };
+  const [editingInteractionId, setEditingInteractionId] = useState<number | null>(null);
+  const [expandedTranscriptId, setExpandedTranscriptId] = useState<number | null>(null);
 
-  // Next Actions state
-  const [nextActions, setNextActions] = useState<NextAction[]>(deal?.nextActions ?? []);
+  // Next Actions - use actionsData directly from API
+  const nextActions = actionsData;
   const [addingAction, setAddingAction] = useState(false);
   const [newActionText, setNewActionText] = useState('');
   const [newActionDue, setNewActionDue] = useState('');
 
-  const toggleAction = (id: string) => {
-    setNextActions(prev => prev.map(a => a.id === id ? { ...a, completed: !a.completed } : a));
+  const toggleAction = (id: number) => {
+    const action = actionsData.find(a => a.id === id);
+    if (!action) return;
+    toggleActionMutation.mutate({ id, completed: !action.completed });
   };
-  const deleteAction = (id: string) => {
-    setNextActions(prev => prev.filter(a => a.id !== id));
+  const deleteAction = (id: number) => {
+    deleteActionMutation.mutate({ id });
   };
   const addAction = () => {
     if (!newActionText.trim()) return;
-    const action: NextAction = {
-      id: nanoid(8),
-      dealId: deal!.id,
+    createActionMutation.mutate({
+      dealId,
       text: newActionText.trim(),
       dueDate: newActionDue || undefined,
-      completed: false,
       priority: 'medium',
-    };
-    setNextActions(prev => [...prev, action]);
+    });
     setNewActionText('');
     setNewActionDue('');
     setAddingAction(false);
@@ -172,35 +288,40 @@ export default function DealDetail() {
     'Negotiation', 'Executive Briefing', 'Follow-up',
   ] as const;
 
-  const updateInteraction = (id: string, patch: Partial<Interaction>) => {
-    setLocalInteractions(prev => prev.map(i => i.id === id ? { ...i, ...patch } : i));
+  const updateInteraction = (id: number, patch: Partial<Interaction>) => {
+    // Only pass fields the server router accepts
+    const serverPatch: { id: number; date?: string | Date; type?: string; summary?: string; transcriptUrl?: string; keyParticipant?: string; duration?: number } = { id };
+    if (patch.date !== undefined) serverPatch.date = patch.date as string | Date;
+    if (patch.type !== undefined) serverPatch.type = patch.type;
+    if (patch.summary !== undefined) serverPatch.summary = patch.summary ?? undefined;
+    if (patch.keyParticipant !== undefined) serverPatch.keyParticipant = patch.keyParticipant ?? undefined;
+    if (patch.duration !== undefined) serverPatch.duration = patch.duration ?? undefined;
+    updateMeetingMutation.mutate(serverPatch);
+    // Optimistic local override
+    setLocalInteractionOverrides(prev => ({ ...prev, [id]: { ...(prev[id] ?? {}), ...patch } }));
   };
 
   const addInteraction = () => {
-    const newI: Interaction = {
-      id: nanoid(8),
-      dealId: deal!.id,
+    createMeetingMutation.mutate({
+      dealId,
       date: new Date().toISOString().slice(0, 10),
       type: 'Follow-up',
       keyParticipant: '',
       summary: '',
       duration: 30,
-    };
-    setLocalInteractions(prev => [newI, ...prev]);
-    setEditingInteractionId(newI.id);
+    });
   };
 
-  const deleteInteraction = (id: string) => {
-    setLocalInteractions(prev => prev.filter(i => i.id !== id));
+  const deleteInteraction = (id: number) => {
+    deleteMeetingMutation.mutate({ id });
+    // Clear any local overrides for this interaction
+    setLocalInteractionOverrides(prev => { const next = { ...prev }; delete next[id]; return next; });
     if (editingInteractionId === id) setEditingInteractionId(null);
   };
 
-  // Reset all per-deal state when deal changes
+  // Reset per-deal UI state when deal changes
   useEffect(() => {
-    if (deal) {
-      setLocalStakeholders(deal.stakeholders);
-      setLocalInteractions(deal.meetings);
-      setNextActions(deal.nextActions ?? []);
+    if (dealId > 0) {
       setEditingInteractionId(null);
       setExpandedTranscriptId(null);
       setStrategyNotes([]);
@@ -212,7 +333,7 @@ export default function DealDetail() {
       setActiveTab('map');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deal?.id]);
+  }, [dealId]);
 
   // Personal intelligence state — keyed by stakeholder ID
   const [personalNotesMap, setPersonalNotesMap] = useState<Record<string, string>>({});
@@ -220,20 +341,20 @@ export default function DealDetail() {
   const [editingPersonalNotes, setEditingPersonalNotes] = useState(false);
   const [personalNotesDraft, setPersonalNotesDraft] = useState('');
 
-  // Initialize personal data from seed when deal changes
+  // Initialize personal data from stakeholders when they load
   useEffect(() => {
-    if (deal) {
+    if (stakeholdersData.length > 0) {
       const notesMap: Record<string, string> = {};
       const signalsMap: Record<string, PersonalSignal[]> = {};
-      deal.stakeholders.forEach(s => {
-        if (s.personalNotes) notesMap[s.id] = s.personalNotes;
-        if (s.personalSignals) signalsMap[s.id] = s.personalSignals;
+      stakeholdersData.forEach(s => {
+        if (s.personalNotes) notesMap[String(s.id)] = s.personalNotes;
+        if (s.personalSignals) signalsMap[String(s.id)] = s.personalSignals as PersonalSignal[];
       });
       setPersonalNotesMap(notesMap);
       setPersonalSignalsMap(signalsMap);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deal?.id]);
+  }, [stakeholdersData]);
 
   // Editing state for the profile panel
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -244,12 +365,65 @@ export default function DealDetail() {
 
   // Pre-meeting Brief state
   const [showBrief, setShowBrief] = useState(false);
-  const [briefStakeholderId, setBriefStakeholderId] = useState<string | null>(null);
+  const [briefStakeholderId, setBriefStakeholderId] = useState<number | null>(null);
+  const [aiBriefText, setAiBriefText] = useState<string | null>(null);
+  const [aiBriefLoading, setAiBriefLoading] = useState(false);
+
+  // Avatar upload ref — must be before early returns (Rules of Hooks)
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const generateBriefMutation = trpc.ai.generateBrief.useMutation();
 
   const generateBrief = (stakeholder: Stakeholder) => {
     setBriefStakeholderId(stakeholder.id);
     setShowBrief(true);
+    setAiBriefText(null);
   };
+
+  const handleGenerateAIBrief = async (s: any) => {
+    if (!deal) return;
+    setAiBriefLoading(true);
+    try {
+      const roles: string[] = Array.isArray((s as any).roles) ? (s as any).roles : [s.role];
+      const relatedMeetings = deal.meetings.filter(m => m.keyParticipant === s.name);
+      const lastMeeting = relatedMeetings[0];
+      const signals = personalSignalsMap[s.id] ?? [];
+      const pendingActions = nextActions.filter(a => !a.completed && (a as any).stakeholderId === s.id);
+      const result = await generateBriefMutation.mutateAsync({
+        dealId: deal.id,
+        stakeholderName: s.name,
+        stakeholderTitle: s.title ?? '',
+        stakeholderRole: roles[0] ?? 'Unknown',
+        sentiment: s.sentiment,
+        engagement: s.engagement,
+        keyInsights: s.keyInsights ?? '',
+        personalNotes: personalNotesMap[s.id] ?? '',
+        personalSignals: signals.map((sig: any) => ({ text: sig.text, emoji: sig.emoji ?? '•' })),
+        dealName: deal.company,
+        dealStage: deal.stage,
+        dealValue: deal.value,
+        companyInfo: s.keyInsights ?? '',
+        lastMeetingSummary: lastMeeting?.summary ?? undefined,
+        openActions: pendingActions.map((a: any) => a.text),
+      });
+      setAiBriefText(result.brief);
+    } catch (err) {
+      console.error('Brief generation failed:', err);
+    } finally {
+      setAiBriefLoading(false);
+    }
+  };
+
+  if (dealLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">Loading deal...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!deal) {
     return (
@@ -272,10 +446,10 @@ export default function DealDetail() {
   const handleStakeholderClick = (s: Stakeholder) => {
     // Find the latest local version
     const latest = localStakeholders.find(ls => ls.id === s.id) || s;
-    setSelectedStakeholder(latest);
+    setSelectedStakeholder(latest as Stakeholder);
     setIsEditingProfile(false);
     setEditName(latest.name);
-    setEditTitle(latest.title);
+    setEditTitle(latest.title ?? '');
     setEditSentiment(latest.sentiment as SentimentType);
     // role can be a single string in current data — normalize to array
     const currentRoles = Array.isArray((latest as any).roles)
@@ -284,26 +458,23 @@ export default function DealDetail() {
     setEditRoles(currentRoles as RoleType[]);
   };
 
-  // Save edits back to local state
+  // Save edits via real API
   const handleSaveProfile = () => {
     if (!selectedStakeholder) return;
-    const updated = localStakeholders.map(s => {
-      if (s.id !== selectedStakeholder.id) return s;
-      return {
-        ...s,
-        name: editName.trim() || s.name,
-        title: editTitle.trim() || s.title,
-        sentiment: editSentiment,
-        role: editRoles[0] || s.role, // primary role for backward compat
-        // store full roles array
-        roles: editRoles,
-      } as Stakeholder;
+    updateStakeholderMutation.mutate({
+      id: selectedStakeholder.id,
+      name: editName.trim() || selectedStakeholder.name,
+      title: editTitle.trim() || selectedStakeholder.title || '',
+      sentiment: editSentiment,
+      role: editRoles[0] || selectedStakeholder.role,
+    }, {
+      onSuccess: () => {
+        // Refresh from API
+        utils.stakeholders.listByDeal.invalidate({ dealId });
+        setIsEditingProfile(false);
+        toast.success('Stakeholder profile updated');
+      },
     });
-    setLocalStakeholders(updated);
-    const updatedS = updated.find(s => s.id === selectedStakeholder.id)!;
-    setSelectedStakeholder(updatedS);
-    setIsEditingProfile(false);
-    toast.success('Stakeholder profile updated');
   };
 
   const toggleRole = (role: RoleType) => {
@@ -313,19 +484,15 @@ export default function DealDetail() {
   };
 
   // Avatar upload handler
-  const avatarInputRef = useRef<HTMLInputElement>(null);
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !selectedStakeholder) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
       const dataUrl = ev.target?.result as string;
-      const updated = localStakeholders.map(s =>
-        s.id === selectedStakeholder.id ? { ...s, avatar: dataUrl } : s
-      );
-      setLocalStakeholders(updated);
+      // Avatar is stored locally in UI state only (not persisted to DB yet)
       setSelectedStakeholder({ ...selectedStakeholder, avatar: dataUrl });
-      toast.success('Avatar updated');
+      toast.success('Avatar updated (local preview only)');
     };
     reader.readAsDataURL(file);
   };
@@ -341,7 +508,7 @@ export default function DealDetail() {
             </button>
           </Link>
           <img
-            src={deal.logo}
+            src={deal.logo ?? undefined}
             alt={deal.company}
             className="w-9 h-9 rounded-lg bg-white/10 object-contain p-1.5 border border-border/30"
             onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${deal.company}&background=1a1f36&color=fff&size=64`; }}
@@ -473,7 +640,7 @@ export default function DealDetail() {
                               <div className="mb-2">
                                 <div className="flex items-center justify-between mb-1">
                                   <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Confidence Trend</span>
-                                  <span className="text-[9px] text-muted-foreground">{sorted[0].date.slice(5)} → {sorted[sorted.length-1].date.slice(5)}</span>
+                                  <span className="text-[9px] text-muted-foreground">{new Date(sorted[0].date).toLocaleDateString('en-US', {month:'short',day:'numeric'})} → {new Date(sorted[sorted.length-1].date).toLocaleDateString('en-US', {month:'short',day:'numeric'})}</span>
                                 </div>
                                 <svg width="100%" viewBox={`0 0 ${W} ${H}`} className="overflow-visible">
                                   <defs>
@@ -514,11 +681,11 @@ export default function DealDetail() {
                         </div>
 
                         {/* Key Risks */}
-                        {latestSnapshot.keyRisks.length > 0 && (
+                        {(latestSnapshot.keyRisks as string[] | null)?.length ? (
                           <div className="mb-3">
                             <div className="text-[9px] font-semibold text-status-danger uppercase tracking-wider mb-1.5">Key Risks</div>
                             <div className="space-y-1">
-                              {latestSnapshot.keyRisks.map((risk, i) => (
+                              {(latestSnapshot.keyRisks as string[]).map((risk, i) => (
                                 <div key={i} className="flex items-start gap-1.5 text-[11px] text-muted-foreground">
                                   <span className="text-status-danger mt-0.5 shrink-0">•</span>
                                   <span className="leading-snug">{risk}</span>
@@ -526,7 +693,7 @@ export default function DealDetail() {
                               ))}
                             </div>
                           </div>
-                        )}
+                        ) : null}
 
                         {/* What's Next */}
                         <div className="mb-3">
@@ -646,9 +813,9 @@ export default function DealDetail() {
                 <div className="flex-1 relative overflow-hidden">
                   <StakeholderMap
                     key={deal.id}
-                    deal={deal}
-                    onStakeholderClick={handleStakeholderClick}
-                    onStakeholdersChange={setLocalStakeholders}
+                    deal={deal as any}
+                    onStakeholderClick={(s: any) => handleStakeholderClick(s as Stakeholder)}
+                    onStakeholdersChange={() => utils.stakeholders.listByDeal.invalidate({ dealId })}
                   />
                 </div>
 
@@ -672,7 +839,7 @@ export default function DealDetail() {
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className="text-[10px]">{snap.interactionType}</Badge>
-                          <span className="text-xs text-muted-foreground">{formatDate(snap.date)}</span>
+                          <span className="text-xs text-muted-foreground">{formatDate(new Date(snap.date).toISOString())}</span>
                         </div>
                         <Badge variant="outline" className={`text-[10px] ${getConfidenceBg(snap.confidenceScore)}`}>
                           {snap.confidenceScore}%
@@ -692,12 +859,12 @@ export default function DealDetail() {
                           <span className="font-medium text-status-success">Next: </span>
                           <span className="text-muted-foreground">{snap.whatsNext}</span>
                         </div>
-                        {snap.keyRisks.length > 0 && (
+                        {(snap.keyRisks as string[] | null)?.length ? (
                           <div>
                             <span className="font-medium text-status-danger">Risks: </span>
-                            <span className="text-muted-foreground">{snap.keyRisks.join('; ')}</span>
+                            <span className="text-muted-foreground">{(snap.keyRisks as string[]).join('; ')}</span>
                           </div>
-                        )}
+                        ) : null}
                       </div>
                     </CardContent>
                   </Card>
@@ -745,7 +912,7 @@ export default function DealDetail() {
                                 </select>
                                 <input
                                   type="text"
-                                  value={interaction.keyParticipant}
+                                  value={interaction.keyParticipant ?? ''}
                                   onChange={e => updateInteraction(interaction.id, { keyParticipant: e.target.value })}
                                   placeholder="Participant name"
                                   className="flex-1 text-xs bg-background border border-border/50 rounded-md px-2.5 py-1.5 text-foreground"
@@ -757,7 +924,7 @@ export default function DealDetail() {
                                   <Calendar className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                                   <input
                                     type="date"
-                                    value={interaction.date}
+                                    value={typeof interaction.date === 'string' ? interaction.date : new Date(interaction.date).toISOString().slice(0,10)}
                                     onChange={e => updateInteraction(interaction.id, { date: e.target.value })}
                                     className="flex-1 text-xs bg-background border border-border/50 rounded-md px-2.5 py-1.5 text-foreground"
                                   />
@@ -766,7 +933,7 @@ export default function DealDetail() {
                                   <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                                   <input
                                     type="number"
-                                    value={interaction.duration}
+                                    value={interaction.duration ?? 30}
                                     onChange={e => updateInteraction(interaction.id, { duration: Number(e.target.value) })}
                                     min={1}
                                     className="w-16 text-xs bg-background border border-border/50 rounded-md px-2.5 py-1.5 text-foreground"
@@ -778,7 +945,7 @@ export default function DealDetail() {
                               <div>
                                 <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Notes / Transcript</div>
                                 <textarea
-                                  value={interaction.summary}
+                                  value={interaction.summary ?? ''}
                                   onChange={e => updateInteraction(interaction.id, { summary: e.target.value })}
                                   placeholder="Meeting notes, key decisions, action items..."
                                   rows={5}
@@ -821,7 +988,7 @@ export default function DealDetail() {
                                     })()}
                                     <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
                                       <Calendar className="w-3 h-3" />
-                                      <span>{formatDate(interaction.date)}</span>
+                                      <span>{formatDate(typeof interaction.date === 'string' ? interaction.date : new Date(interaction.date).toISOString())}</span>
                                     </div>
                                     <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
                                       <Clock className="w-3 h-3" />
@@ -850,7 +1017,7 @@ export default function DealDetail() {
                                     <p className="text-xs text-muted-foreground/40 italic">No notes yet — click ✏ to add</p>
                                   )}
                                   {/* View Full Transcript toggle — only shown when a separate transcript exists */}
-                                  {(interaction.transcript || (interaction.summary && interaction.summary.length > 120)) && (
+                                  {(interaction.transcriptUrl || (interaction.summary && interaction.summary.length > 120)) && (
                                     <button
                                       onClick={() => setExpandedTranscriptId(id => id === interaction.id ? null : interaction.id)}
                                       className="mt-2 flex items-center gap-1.5 text-[10px] text-primary hover:text-primary/80 font-medium transition-colors"
@@ -878,16 +1045,16 @@ export default function DealDetail() {
                                             <div className="flex items-center gap-1.5">
                                               <FileText className="w-3 h-3 text-muted-foreground" />
                                               <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">
-                                                {interaction.transcript ? 'Full Transcript' : 'Full Notes'}
+                                                {interaction.transcriptUrl ? 'Full Transcript' : 'Full Notes'}
                                               </span>
                                             </div>
                                             <span className="text-[9px] text-muted-foreground/50">
-                                              {interaction.duration} min · {formatDate(interaction.date)}
+                                              {interaction.duration} min · {formatDate(typeof interaction.date === 'string' ? interaction.date : new Date(interaction.date).toISOString())}
                                             </span>
                                           </div>
                                           <div className="p-3 bg-muted/20 max-h-96 overflow-y-auto">
                                             <p className="text-xs text-foreground/80 leading-relaxed whitespace-pre-wrap font-mono">
-                                              {interaction.transcript ?? interaction.summary}
+                                              {interaction.transcriptUrl ?? interaction.summary}
                                             </p>
                                           </div>
                                         </div>
@@ -1388,7 +1555,7 @@ export default function DealDetail() {
                           <div key={interaction.id} className="p-2 rounded bg-muted/20 mb-1.5">
                             <div className="flex items-center gap-1.5 mb-1">
                               <Badge variant="outline" className="text-[9px] px-1 py-0">{interaction.type}</Badge>
-                              <span className="text-[10px] text-muted-foreground">{formatDate(interaction.date)}</span>
+                              <span className="text-[10px] text-muted-foreground">{formatDate(typeof interaction.date === 'string' ? interaction.date : new Date(interaction.date).toISOString())}</span>
                             </div>
                             <p className="text-[10px] text-muted-foreground line-clamp-2">{interaction.summary}</p>
                           </div>
@@ -1450,7 +1617,7 @@ export default function DealDetail() {
                   <div>
                     <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Who They Are</div>
                     <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/20 border border-border/20">
-                      <img src={s.avatar} alt={s.name} className="w-10 h-10 rounded-full object-cover border border-border/30"
+                      <img src={s.avatar ?? undefined} alt={s.name} className="w-10 h-10 rounded-full object-cover border border-border/30"
                         onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=1a1f36&color=fff&size=40`; }}
                       />
                       <div>
@@ -1481,7 +1648,7 @@ export default function DealDetail() {
                         'bg-amber-500/15 text-amber-400'
                       }`}>{s.sentiment}</span>
                       <span className="text-muted-foreground">{s.engagement} Engagement</span>
-                      {lastMeeting && <span className="text-muted-foreground">Last met: {formatDate(lastMeeting.date)}</span>}
+                      {lastMeeting && <span className="text-muted-foreground">Last met: {formatDate(typeof lastMeeting.date === 'string' ? lastMeeting.date : new Date(lastMeeting.date).toISOString())}</span>}
                     </div>
                     {lastMeeting && (
                       <p className="text-[11px] text-muted-foreground/70 mt-2 leading-relaxed">
@@ -1555,10 +1722,34 @@ export default function DealDetail() {
                     )}
                   </div>
 
-                  {/* AI note */}
-                  <div className="flex items-center gap-2 p-2.5 rounded-lg bg-amber-500/8 border border-amber-500/20">
-                    <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />
-                    <p className="text-[10px] text-amber-400/80">AI-generated brief coming soon — this is a structured summary from your recorded data.</p>
+                  {/* AI Brief section */}
+                  <div className="border-t border-border/30 pt-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-[9px] font-semibold text-amber-400 uppercase tracking-wider flex items-center gap-1">
+                        <Sparkles className="w-2.5 h-2.5" />
+                        AI-Generated Brief
+                      </div>
+                      <button
+                        onClick={() => handleGenerateAIBrief(s)}
+                        disabled={aiBriefLoading}
+                        className="flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25 transition-colors disabled:opacity-50"
+                      >
+                        {aiBriefLoading ? (
+                          <><div className="w-2.5 h-2.5 border border-amber-400 border-t-transparent rounded-full animate-spin" />Generating...</>
+                        ) : (
+                          <><Sparkles className="w-2.5 h-2.5" />{aiBriefText ? 'Regenerate' : 'Generate Brief'}</>
+                        )}
+                      </button>
+                    </div>
+                    {aiBriefText ? (
+                      <div className="bg-amber-500/5 border border-amber-500/15 rounded-lg p-3">
+                        <pre className="text-[11px] text-foreground/85 leading-relaxed whitespace-pre-wrap font-body">{aiBriefText}</pre>
+                      </div>
+                    ) : (
+                      <p className="text-[10px] text-muted-foreground/60 italic">
+                        Click "Generate Brief" to get an AI-crafted narrative brief based on all available context for {s.name}.
+                      </p>
+                    )}
                   </div>
                 </div>
               </motion.div>

@@ -1,10 +1,9 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch, Redirect } from "wouter";
+import { Route, Switch, Redirect, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import DealDetail from "./pages/DealDetail";
@@ -12,19 +11,35 @@ import Stakeholders from "./pages/Stakeholders";
 import Transcripts from "./pages/Transcripts";
 import AskMeridian from "./pages/AskMeridian";
 import KnowledgeBase from "./pages/KnowledgeBase";
+import AdminPlayground from "./pages/AdminPlayground";
 import AppLayout from "./components/AppLayout";
+import { useAuth } from "./_core/hooks/useAuth";
+import { getLoginUrl } from "./const";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
-  const { isAuthenticated } = useAuth();
-  if (!isAuthenticated) return <Redirect to="/login" />;
+  const { user, loading } = useAuth();
+  const [location] = useLocation();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-muted-foreground text-sm animate-pulse">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Redirect to="/login" />;
+  }
+
   return (
     <AppLayout>
       <Component />
     </AppLayout>
   );
 }
+
 function Router() {
-  // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
       <Route path="/login" component={Login} />
@@ -46,6 +61,9 @@ function Router() {
       <Route path="/knowledge">
         <ProtectedRoute component={KnowledgeBase} />
       </Route>
+      <Route path="/admin/playground">
+        <ProtectedRoute component={AdminPlayground} />
+      </Route>
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
@@ -56,12 +74,10 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark" switchable>
-        <AuthProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Router />
-          </TooltipProvider>
-        </AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

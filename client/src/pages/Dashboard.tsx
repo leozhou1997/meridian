@@ -1,7 +1,9 @@
-import { Link } from 'wouter';
-import { deals, formatCurrency, getConfidenceColor, getConfidenceBg, getStageColor, formatDate, pipelineStats } from '@/lib/data';
+import { Link, useLocation } from 'wouter';
+import { trpc } from '@/lib/trpc';
+import { formatCurrency, getConfidenceColor, getConfidenceBg, getStageColor, formatDate } from '@/lib/data';
+import { useAuth } from '@/_core/hooks/useAuth';
 import { motion } from 'framer-motion';
-import { AlertTriangle, TrendingUp, TrendingDown, ArrowRight, Clock, Target, BarChart3, Shield } from 'lucide-react';
+import { AlertTriangle, TrendingUp, TrendingDown, ArrowRight, Clock, Target, BarChart3, Shield, Plus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -16,35 +18,61 @@ const item = {
 };
 
 export default function Dashboard() {
-  const atRiskDeals = deals.filter(d => d.confidenceScore < 60 || d.daysInStage > 90);
-  const recentSnapshots = deals
-    .flatMap(d => d.snapshots.map(s => ({ ...s, dealName: d.company, dealId: d.id, dealLogo: d.logo })))
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 5);
+  const { user } = useAuth();
+  const [, navigate] = useLocation();
+
+  const { data: deals = [], isLoading } = trpc.deals.list.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+  });
+
+  const atRiskDeals = deals.filter(d => (d.confidenceScore ?? 0) < 60 || (d.daysInStage ?? 0) > 90);
+  const totalPipeline = deals.reduce((s, d) => s + (d.value ?? 0), 0);
+  const predictableRevenue = deals.filter(d => (d.confidenceScore ?? 0) >= 70).reduce((s, d) => s + (d.value ?? 0), 0);
+  const avgConfidence = deals.length > 0
+    ? Math.round(deals.reduce((s, d) => s + (d.confidenceScore ?? 0), 0) / deals.length)
+    : 0;
 
   const stageGroups = ['Discovery', 'Demo', 'Technical Evaluation', 'POC', 'Negotiation'].map(stage => ({
     stage,
     count: deals.filter(d => d.stage === stage).length,
-    value: deals.filter(d => d.stage === stage).reduce((s, d) => s + d.value, 0),
+    value: deals.filter(d => d.stage === stage).reduce((s, d) => s + (d.value ?? 0), 0),
   }));
   const maxCount = Math.max(...stageGroups.map(g => g.count), 1);
+  const firstName = user?.name?.split(' ')[0] ?? 'there';
+
+  if (isLoading) {
+    return (
+      <div className="p-6 max-w-[1200px]">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-muted rounded w-64" />
+          <div className="grid grid-cols-4 gap-4">
+            {[1,2,3,4].map(i => <div key={i} className="h-24 bg-muted rounded" />)}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-[1200px]">
       <motion.div variants={container} initial="hidden" animate="show">
         {/* Header */}
-        <motion.div variants={item} className="mb-8">
-          <h1 className="font-display text-2xl font-bold mb-1">Good morning, Leo</h1>
-          <p className="text-muted-foreground text-sm">Here's what needs your attention today.</p>
+        <motion.div variants={item} className="mb-8 flex items-start justify-between">
+          <div>
+            <h1 className="font-display text-2xl font-bold mb-1">Good morning, {firstName}</h1>
+            <p className="text-muted-foreground text-sm">
+              {deals.length === 0 ? 'Welcome to Meridian. Create your first deal to get started.' : "Here's what needs your attention today."}
+            </p>
+          </div>
         </motion.div>
 
         {/* KPI Cards */}
         <motion.div variants={item} className="grid grid-cols-4 gap-4 mb-8">
           {[
-            { label: 'Total Pipeline', value: formatCurrency(pipelineStats.totalPipeline), icon: BarChart3, color: 'text-primary' },
-            { label: 'Predictable Revenue', value: formatCurrency(pipelineStats.predictableRevenue), icon: Target, color: 'text-status-success' },
-            { label: 'Avg Confidence', value: `${pipelineStats.avgConfidence}%`, icon: Shield, color: 'text-status-warning' },
-            { label: 'At Risk Deals', value: `${pipelineStats.atRiskCount}`, icon: AlertTriangle, color: 'text-status-danger' },
+            { label: 'Total Pipeline', value: formatCurrency(totalPipeline), icon: BarChart3, color: 'text-primary' },
+            { label: 'Predictable Revenue', value: formatCurrency(predictableRevenue), icon: Target, color: 'text-status-success' },
+            { label: 'Avg Confidence', value: `${avgConfidence}%`, icon: Shield, color: 'text-status-warning' },
+            { label: 'At Risk Deals', value: `${atRiskDeals.length}`, icon: AlertTriangle, color: 'text-status-danger' },
           ].map((kpi) => (
             <Card key={kpi.label} className="bg-card border-border/50">
               <CardContent className="p-4">
@@ -74,12 +102,9 @@ export default function Dashboard() {
                   {atRiskDeals.map(deal => (
                     <Link key={deal.id} href={`/deal/${deal.id}`}>
                       <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 border border-transparent hover:border-border/50 transition-all group">
-                        <img
-                          src={deal.logo}
-                          alt={deal.company}
-                          className="w-9 h-9 rounded-md bg-white/10 object-contain p-1"
-                          onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${deal.company}&background=1a1f36&color=fff&size=64`; }}
-                        />
+                        <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center text-sm font-bold text-primary shrink-0">
+                          {deal.company.charAt(0)}
+                        </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-0.5">
                             <span className="text-sm font-medium truncate">{deal.company}</span>
@@ -87,12 +112,12 @@ export default function Dashboard() {
                               {deal.stage}
                             </Badge>
                           </div>
-                          <p className="text-xs text-status-danger/80 truncate">{deal.riskOneLiner}</p>
+                          <p className="text-xs text-status-danger/80 truncate">{deal.riskOneLiner ?? 'Needs attention'}</p>
                         </div>
                         <div className="text-right shrink-0">
-                          <div className="font-mono text-xs font-medium">{formatCurrency(deal.value)}</div>
-                          <div className={`font-mono text-xs font-medium ${getConfidenceColor(deal.confidenceScore)}`}>
-                            {deal.confidenceScore}%
+                          <div className="font-mono text-xs font-medium">{formatCurrency(deal.value ?? 0)}</div>
+                          <div className={`font-mono text-xs font-medium ${getConfidenceColor(deal.confidenceScore ?? 0)}`}>
+                            {deal.confidenceScore ?? 0}%
                           </div>
                         </div>
                         <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
@@ -143,50 +168,43 @@ export default function Dashboard() {
             </motion.div>
           </div>
 
-          {/* Right column — Recent Insights */}
+          {/* Right column — All Deals */}
           <div className="col-span-2">
             <motion.div variants={item}>
               <Card className="bg-card border-border/50">
                 <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-status-info" />
-                    <CardTitle className="text-sm font-display">Recent Insights</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-display">All Deals</CardTitle>
+                    <span className="text-xs text-muted-foreground">{deals.length} total</span>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-1">
-                  {recentSnapshots.map((snap, i) => (
-                    <Link key={snap.id} href={`/deal/${snap.dealId}`}>
-                      <div className="p-3 rounded-lg hover:bg-muted/30 transition-colors group">
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <img
-                            src={snap.dealLogo}
-                            alt=""
-                            className="w-5 h-5 rounded bg-white/10 object-contain p-0.5"
-                            onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${snap.dealName}&background=1a1f36&color=fff&size=32`; }}
-                          />
-                          <span className="text-xs font-medium">{snap.dealName}</span>
-                          <span className="text-[10px] text-muted-foreground ml-auto">{formatDate(snap.date)}</span>
+                <CardContent className="space-y-1 p-3">
+                  {deals.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-6">No deals yet</p>
+                  ) : (
+                    deals.slice(0, 10).map(deal => (
+                      <Link key={deal.id} href={`/deal/${deal.id}`}>
+                        <div className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-muted/40 transition-all">
+                          <div className={`w-2 h-2 rounded-full shrink-0 ${
+                            (deal.confidenceScore ?? 0) >= 75 ? 'bg-status-success' :
+                            (deal.confidenceScore ?? 0) >= 50 ? 'bg-status-warning' : 'bg-status-danger'
+                          }`} />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-medium truncate">{deal.company}</span>
+                              <span className="text-[10px] font-mono text-muted-foreground ml-1">{formatCurrency(deal.value ?? 0)}</span>
+                            </div>
+                            <div className="flex items-center justify-between mt-0.5">
+                              <span className="text-[10px] text-muted-foreground">{deal.stage}</span>
+                              <span className={`text-[10px] font-mono font-medium ${getConfidenceColor(deal.confidenceScore ?? 0)}`}>
+                                {deal.confidenceScore ?? 0}%
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
-                          {snap.whatsHappening}
-                        </p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${getConfidenceBg(snap.confidenceScore)}`}>
-                            {snap.confidenceScore}%
-                          </Badge>
-                          {snap.confidenceChange !== 0 && (
-                            <span className={`flex items-center gap-0.5 text-[10px] font-mono ${
-                              snap.confidenceChange > 0 ? 'text-status-success' : 'text-status-danger'
-                            }`}>
-                              {snap.confidenceChange > 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                              {snap.confidenceChange > 0 ? '+' : ''}{snap.confidenceChange}
-                            </span>
-                          )}
-                        </div>
-                        {i < recentSnapshots.length - 1 && <div className="border-b border-border/30 mt-3" />}
-                      </div>
-                    </Link>
-                  ))}
+                      </Link>
+                    ))
+                  )}
                 </CardContent>
               </Card>
             </motion.div>

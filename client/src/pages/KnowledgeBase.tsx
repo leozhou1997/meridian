@@ -1,10 +1,11 @@
 import { useState } from 'react';
+import { trpc } from '@/lib/trpc';
 import { motion } from 'framer-motion';
 import {
-  BookOpen, Upload, FileText, Target, Layers, Plus, Trash2,
-  Eye, Download, Search, ChevronDown, ChevronRight, File, FileCheck
+  BookOpen, Plus, Trash2,
+  Eye, Search, ChevronDown, ChevronRight, File, FileCheck, Layers, Target
 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,70 +16,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 
 type DocCategory = 'product' | 'playbook' | 'icp';
-
-interface KBDocument {
-  id: string;
-  name: string;
-  category: DocCategory;
-  description: string;
-  fileType: 'pdf' | 'doc' | 'md' | 'txt';
-  uploadedAt: string;
-  size: string;
-  content?: string;
-}
-
-const INITIAL_DOCS: KBDocument[] = [
-  {
-    id: 'kb-1',
-    name: 'Meridian Product Overview v2.1',
-    category: 'product',
-    description: 'Core product capabilities, feature set, and technical architecture overview for sales conversations.',
-    fileType: 'pdf',
-    uploadedAt: '2025-02-15',
-    size: '2.4 MB',
-    content: `# Meridian Product Overview\n\n## What is Meridian?\nMeridian is an AI-powered Sales Intelligence platform that transforms unstructured meeting data into actionable deal insights.\n\n## Core Capabilities\n- **Meeting Analysis**: Automatically transcribe and analyze sales calls\n- **Stakeholder Mapping**: Visual relationship mapping with sentiment tracking\n- **Deal Snapshots**: AI-generated deal summaries with confidence scoring\n- **Risk Detection**: Early warning system for at-risk deals\n\n## Technical Architecture\n- Cloud-native SaaS, SOC 2 Type II compliant\n- Integrates with Salesforce, HubSpot, Gong, Zoom, Teams\n- API-first design for custom integrations\n- 99.9% uptime SLA`,
-  },
-  {
-    id: 'kb-2',
-    name: 'Competitive Battle Card — Gong vs Meridian',
-    category: 'product',
-    description: 'Side-by-side comparison with Gong, Chorus, and Clari. Objection handling and differentiation points.',
-    fileType: 'doc',
-    uploadedAt: '2025-03-01',
-    size: '890 KB',
-    content: `# Competitive Battle Card: Meridian vs Gong\n\n## Key Differentiators\n| Feature | Meridian | Gong |\n|---------|----------|------|\n| Stakeholder Map | ✅ Visual, editable | ❌ Not available |\n| Deal Confidence Score | ✅ AI-powered | ✅ Revenue Intelligence |\n| Buying Committee Tracking | ✅ Multi-role, multi-stage | ⚠️ Limited |\n| Price | $$ | $$$$ |\n\n## Common Objections\n**"We already use Gong"**\nMeridian focuses on deal strategy and stakeholder intelligence, not just call recording. We complement Gong by providing the "so what" layer on top of raw conversation data.`,
-  },
-  {
-    id: 'kb-3',
-    name: 'Enterprise Sales Playbook 2025',
-    category: 'playbook',
-    description: 'End-to-end enterprise sales methodology: discovery framework, demo flow, POC structure, and negotiation tactics.',
-    fileType: 'pdf',
-    uploadedAt: '2025-01-20',
-    size: '5.1 MB',
-    content: `# Enterprise Sales Playbook 2025\n\n## Discovery Framework (MEDDIC)\n- **Metrics**: Quantify the economic impact\n- **Economic Buyer**: Identify and access the financial decision maker\n- **Decision Criteria**: Understand how they will evaluate solutions\n- **Decision Process**: Map the internal approval workflow\n- **Identify Pain**: Connect to a compelling event\n- **Champion**: Develop an internal advocate\n\n## Demo Flow\n1. Recap discovery findings (5 min)\n2. Show the "before" state — manual, fragmented data (3 min)\n3. Live walkthrough with their actual use case (20 min)\n4. ROI calculation together (10 min)\n5. Next steps and timeline (5 min)\n\n## POC Structure\n- Duration: 30 days max\n- Success criteria: defined upfront, in writing\n- Weekly check-ins with champion\n- Executive sponsor meeting at day 15`,
-  },
-  {
-    id: 'kb-4',
-    name: 'Objection Handling Guide',
-    category: 'playbook',
-    description: 'Top 20 objections with proven responses. Covers price, security, integration, and ROI concerns.',
-    fileType: 'md',
-    uploadedAt: '2025-02-28',
-    size: '340 KB',
-    content: `# Objection Handling Guide\n\n## Price Objections\n**"It's too expensive"**\nAsk: "What's the cost of losing one enterprise deal per quarter due to poor stakeholder visibility?" Then anchor to their average deal size × win rate improvement.\n\n## Security Objections\n**"We can't share meeting recordings with a third party"**\nMeridian is SOC 2 Type II certified. Data is encrypted at rest and in transit. We offer private cloud deployment for enterprise customers. We can provide our security whitepaper.\n\n## Integration Objections\n**"We already have Salesforce/HubSpot"**\nMeridian integrates natively with both. We don't replace your CRM — we enrich it with deal intelligence that your CRM can't capture from structured fields alone.`,
-  },
-  {
-    id: 'kb-5',
-    name: 'Ideal Customer Profile (ICP) Definition',
-    category: 'icp',
-    description: 'Detailed ICP criteria: firmographics, technographics, behavioral signals, and disqualification criteria.',
-    fileType: 'doc',
-    uploadedAt: '2025-03-10',
-    size: '1.2 MB',
-    content: `# Ideal Customer Profile — Meridian\n\n## Tier 1 ICP (Highest Priority)\n**Firmographics**\n- B2B SaaS or enterprise software company\n- 50–500 employees\n- $10M–$100M ARR\n- Series B or later\n\n**Sales Team Profile**\n- 5+ quota-carrying AEs\n- Average deal size >$50K ARR\n- Sales cycle 3–9 months\n- Multi-stakeholder deals (3+ contacts per opportunity)\n\n**Technographics**\n- Uses Salesforce or HubSpot\n- Has Gong, Zoom, or Teams for calls\n- Has a RevOps or Sales Ops function\n\n**Behavioral Signals**\n- Recently missed quota (pain is acute)\n- Scaling sales team (hiring AEs)\n- Lost a major deal to a competitor recently\n\n## Disqualification Criteria\n- Transactional sales (<30 day cycle)\n- SMB-only focus (<$10K ACV)\n- No dedicated sales team (founder-led only)\n- Regulated industries with strict data residency requirements (unless enterprise plan)`,
-  },
-];
 
 const CATEGORIES = [
   {
@@ -115,15 +52,37 @@ const FILE_TYPE_ICON: Record<string, string> = {
 };
 
 export default function KnowledgeBase() {
-  const [docs, setDocs] = useState<KBDocument[]>(INITIAL_DOCS);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<Set<DocCategory>>(new Set<DocCategory>(['product', 'playbook', 'icp']));
-  const [selectedDoc, setSelectedDoc] = useState<KBDocument | null>(null);
+  const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
   const [showUpload, setShowUpload] = useState(false);
   const [uploadCategory, setUploadCategory] = useState<DocCategory>('product');
   const [uploadName, setUploadName] = useState('');
   const [uploadDesc, setUploadDesc] = useState('');
   const [uploadContent, setUploadContent] = useState('');
+
+  const { data: docs = [], isLoading } = trpc.knowledge.list.useQuery();
+  const utils = trpc.useUtils();
+
+  const createDoc = trpc.knowledge.create.useMutation({
+    onSuccess: () => {
+      utils.knowledge.list.invalidate();
+      toast.success('Document added to Knowledge Base. Meridian AI will use this in deal analysis.');
+      setShowUpload(false);
+      setUploadName('');
+      setUploadDesc('');
+      setUploadContent('');
+    },
+    onError: () => toast.error('Failed to add document'),
+  });
+
+  const deleteDoc = trpc.knowledge.delete.useMutation({
+    onSuccess: () => {
+      utils.knowledge.list.invalidate();
+      toast.success('Document removed from Knowledge Base');
+    },
+    onError: () => toast.error('Failed to delete document'),
+  });
 
   const toggleCategory = (cat: DocCategory) => {
     setExpandedCategories(prev => {
@@ -134,37 +93,26 @@ export default function KnowledgeBase() {
     });
   };
 
-  const handleDelete = (id: string) => {
-    setDocs(prev => prev.filter(d => d.id !== id));
-    toast.success('Document removed from Knowledge Base');
-  };
-
   const handleUpload = () => {
     if (!uploadName.trim()) { toast.error('Please enter a document name'); return; }
-    const newDoc: KBDocument = {
-      id: `kb-${Date.now()}`,
+    createDoc.mutate({
       name: uploadName,
       category: uploadCategory,
       description: uploadDesc,
-      fileType: 'txt',
-      uploadedAt: new Date().toISOString().split('T')[0],
-      size: `${Math.round(uploadContent.length / 1024 * 10) / 10} KB`,
+      fileType: 'md',
       content: uploadContent,
-    };
-    setDocs(prev => [newDoc, ...prev]);
-    toast.success('Document added to Knowledge Base. Meridian AI will use this in deal analysis.');
-    setShowUpload(false);
-    setUploadName('');
-    setUploadDesc('');
-    setUploadContent('');
+      fileSize: `${Math.round(uploadContent.length / 1024 * 10) / 10} KB`,
+    });
   };
 
   const filteredDocs = (cat: DocCategory) =>
     docs.filter(d =>
       d.category === cat &&
       (d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-       d.description.toLowerCase().includes(searchQuery.toLowerCase()))
+       (d.description ?? '').toLowerCase().includes(searchQuery.toLowerCase()))
     );
+
+  const selectedDoc = selectedDocId ? docs.find(d => d.id === selectedDocId) : null;
 
   return (
     <div className="p-6 max-w-[960px]">
@@ -203,104 +151,116 @@ export default function KnowledgeBase() {
           />
         </div>
 
+        {/* Loading */}
+        {isLoading && (
+          <div className="space-y-3">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-14 rounded-lg bg-muted/30 animate-pulse" />
+            ))}
+          </div>
+        )}
+
         {/* Categories */}
-        <div className="space-y-3">
-          {CATEGORIES.map(cat => {
-            const catDocs = filteredDocs(cat.id);
-            const isExpanded = expandedCategories.has(cat.id);
-            const CatIcon = cat.icon;
+        {!isLoading && (
+          <div className="space-y-3">
+            {CATEGORIES.map(cat => {
+              const catDocs = filteredDocs(cat.id);
+              const isExpanded = expandedCategories.has(cat.id);
+              const CatIcon = cat.icon;
 
-            return (
-              <Card key={cat.id} className="bg-card border-border/50 overflow-hidden">
-                <button
-                  onClick={() => toggleCategory(cat.id)}
-                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-accent/30 transition-colors text-left"
-                >
-                  <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${cat.bg}`}>
-                    <CatIcon className={`w-4 h-4 ${cat.color}`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="font-display text-sm font-semibold">{cat.label}</span>
-                    <span className="text-xs text-muted-foreground ml-2">{cat.description}</span>
-                  </div>
-                  <span className="text-xs text-muted-foreground mr-2">
-                    {catDocs.length} doc{catDocs.length !== 1 ? 's' : ''}
-                  </span>
-                  {isExpanded ? <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
-                </button>
+              return (
+                <Card key={cat.id} className="bg-card border-border/50 overflow-hidden">
+                  <button
+                    onClick={() => toggleCategory(cat.id)}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-accent/30 transition-colors text-left"
+                  >
+                    <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${cat.bg}`}>
+                      <CatIcon className={`w-4 h-4 ${cat.color}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="font-display text-sm font-semibold">{cat.label}</span>
+                      <span className="text-xs text-muted-foreground ml-2">{cat.description}</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground mr-2">
+                      {catDocs.length} doc{catDocs.length !== 1 ? 's' : ''}
+                    </span>
+                    {isExpanded ? <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
+                  </button>
 
-                {isExpanded && (
-                  <div className="border-t border-border/40 divide-y divide-border/30">
-                    {catDocs.length === 0 ? (
-                      <div className="px-4 py-6 text-center text-muted-foreground">
-                        <File className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                        <p className="text-xs">No documents yet. Add your first {cat.label.toLowerCase()} document.</p>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="mt-3 text-xs font-display gap-1.5"
-                          onClick={() => { setUploadCategory(cat.id); setShowUpload(true); }}
-                        >
-                          <Plus className="w-3 h-3" />
-                          Add {cat.label}
-                        </Button>
-                      </div>
-                    ) : (
-                      catDocs.map(doc => (
-                        <div key={doc.id} className="px-4 py-3 hover:bg-accent/20 transition-colors">
-                          <div className="flex items-start gap-3">
-                            <span className="text-lg mt-0.5 shrink-0">{FILE_TYPE_ICON[doc.fileType]}</span>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-0.5">
-                                <span className="text-sm font-medium">{doc.name}</span>
-                                <Badge variant="outline" className="text-[9px] px-1.5 py-0 uppercase tracking-wide">
-                                  {doc.fileType}
-                                </Badge>
+                  {isExpanded && (
+                    <div className="border-t border-border/40 divide-y divide-border/30">
+                      {catDocs.length === 0 ? (
+                        <div className="px-4 py-6 text-center text-muted-foreground">
+                          <File className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                          <p className="text-xs">No documents yet. Add your first {cat.label.toLowerCase()} document.</p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="mt-3 text-xs font-display gap-1.5"
+                            onClick={() => { setUploadCategory(cat.id); setShowUpload(true); }}
+                          >
+                            <Plus className="w-3 h-3" />
+                            Add {cat.label}
+                          </Button>
+                        </div>
+                      ) : (
+                        catDocs.map(doc => (
+                          <div key={doc.id} className="px-4 py-3 hover:bg-accent/20 transition-colors">
+                            <div className="flex items-start gap-3">
+                              <span className="text-lg mt-0.5 shrink-0">{FILE_TYPE_ICON[doc.fileType ?? 'md'] ?? '📋'}</span>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-0.5">
+                                  <span className="text-sm font-medium">{doc.name}</span>
+                                  <Badge variant="outline" className="text-[9px] px-1.5 py-0 uppercase tracking-wide">
+                                    {doc.fileType ?? 'md'}
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-muted-foreground leading-relaxed mb-2">{doc.description}</p>
+                                <div className="flex items-center gap-4 text-[10px] text-muted-foreground">
+                                  <span>{new Date(doc.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                                  {doc.fileSize && <span>{doc.fileSize}</span>}
+                                </div>
                               </div>
-                              <p className="text-xs text-muted-foreground leading-relaxed mb-2">{doc.description}</p>
-                              <div className="flex items-center gap-4 text-[10px] text-muted-foreground">
-                                <span>{doc.uploadedAt}</span>
-                                <span>{doc.size}</span>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1 shrink-0">
-                              {doc.content && (
+                              <div className="flex items-center gap-1 shrink-0">
+                                {doc.content && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                                    onClick={() => setSelectedDocId(doc.id)}
+                                  >
+                                    <Eye className="w-3.5 h-3.5" />
+                                  </Button>
+                                )}
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
-                                  onClick={() => setSelectedDoc(doc)}
+                                  className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                                  onClick={() => deleteDoc.mutate({ id: doc.id })}
+                                  disabled={deleteDoc.isPending}
                                 >
-                                  <Eye className="w-3.5 h-3.5" />
+                                  <Trash2 className="w-3.5 h-3.5" />
                                 </Button>
-                              )}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                                onClick={() => handleDelete(doc.id)}
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </Button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                )}
-              </Card>
-            );
-          })}
-        </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </Card>
+              );
+            })}
+          </div>
+        )}
       </motion.div>
 
       {/* View Document Dialog */}
-      <Dialog open={!!selectedDoc} onOpenChange={() => setSelectedDoc(null)}>
+      <Dialog open={!!selectedDoc} onOpenChange={() => setSelectedDocId(null)}>
         <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
           <DialogHeader className="shrink-0">
             <DialogTitle className="font-display text-base flex items-center gap-2">
-              <span>{selectedDoc && FILE_TYPE_ICON[selectedDoc.fileType]}</span>
+              <span>{selectedDoc && FILE_TYPE_ICON[selectedDoc.fileType ?? 'md']}</span>
               {selectedDoc?.name}
             </DialogTitle>
             {selectedDoc && (
@@ -368,8 +328,13 @@ export default function KnowledgeBase() {
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" size="sm" onClick={() => setShowUpload(false)} className="text-xs font-display">Cancel</Button>
-              <Button size="sm" className="text-xs font-display" onClick={handleUpload}>
-                Add to Knowledge Base
+              <Button
+                size="sm"
+                className="text-xs font-display"
+                onClick={handleUpload}
+                disabled={createDoc.isPending}
+              >
+                {createDoc.isPending ? 'Adding...' : 'Add to Knowledge Base'}
               </Button>
             </div>
           </div>

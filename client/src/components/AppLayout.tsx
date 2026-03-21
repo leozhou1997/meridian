@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useLocation, Link } from 'wouter';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { deals, formatCurrency, getConfidenceColor, pipelineStats } from '@/lib/data';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Compass, LayoutDashboard, Users, FileText, MessageSquare,
-  Search, LogOut, ChevronDown, ChevronRight, Settings
+  Search, LogOut, ChevronDown, ChevronRight, Settings, Sun, Moon, BookOpen
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -20,6 +21,7 @@ interface AppLayoutProps {
 
 export default function AppLayout({ children }: AppLayoutProps) {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [location, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedStages, setExpandedStages] = useState<Set<string>>(
@@ -44,6 +46,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
     { icon: Users, label: 'Stakeholders', path: '/stakeholders' },
     { icon: FileText, label: 'Transcripts', path: '/transcripts' },
+    { icon: BookOpen, label: 'Knowledge Base', path: '/knowledge' },
     { icon: MessageSquare, label: 'Ask Meridian', path: '/ask' },
   ];
 
@@ -84,6 +87,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </nav>
 
         <div className="flex flex-col items-center gap-2">
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <button
+                onClick={toggleTheme}
+                className="w-10 h-10 rounded-lg flex items-center justify-center text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all"
+              >
+                {theme === 'dark' ? <Sun className="w-[18px] h-[18px]" /> : <Moon className="w-[18px] h-[18px]" />}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="font-display text-xs">
+              {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+            </TooltipContent>
+          </Tooltip>
+
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
               <button

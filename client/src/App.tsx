@@ -11,6 +11,7 @@ import DealDetail from "./pages/DealDetail";
 import Stakeholders from "./pages/Stakeholders";
 import Transcripts from "./pages/Transcripts";
 import AskMeridian from "./pages/AskMeridian";
+import KnowledgeBase from "./pages/KnowledgeBase";
 import AppLayout from "./components/AppLayout";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
@@ -42,6 +43,9 @@ function Router() {
       <Route path="/ask">
         <ProtectedRoute component={AskMeridian} />
       </Route>
+      <Route path="/knowledge">
+        <ProtectedRoute component={KnowledgeBase} />
+      </Route>
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
@@ -51,7 +55,7 @@ function Router() {
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider defaultTheme="dark">
+      <ThemeProvider defaultTheme="dark" switchable>
         <AuthProvider>
           <TooltipProvider>
             <Toaster />

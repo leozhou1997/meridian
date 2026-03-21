@@ -1,6 +1,14 @@
 // Meridian Sales Intelligence — Mock Data
 // All data simulates Meridian selling to B2B SaaS / enterprise software companies
 
+export interface PersonalSignal {
+  id: string;
+  text: string;           // e.g. "Plays golf on weekends"
+  emoji: string;          // e.g. "⛳"
+  source?: string;        // e.g. "Mentioned in POC Check-in · Mar 2"
+  aiExtracted: boolean;   // true = AI extracted from transcript, false = manually added
+}
+
 export interface Stakeholder {
   id: string;
   name: string;
@@ -16,6 +24,8 @@ export interface Stakeholder {
   stage?: string;
   x?: number;
   y?: number;
+  personalSignals?: PersonalSignal[];  // AI-extracted + manually added personal context
+  personalNotes?: string;              // free-form personal notes by the rep
 }
 
 export interface Snapshot {
@@ -114,11 +124,30 @@ export const deals: Deal[] = [
     buyingStages: ['Champion Buy-in', 'Stakeholder Alignment', 'Procurement Approvals', 'Close'],
     companyInfo: 'Allbirds is a sustainable footwear and apparel company. Founded in 2016, they focus on using natural materials. Revenue ~$300M, 800+ employees. Growing enterprise sales team.',
     stakeholders: [
-      { id: 'a1-s1', name: 'Benny Joseph', title: 'CTO & CSO', role: 'Champion', roles: ['Champion', 'Influencer'], sentiment: 'Positive', engagement: 'High', avatar: AVATARS.d1_s1, stage: 'Champion Buy-in', email: 'benny.joseph@allbirds.com', keyInsights: 'Strong internal advocate. Pushing for AI-driven sales tools. May transition to advisory role in Q2 — need to identify successor champion.', x: 150, y: 100 },
-      { id: 'a1-s2', name: 'Annie Mitchell', title: 'CFO', role: 'Evaluator', roles: ['Evaluator', 'Decision Maker'], sentiment: 'Neutral', engagement: 'Medium', avatar: AVATARS.d1_s2, stage: 'Stakeholder Alignment', email: 'annie.mitchell@allbirds.com', keyInsights: 'Needs ROI proof. Skeptical about AI tools after previous failed implementation with a competitor. Wants 6-month payback period.', x: 420, y: 100 },
+      { id: 'a1-s1', name: 'Benny Joseph', title: 'CTO & CSO', role: 'Champion', roles: ['Champion', 'Influencer'], sentiment: 'Positive', engagement: 'High', avatar: AVATARS.d1_s1, stage: 'Champion Buy-in', email: 'benny.joseph@allbirds.com', keyInsights: 'Strong internal advocate. Pushing for AI-driven sales tools. May transition to advisory role in Q2 — need to identify successor champion.', x: 150, y: 100,
+        personalSignals: [
+          { id: 'ps-b1', text: 'Considering a role change in Q2 — emotionally invested in deal outcome', emoji: '💼', source: 'POC Check-in · Mar 2', aiExtracted: true },
+          { id: 'ps-b2', text: 'Values transparency and direct communication', emoji: '🤝', source: 'POC Check-in · Mar 2', aiExtracted: true },
+          { id: 'ps-b3', text: 'Trusts Zoe Daniels and Robert Osburn internally', emoji: '👥', source: 'POC Check-in · Mar 2', aiExtracted: true },
+        ],
+        personalNotes: 'Benny is a builder-type exec — he responds well to technical depth and honest conversations. Don’t oversell. He mentioned in passing that he’s been at Allbirds for 6 years and is proud of the culture they’ve built.',
+      },
+      { id: 'a1-s2', name: 'Annie Mitchell', title: 'CFO', role: 'Evaluator', roles: ['Evaluator', 'Decision Maker'], sentiment: 'Neutral', engagement: 'Medium', avatar: AVATARS.d1_s2, stage: 'Stakeholder Alignment', email: 'annie.mitchell@allbirds.com', keyInsights: 'Needs ROI proof. Skeptical about AI tools after previous failed implementation with a competitor. Wants 6-month payback period.', x: 420, y: 100,
+        personalSignals: [
+          { id: 'ps-a1', text: 'Burned by a failed AI vendor previously — skepticism is personal, not just financial', emoji: '🔥', source: 'Demo · Feb 23', aiExtracted: true },
+          { id: 'ps-a2', text: 'Focused on 6-month payback — likely tied to a board-level commitment', emoji: '📅', source: 'Demo · Feb 23', aiExtracted: true },
+        ],
+      },
       { id: 'a1-s3', name: 'Christos Yatrokis', title: 'Chief Legal & People Officer', role: 'Blocker', roles: ['Blocker'], sentiment: 'Negative', engagement: 'Low', avatar: AVATARS.d1_s3, stage: 'Procurement Approvals', email: 'christos.y@allbirds.com', keyInsights: 'Concerned about data privacy and GDPR compliance. Requires SOC2 Type II documentation. Has blocked two previous vendor deals this year.', x: 680, y: 100 },
       { id: 'a1-s4', name: 'Joe Vernachio', title: 'CEO', role: 'Decision Maker', roles: ['Decision Maker'], sentiment: 'Neutral', engagement: 'Low', avatar: AVATARS.d1_s4, stage: 'Close', email: 'joe.v@allbirds.com', keyInsights: 'Final sign-off authority. Delegates most vendor decisions to CTO. Met briefly at industry event — positive first impression.', x: 920, y: 100 },
-      { id: 'a1-s5', name: 'Zoe Daniels', title: 'VP, Revenue Operations', role: 'User', roles: ['User', 'Champion'], sentiment: 'Positive', engagement: 'Medium', avatar: AVATARS.d1_s5, stage: 'Stakeholder Alignment', email: 'zoe.daniels@allbirds.com', keyInsights: 'End user champion. Excited about POC results. Running parallel evaluation internally with RevOps team.', x: 420, y: 310 },
+      { id: 'a1-s5', name: 'Zoe Daniels', title: 'VP, Revenue Operations', role: 'User', roles: ['User', 'Champion'], sentiment: 'Positive', engagement: 'Medium', avatar: AVATARS.d1_s5, stage: 'Stakeholder Alignment', email: 'zoe.daniels@allbirds.com', keyInsights: 'End user champion. Excited about POC results. Running parallel evaluation internally with RevOps team.', x: 420, y: 310,
+        personalSignals: [
+          { id: 'ps-z1', text: 'Ran internal pilot organically — high initiative, doesn’t wait for permission', emoji: '⚡', source: 'POC Check-in · Mar 17', aiExtracted: true },
+          { id: 'ps-z2', text: 'Proud of her team’s performance — mentioned reps by name', emoji: '👏', source: 'POC Check-in · Mar 17', aiExtracted: true },
+          { id: 'ps-z3', text: 'Came in late to the call — likely juggling a lot internally', emoji: '⏰', source: 'POC Check-in · Mar 17', aiExtracted: true },
+        ],
+        personalNotes: 'Zoe is the day-to-day champion if Benny leaves. She’s practical and results-driven. Good opener: ask about her team’s pipeline review process — she’s clearly invested in it.',
+      },
       { id: 'a1-s6', name: 'Robert Osburn', title: 'Director, Engineering', role: 'Influencer', roles: ['Evaluator', 'Influencer'], sentiment: 'Positive', engagement: 'High', avatar: AVATARS.d1_s6, stage: 'Procurement Approvals', email: 'robert.o@allbirds.com', keyInsights: 'Technical evaluator. Approved API integration approach. Will write internal recommendation memo.', x: 680, y: 310 },
     ],
     snapshots: [

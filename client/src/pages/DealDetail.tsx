@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRoute, Link } from 'wouter';
 import { deals, formatCurrency, getConfidenceColor, getConfidenceBg, getRoleColor, getSentimentColor, formatDate, getStageColor } from '@/lib/data';
-import type { Stakeholder, Interaction } from '@/lib/data';
+import type { Stakeholder, Interaction, PersonalSignal } from '@/lib/data';
 import StakeholderMap from '@/components/StakeholderMap';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Globe, Clock, TrendingUp, TrendingDown, AlertTriangle,
   ChevronRight, User, MessageSquare, FileText, Map, BarChart3, X, ExternalLink,
   Mic, Check, Edit2, Save, Camera, GripHorizontal, ChevronDown, ChevronUp,
-  Plus, Trash2, Pencil, Calendar, Lightbulb, Lock, Target
+  Plus, Trash2, Pencil, Calendar, Lightbulb, Lock, Target, Sparkles, Heart, StickyNote
 } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -181,6 +181,27 @@ export default function DealDetail() {
       setShowSummary(true);
       setSummaryPos({ x: 16, y: 16 });
       setActiveTab('map');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deal?.id]);
+
+  // Personal intelligence state — keyed by stakeholder ID
+  const [personalNotesMap, setPersonalNotesMap] = useState<Record<string, string>>({});
+  const [personalSignalsMap, setPersonalSignalsMap] = useState<Record<string, PersonalSignal[]>>({});
+  const [editingPersonalNotes, setEditingPersonalNotes] = useState(false);
+  const [personalNotesDraft, setPersonalNotesDraft] = useState('');
+
+  // Initialize personal data from seed when deal changes
+  useEffect(() => {
+    if (deal) {
+      const notesMap: Record<string, string> = {};
+      const signalsMap: Record<string, PersonalSignal[]> = {};
+      deal.stakeholders.forEach(s => {
+        if (s.personalNotes) notesMap[s.id] = s.personalNotes;
+        if (s.personalSignals) signalsMap[s.id] = s.personalSignals;
+      });
+      setPersonalNotesMap(notesMap);
+      setPersonalSignalsMap(signalsMap);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deal?.id]);
@@ -735,8 +756,8 @@ export default function DealDetail() {
                                   ) : (
                                     <p className="text-xs text-muted-foreground/40 italic">No notes yet — click ✏ to add</p>
                                   )}
-                                  {/* View Full Transcript toggle */}
-                                  {interaction.summary && interaction.summary.length > 80 && (
+                                  {/* View Full Transcript toggle — only shown when a separate transcript exists */}
+                                  {(interaction.transcript || (interaction.summary && interaction.summary.length > 120)) && (
                                     <button
                                       onClick={() => setExpandedTranscriptId(id => id === interaction.id ? null : interaction.id)}
                                       className="mt-2 flex items-center gap-1.5 text-[10px] text-primary hover:text-primary/80 font-medium transition-colors"
@@ -749,7 +770,7 @@ export default function DealDetail() {
                                       }
                                     </button>
                                   )}
-                                  {/* Expanded transcript */}
+                                  {/* Expanded transcript — shows interaction.transcript if available, else full summary */}
                                   <AnimatePresence>
                                     {expandedTranscriptId === interaction.id && (
                                       <motion.div
@@ -759,9 +780,23 @@ export default function DealDetail() {
                                         transition={{ duration: 0.2 }}
                                         className="overflow-hidden"
                                       >
-                                        <div className="mt-2 p-3 bg-muted/30 rounded-lg border border-border/30">
-                                          <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Full Transcript / Notes</div>
-                                          <p className="text-xs text-foreground/80 leading-relaxed whitespace-pre-wrap">{interaction.summary}</p>
+                                        <div className="mt-2 rounded-lg border border-border/30 overflow-hidden">
+                                          <div className="flex items-center justify-between px-3 py-2 bg-muted/40 border-b border-border/30">
+                                            <div className="flex items-center gap-1.5">
+                                              <FileText className="w-3 h-3 text-muted-foreground" />
+                                              <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">
+                                                {interaction.transcript ? 'Full Transcript' : 'Full Notes'}
+                                              </span>
+                                            </div>
+                                            <span className="text-[9px] text-muted-foreground/50">
+                                              {interaction.duration} min · {formatDate(interaction.date)}
+                                            </span>
+                                          </div>
+                                          <div className="p-3 bg-muted/20 max-h-96 overflow-y-auto">
+                                            <p className="text-xs text-foreground/80 leading-relaxed whitespace-pre-wrap font-mono">
+                                              {interaction.transcript ?? interaction.summary}
+                                            </p>
+                                          </div>
                                         </div>
                                       </motion.div>
                                     )}
@@ -1122,6 +1157,117 @@ export default function DealDetail() {
                       <p className="text-xs text-foreground/80 leading-relaxed">{selectedStakeholder.keyInsights}</p>
                     </div>
                   )}
+
+                  {/* ── Know Your Stakeholder ── */}
+                  {!isEditingProfile && (() => {
+                    const sid = selectedStakeholder.id;
+                    const signals = personalSignalsMap[sid] ?? [];
+                    const notes = personalNotesMap[sid] ?? '';
+                    return (
+                      <div className="mb-4 border-t border-border/30 pt-4">
+                        {/* Section header */}
+                        <div className="flex items-center gap-1.5 mb-3">
+                          <Heart className="w-3 h-3 text-rose-400" />
+                          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Know Your Stakeholder</span>
+                        </div>
+
+                        {/* AI-extracted signals */}
+                        {signals.length > 0 && (
+                          <div className="mb-3">
+                            <div className="flex items-center gap-1 mb-1.5">
+                              <Sparkles className="w-2.5 h-2.5 text-amber-400" />
+                              <span className="text-[9px] font-medium text-amber-400/80 uppercase tracking-wider">AI Signals</span>
+                            </div>
+                            <div className="space-y-1.5">
+                              {signals.map(sig => (
+                                <div key={sig.id} className="group flex items-start gap-2 p-2 rounded-lg bg-muted/20 hover:bg-muted/30 transition-colors">
+                                  <span className="text-sm leading-none mt-0.5">{sig.emoji}</span>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-[11px] text-foreground/80 leading-snug">{sig.text}</p>
+                                    {sig.source && (
+                                      <p className="text-[9px] text-muted-foreground/50 mt-0.5">{sig.source}</p>
+                                    )}
+                                  </div>
+                                  <button
+                                    onClick={() => setPersonalSignalsMap(prev => ({
+                                      ...prev,
+                                      [sid]: (prev[sid] ?? []).filter(s => s.id !== sig.id)
+                                    }))}
+                                    className="opacity-0 group-hover:opacity-100 w-4 h-4 flex items-center justify-center text-muted-foreground/50 hover:text-destructive transition-all"
+                                    title="Remove signal"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Personal notes */}
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center gap-1">
+                              <StickyNote className="w-2.5 h-2.5 text-muted-foreground/60" />
+                              <span className="text-[9px] font-medium text-muted-foreground/60 uppercase tracking-wider">Personal Notes</span>
+                            </div>
+                            {!editingPersonalNotes ? (
+                              <button
+                                onClick={() => {
+                                  setPersonalNotesDraft(notes);
+                                  setEditingPersonalNotes(true);
+                                }}
+                                className="text-[9px] text-primary/70 hover:text-primary flex items-center gap-0.5 transition-colors"
+                              >
+                                <Pencil className="w-2.5 h-2.5" />
+                                {notes ? 'Edit' : 'Add'}
+                              </button>
+                            ) : (
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  onClick={() => {
+                                    setPersonalNotesMap(prev => ({ ...prev, [sid]: personalNotesDraft }));
+                                    setEditingPersonalNotes(false);
+                                    toast.success('Personal notes saved');
+                                  }}
+                                  className="text-[9px] text-emerald-400 hover:text-emerald-300 font-medium transition-colors"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={() => setEditingPersonalNotes(false)}
+                                  className="text-[9px] text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                          {editingPersonalNotes ? (
+                            <textarea
+                              value={personalNotesDraft}
+                              onChange={e => setPersonalNotesDraft(e.target.value)}
+                              placeholder="Add personal context — hobbies, family mentions, communication style, things to remember before your next meeting..."
+                              className="w-full min-h-[80px] text-xs p-2 rounded-lg bg-muted/30 border border-border/50 text-foreground/80 placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 resize-none transition-colors"
+                              autoFocus
+                            />
+                          ) : notes ? (
+                            <p className="text-[11px] text-foreground/70 leading-relaxed whitespace-pre-wrap bg-muted/10 rounded-lg p-2 border border-border/20">{notes}</p>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setPersonalNotesDraft('');
+                                setEditingPersonalNotes(true);
+                              }}
+                              className="w-full text-left text-[10px] text-muted-foreground/40 italic p-2 rounded-lg border border-dashed border-border/30 hover:border-border/50 hover:text-muted-foreground/60 transition-colors"
+                            >
+                              + Add personal notes about {selectedStakeholder.name.split(' ')[0]}...
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Contact */}
                   {selectedStakeholder.email && !isEditingProfile && (

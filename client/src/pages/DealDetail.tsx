@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRoute, Link } from 'wouter';
 import { deals, formatCurrency, getConfidenceColor, getConfidenceBg, getRoleColor, getSentimentColor, formatDate, getStageColor } from '@/lib/data';
-import type { Stakeholder, Interaction, PersonalSignal } from '@/lib/data';
+import type { Stakeholder, Interaction, PersonalSignal, NextAction } from '@/lib/data';
 import StakeholderMap from '@/components/StakeholderMap';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -110,9 +110,37 @@ export default function DealDetail() {
   const [localStakeholders, setLocalStakeholders] = useState<Stakeholder[]>(deal?.stakeholders ?? []);
 
   // Local editable interactions — shared between All Interactions tab and StakeholderMap
-  const [localInteractions, setLocalInteractions] = useState<Interaction[]>(deal?.interactions ?? []);
+  const [localInteractions, setLocalInteractions] = useState<Interaction[]>(deal?.meetings ?? []);
   const [editingInteractionId, setEditingInteractionId] = useState<string | null>(null);
   const [expandedTranscriptId, setExpandedTranscriptId] = useState<string | null>(null);
+
+  // Next Actions state
+  const [nextActions, setNextActions] = useState<NextAction[]>(deal?.nextActions ?? []);
+  const [addingAction, setAddingAction] = useState(false);
+  const [newActionText, setNewActionText] = useState('');
+  const [newActionDue, setNewActionDue] = useState('');
+
+  const toggleAction = (id: string) => {
+    setNextActions(prev => prev.map(a => a.id === id ? { ...a, completed: !a.completed } : a));
+  };
+  const deleteAction = (id: string) => {
+    setNextActions(prev => prev.filter(a => a.id !== id));
+  };
+  const addAction = () => {
+    if (!newActionText.trim()) return;
+    const action: NextAction = {
+      id: nanoid(8),
+      dealId: deal!.id,
+      text: newActionText.trim(),
+      dueDate: newActionDue || undefined,
+      completed: false,
+      priority: 'medium',
+    };
+    setNextActions(prev => [...prev, action]);
+    setNewActionText('');
+    setNewActionDue('');
+    setAddingAction(false);
+  };
 
   // Deal Strategy notes
   const [strategyNotes, setStrategyNotes] = useState<StrategyNote[]>([]);
@@ -171,7 +199,8 @@ export default function DealDetail() {
   useEffect(() => {
     if (deal) {
       setLocalStakeholders(deal.stakeholders);
-      setLocalInteractions(deal.interactions);
+      setLocalInteractions(deal.meetings);
+      setNextActions(deal.nextActions ?? []);
       setEditingInteractionId(null);
       setExpandedTranscriptId(null);
       setStrategyNotes([]);
@@ -212,6 +241,15 @@ export default function DealDetail() {
   const [editTitle, setEditTitle] = useState('');
   const [editSentiment, setEditSentiment] = useState<SentimentType>('Neutral');
   const [editRoles, setEditRoles] = useState<RoleType[]>([]);
+
+  // Pre-meeting Brief state
+  const [showBrief, setShowBrief] = useState(false);
+  const [briefStakeholderId, setBriefStakeholderId] = useState<string | null>(null);
+
+  const generateBrief = (stakeholder: Stakeholder) => {
+    setBriefStakeholderId(stakeholder.id);
+    setShowBrief(true);
+  };
 
   if (!deal) {
     return (
@@ -416,8 +454,44 @@ export default function DealDetail() {
                           </div>
                         </div>
 
-                        {/* Confidence bar */}
+                        {/* Confidence sparkline + bar */}
                         <div className="mb-4">
+                          {/* Sparkline SVG */}
+                          {deal.snapshots.length >= 2 && (() => {
+                            const sorted = [...deal.snapshots].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                            const scores = sorted.map(s => s.confidenceScore);
+                            const W = 200, H = 32, PAD = 4;
+                            const minS = Math.max(0, Math.min(...scores) - 10);
+                            const maxS = Math.min(100, Math.max(...scores) + 10);
+                            const toX = (i: number) => PAD + (i / (scores.length - 1)) * (W - PAD * 2);
+                            const toY = (v: number) => H - PAD - ((v - minS) / (maxS - minS)) * (H - PAD * 2);
+                            const points = scores.map((v, i) => `${toX(i)},${toY(v)}`).join(' ');
+                            const areaPoints = `${toX(0)},${H} ${points} ${toX(scores.length - 1)},${H}`;
+                            const lastScore = scores[scores.length - 1];
+                            const lineColor = lastScore >= 75 ? '#10b981' : lastScore >= 50 ? '#f59e0b' : '#ef4444';
+                            return (
+                              <div className="mb-2">
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Confidence Trend</span>
+                                  <span className="text-[9px] text-muted-foreground">{sorted[0].date.slice(5)} → {sorted[sorted.length-1].date.slice(5)}</span>
+                                </div>
+                                <svg width="100%" viewBox={`0 0 ${W} ${H}`} className="overflow-visible">
+                                  <defs>
+                                    <linearGradient id={`cg-${deal.id}`} x1="0" y1="0" x2="0" y2="1">
+                                      <stop offset="0%" stopColor={lineColor} stopOpacity="0.25" />
+                                      <stop offset="100%" stopColor={lineColor} stopOpacity="0.02" />
+                                    </linearGradient>
+                                  </defs>
+                                  <polygon points={areaPoints} fill={`url(#cg-${deal.id})`} />
+                                  <polyline points={points} fill="none" stroke={lineColor} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+                                  {scores.map((v, i) => (
+                                    <circle key={i} cx={toX(i)} cy={toY(v)} r="2" fill={lineColor} />
+                                  ))}
+                                </svg>
+                              </div>
+                            );
+                          })()}
+                          {/* Static confidence bar */}
                           <div className="h-1.5 rounded-full bg-muted/60 overflow-hidden">
                             <div
                               className="h-full rounded-full transition-all"
@@ -455,11 +529,94 @@ export default function DealDetail() {
                         )}
 
                         {/* What's Next */}
-                        <div className="mb-4">
+                        <div className="mb-3">
                           <div className="text-[9px] font-semibold text-status-success uppercase tracking-wider mb-1.5">What's Next</div>
                           <p className="text-[11px] text-muted-foreground leading-relaxed">
                             {latestSnapshot.whatsNext}
                           </p>
+                        </div>
+
+                        {/* Next Actions */}
+                        <div className="mb-4">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <div className="text-[9px] font-semibold text-primary uppercase tracking-wider">Next Actions</div>
+                            <button
+                              onClick={() => setAddingAction(v => !v)}
+                              className="w-4 h-4 rounded flex items-center justify-center hover:bg-muted/60 transition-colors text-muted-foreground hover:text-foreground"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </button>
+                          </div>
+
+                          {/* Add new action form */}
+                          {addingAction && (
+                            <div className="mb-2 p-2 rounded-lg bg-muted/30 border border-border/30">
+                              <input
+                                autoFocus
+                                value={newActionText}
+                                onChange={e => setNewActionText(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') addAction(); if (e.key === 'Escape') { setAddingAction(false); setNewActionText(''); } }}
+                                placeholder="Action item..."
+                                className="w-full bg-transparent text-[11px] outline-none placeholder:text-muted-foreground/50 mb-1.5"
+                              />
+                              <div className="flex items-center gap-1.5">
+                                <input
+                                  type="date"
+                                  value={newActionDue}
+                                  onChange={e => setNewActionDue(e.target.value)}
+                                  className="flex-1 bg-transparent text-[10px] text-muted-foreground outline-none border border-border/30 rounded px-1.5 py-0.5"
+                                />
+                                <button onClick={addAction} className="text-[10px] px-2 py-0.5 rounded bg-primary text-primary-foreground font-medium">Add</button>
+                                <button onClick={() => { setAddingAction(false); setNewActionText(''); }} className="text-[10px] px-1.5 py-0.5 rounded hover:bg-muted/60 text-muted-foreground">Cancel</button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Action list */}
+                          <div className="space-y-1">
+                            {nextActions.length === 0 && !addingAction && (
+                              <p className="text-[10px] text-muted-foreground/50 italic">No actions yet — click + to add</p>
+                            )}
+                            {nextActions.map(action => {
+                              const isOverdue = !action.completed && action.dueDate && new Date(action.dueDate) < new Date();
+                              return (
+                                <div key={action.id} className={`flex items-start gap-1.5 group rounded-lg px-1.5 py-1 transition-colors hover:bg-muted/20 ${
+                                  action.completed ? 'opacity-50' : ''
+                                }`}>
+                                  <button
+                                    onClick={() => toggleAction(action.id)}
+                                    className={`mt-0.5 w-3.5 h-3.5 rounded border shrink-0 flex items-center justify-center transition-colors ${
+                                      action.completed
+                                        ? 'bg-primary border-primary'
+                                        : action.priority === 'high'
+                                          ? 'border-status-danger/60 hover:border-status-danger'
+                                          : 'border-border/60 hover:border-primary'
+                                    }`}
+                                  >
+                                    {action.completed && <Check className="w-2 h-2 text-primary-foreground" />}
+                                  </button>
+                                  <div className="flex-1 min-w-0">
+                                    <p className={`text-[11px] leading-snug ${
+                                      action.completed ? 'line-through text-muted-foreground/50' : 'text-foreground/90'
+                                    }`}>{action.text}</p>
+                                    {action.dueDate && (
+                                      <p className={`text-[9px] mt-0.5 ${
+                                        isOverdue ? 'text-status-danger' : 'text-muted-foreground/60'
+                                      }`}>
+                                        {isOverdue ? '⚠ ' : ''}Due {new Date(action.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <button
+                                    onClick={() => deleteAction(action.id)}
+                                    className="opacity-0 group-hover:opacity-100 w-3.5 h-3.5 flex items-center justify-center text-muted-foreground/40 hover:text-status-danger transition-all shrink-0 mt-0.5"
+                                  >
+                                    <Trash2 className="w-2.5 h-2.5" />
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
 
                         <div className="border-t border-border/25 pt-3 space-y-1.5">
@@ -917,6 +1074,14 @@ export default function DealDetail() {
                       ) : (
                         <>
                           <button
+                            onClick={() => generateBrief(selectedStakeholder)}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-500/15 text-amber-400 border border-amber-500/30 text-[10px] font-medium hover:bg-amber-500/25 transition-colors"
+                            title="Generate pre-meeting brief"
+                          >
+                            <Sparkles className="w-3 h-3" />
+                            Brief
+                          </button>
+                          <button
                             onClick={() => setIsEditingProfile(true)}
                             className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-muted text-muted-foreground text-[10px] font-medium hover:bg-muted/80 hover:text-foreground transition-colors"
                           >
@@ -1217,7 +1382,7 @@ export default function DealDetail() {
                   {!isEditingProfile && (
                     <div className="border-t border-border/30 pt-3">
                       <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Related Interactions</div>
-                      {deal.interactions
+                      {deal.meetings
                         .filter(i => i.keyParticipant === selectedStakeholder.name)
                         .map(interaction => (
                           <div key={interaction.id} className="p-2 rounded bg-muted/20 mb-1.5">
@@ -1229,7 +1394,7 @@ export default function DealDetail() {
                           </div>
                         ))
                       }
-                      {deal.interactions.filter(i => i.keyParticipant === selectedStakeholder.name).length === 0 && (
+                      {deal.meetings.filter(i => i.keyParticipant === selectedStakeholder.name).length === 0 && (
                         <p className="text-[10px] text-muted-foreground/60 italic">No direct interactions recorded.</p>
                       )}
                     </div>
@@ -1240,6 +1405,167 @@ export default function DealDetail() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Pre-meeting Brief Modal */}
+      <AnimatePresence>
+        {showBrief && briefStakeholderId && (() => {
+          const s = localStakeholders.find(st => st.id === briefStakeholderId);
+          if (!s) return null;
+          const signals = personalSignalsMap[s.id] ?? [];
+          const notes = personalNotesMap[s.id] ?? '';
+          const relatedMeetings = deal.meetings.filter(m => m.keyParticipant === s.name);
+          const lastMeeting = relatedMeetings[0];
+          const roles: string[] = Array.isArray((s as any).roles) ? (s as any).roles : [s.role];
+          const pendingActions = nextActions.filter(a => !a.completed && a.stakeholderId === s.id);
+          return (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+              onClick={() => setShowBrief(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                onClick={e => e.stopPropagation()}
+                className="w-[520px] max-h-[80vh] overflow-y-auto rounded-2xl bg-card border border-border/60 shadow-2xl"
+              >
+                {/* Brief header */}
+                <div className="flex items-center justify-between px-5 py-4 border-b border-border/30">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-400" />
+                    <span className="font-display text-sm font-semibold">Pre-meeting Brief</span>
+                    <span className="text-xs text-muted-foreground">— {s.name}</span>
+                  </div>
+                  <button onClick={() => setShowBrief(false)} className="w-6 h-6 rounded flex items-center justify-center hover:bg-muted transition-colors">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="px-5 py-4 space-y-4">
+                  {/* Who they are */}
+                  <div>
+                    <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Who They Are</div>
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/20 border border-border/20">
+                      <img src={s.avatar} alt={s.name} className="w-10 h-10 rounded-full object-cover border border-border/30"
+                        onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=1a1f36&color=fff&size=40`; }}
+                      />
+                      <div>
+                        <div className="text-sm font-semibold">{s.name}</div>
+                        <div className="text-xs text-muted-foreground">{s.title} · {deal.company}</div>
+                        <div className="flex gap-1 mt-1">
+                          {roles.map(r => <span key={r} className="text-[9px] px-1.5 py-0.5 rounded bg-muted/40 text-muted-foreground">{r}</span>)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Business context */}
+                  {s.keyInsights && (
+                    <div>
+                      <div className="text-[9px] font-semibold text-status-info uppercase tracking-wider mb-1.5">Business Context</div>
+                      <p className="text-xs text-foreground/80 leading-relaxed bg-muted/15 rounded-lg p-3">{s.keyInsights}</p>
+                    </div>
+                  )}
+
+                  {/* Relationship status */}
+                  <div>
+                    <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Relationship Status</div>
+                    <div className="flex items-center gap-3 text-xs">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                        s.sentiment === 'Positive' ? 'bg-emerald-500/15 text-emerald-400' :
+                        s.sentiment === 'Negative' ? 'bg-red-500/15 text-red-400' :
+                        'bg-amber-500/15 text-amber-400'
+                      }`}>{s.sentiment}</span>
+                      <span className="text-muted-foreground">{s.engagement} Engagement</span>
+                      {lastMeeting && <span className="text-muted-foreground">Last met: {formatDate(lastMeeting.date)}</span>}
+                    </div>
+                    {lastMeeting && (
+                      <p className="text-[11px] text-muted-foreground/70 mt-2 leading-relaxed">
+                        <span className="font-medium text-muted-foreground">Last interaction:</span> {lastMeeting.summary}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Personal talking points */}
+                  {(signals.length > 0 || notes) && (
+                    <div>
+                      <div className="text-[9px] font-semibold text-rose-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                        <Heart className="w-2.5 h-2.5" />
+                        Personal Talking Points
+                      </div>
+                      {signals.length > 0 && (
+                        <div className="space-y-1.5 mb-2">
+                          {signals.map(sig => (
+                            <div key={sig.id} className="flex items-start gap-2 text-[11px] text-foreground/80">
+                              <span>{sig.emoji}</span>
+                              <span className="leading-snug">{sig.text}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {notes && (
+                        <p className="text-[11px] text-foreground/70 leading-relaxed bg-muted/15 rounded-lg p-2.5 border border-border/20 whitespace-pre-wrap">{notes}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Pending actions for this stakeholder */}
+                  {pendingActions.length > 0 && (
+                    <div>
+                      <div className="text-[9px] font-semibold text-primary uppercase tracking-wider mb-1.5">Open Actions</div>
+                      <div className="space-y-1">
+                        {pendingActions.map(a => (
+                          <div key={a.id} className="flex items-start gap-2 text-[11px] text-foreground/80">
+                            <span className={`mt-0.5 w-3 h-3 rounded border shrink-0 ${
+                              a.priority === 'high' ? 'border-status-danger/60' : 'border-border/60'
+                            }`} />
+                            <span className="leading-snug">{a.text}</span>
+                            {a.dueDate && <span className="text-[9px] text-muted-foreground/60 shrink-0">Due {new Date(a.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Deal context */}
+                  <div className="border-t border-border/30 pt-3">
+                    <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Deal Context</div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="bg-muted/20 rounded-lg p-2">
+                        <div className="text-[9px] text-muted-foreground mb-0.5">Stage</div>
+                        <div className="text-[11px] font-medium">{deal.stage}</div>
+                      </div>
+                      <div className="bg-muted/20 rounded-lg p-2">
+                        <div className="text-[9px] text-muted-foreground mb-0.5">Confidence</div>
+                        <div className={`text-[11px] font-semibold font-mono ${getConfidenceColor(deal.confidenceScore)}`}>{deal.confidenceScore}%</div>
+                      </div>
+                      <div className="bg-muted/20 rounded-lg p-2">
+                        <div className="text-[9px] text-muted-foreground mb-0.5">ACV</div>
+                        <div className="text-[11px] font-semibold font-mono">{formatCurrency(deal.value)}</div>
+                      </div>
+                    </div>
+                    {latestSnapshot && (
+                      <p className="text-[11px] text-muted-foreground/70 mt-2 leading-relaxed">
+                        <span className="font-medium text-muted-foreground">Situation:</span> {latestSnapshot.whatsHappening}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* AI note */}
+                  <div className="flex items-center gap-2 p-2.5 rounded-lg bg-amber-500/8 border border-amber-500/20">
+                    <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />
+                    <p className="text-[10px] text-amber-400/80">AI-generated brief coming soon — this is a structured summary from your recorded data.</p>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
 
       {/* Ask Meridian bar */}
       <div className="border-t border-border/50 bg-card/50 px-6 py-2.5 shrink-0">

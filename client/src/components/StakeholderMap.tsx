@@ -10,7 +10,7 @@
  */
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { Stakeholder, Deal, Interaction } from '@/lib/data';
+import type { Stakeholder, Deal, Interaction, Meeting } from '@/lib/data';
 import { getRoleColor } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -124,7 +124,7 @@ function saveState(dealId: string, state: PersistedMapState) {
 // ── Heat score calculation ────────────────────────────────────────────────────
 function computeHeatScore(
   stakeholderName: string,
-  interactions: Deal['interactions'],
+  interactions: Deal['meetings'],
   window: HeatWindow,
   maxCount: number,
 ): number {
@@ -281,8 +281,8 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
   const [localStakeholders, setLocalStakeholders] = useState<Stakeholder[]>([]);
   const [positions, setPositions] = useState<NodePosition[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
-  // Local interactions — editable copy of deal.interactions + user-added ones
-  const [localInteractions, setLocalInteractions] = useState<Interaction[]>([]);
+  // Local meetings — editable copy of deal.meetings + user-added ones
+  const [localInteractions, setLocalInteractions] = useState<Meeting[]>([]);
 
   // ── Hover tooltip state ───────────────────────────────────────────────────
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -330,13 +330,13 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
         setConnections(saved.connections ?? []);
         setLocalInteractions(saved.localInteractions?.length
           ? saved.localInteractions
-          : [...deal.interactions]);
+          : [...deal.meetings]);
         return;
       }
     }
     setPositions(computeInitialPositions(stks, deal.buyingStages, actualW));
     setConnections(buildDefaultConnections(stks, deal.buyingStages));
-    setLocalInteractions([...deal.interactions]);
+    setLocalInteractions([...deal.meetings]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deal.id]);
 

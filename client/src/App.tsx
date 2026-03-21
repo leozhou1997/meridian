@@ -23,8 +23,8 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
     </AppLayout>
   );
 }
-
 function Router() {
+  // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
       <Route path="/login" component={Login} />

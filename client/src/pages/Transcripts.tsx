@@ -40,7 +40,7 @@ export default function Transcripts() {
 
   const filteredDeals = deals.map(deal => ({
     ...deal,
-    filteredInteractions: deal.interactions.filter(i =>
+    filteredInteractions: deal.meetings.filter(i =>
       i.keyParticipant.toLowerCase().includes(searchQuery.toLowerCase()) ||
       i.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
       i.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -48,8 +48,8 @@ export default function Transcripts() {
     ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
   })).filter(d => d.filteredInteractions.length > 0);
 
-  const totalTranscripts = deals.reduce((sum, d) => sum + d.interactions.length, 0);
-  const withFullText = deals.reduce((sum, d) => sum + d.interactions.filter(i => i.transcript).length, 0);
+  const totalTranscripts = deals.reduce((sum, d) => sum + d.meetings.length, 0);
+  const withFullText = deals.reduce((sum, d) => sum + d.meetings.filter(i => i.transcript).length, 0);
 
   return (
     <div className="p-6 max-w-[960px]">

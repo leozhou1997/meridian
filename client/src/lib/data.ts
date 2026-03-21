@@ -41,7 +41,7 @@ export interface Snapshot {
   keyParticipant: string;
 }
 
-export interface Interaction {
+export interface Meeting {
   id: string;
   dealId: string;
   date: string;
@@ -50,6 +50,19 @@ export interface Interaction {
   summary: string;
   duration: number; // minutes
   transcript?: string; // full meeting transcript
+}
+
+// Legacy alias — use Meeting going forward
+export type Interaction = Meeting;
+
+export interface NextAction {
+  id: string;
+  dealId: string;
+  text: string;
+  dueDate?: string;
+  stakeholderId?: string;
+  completed: boolean;
+  priority: 'high' | 'medium' | 'low';
 }
 
 export interface Deal {
@@ -67,7 +80,8 @@ export interface Deal {
   riskOneLiner: string;
   stakeholders: Stakeholder[];
   snapshots: Snapshot[];
-  interactions: Interaction[];
+  meetings: Meeting[];
+  nextActions: NextAction[];
   buyingStages: string[];
   companyInfo?: string;
 }
@@ -173,7 +187,13 @@ export const deals: Deal[] = [
         confidenceScore: 65, confidenceChange: 5, interactionType: 'Demo', keyParticipant: 'Annie Mitchell'
       },
     ],
-    interactions: [
+    nextActions: [
+      { id: 'na-1a', dealId: 'deal-1', text: 'Send ROI model with Allbirds-specific numbers to Annie Mitchell', dueDate: '2026-03-22', stakeholderId: 'a1-s2', completed: false, priority: 'high' },
+      { id: 'na-1b', dealId: 'deal-1', text: 'Send SOC2 Type II documentation to Christos', dueDate: '2026-03-23', stakeholderId: 'a1-s3', completed: false, priority: 'high' },
+      { id: 'na-1c', dealId: 'deal-1', text: 'Re-engage Benny to understand Q2 succession plan', dueDate: '2026-03-24', stakeholderId: 'a1-s1', completed: false, priority: 'medium' },
+      { id: 'na-1d', dealId: 'deal-1', text: 'Send 3 relevant case studies to Annie', dueDate: '2026-03-21', stakeholderId: 'a1-s2', completed: true, priority: 'medium' },
+    ],
+    meetings: [
       {
         id: 'int-1f', dealId: 'deal-1', date: '2026-03-02', type: 'POC Check-in', keyParticipant: 'Benny Joseph',
         summary: 'Reviewed POC metrics. 23% improvement in deal velocity. Benny mentioned potential role change in Q2.',
@@ -467,7 +487,12 @@ Leo Zhou: Perfect. I'll send the invite to both of you.
         confidenceScore: 60, confidenceChange: 0, interactionType: 'Discovery Call', keyParticipant: 'Marcus Chen'
       },
     ],
-    interactions: [
+    nextActions: [
+      { id: 'na-2a', dealId: 'deal-2', text: 'Send competitive comparison doc vs Gong and Clari', dueDate: '2026-03-23', stakeholderId: 'g2-s2', completed: false, priority: 'high' },
+      { id: 'na-2b', dealId: 'deal-2', text: 'Schedule POC kickoff with Sarah and Priya', dueDate: '2026-03-26', stakeholderId: 'g2-s2', completed: false, priority: 'high' },
+      { id: 'na-2c', dealId: 'deal-2', text: 'Engage CRO David Park — get intro through Marcus', dueDate: '2026-03-28', stakeholderId: 'g2-s3', completed: false, priority: 'medium' },
+    ],
+    meetings: [
       {
         id: 'int-2c', dealId: 'deal-2', date: '2026-03-14', type: 'Demo', keyParticipant: 'Sarah Kim',
         summary: 'Full platform demo. Sarah impressed by stakeholder map. Wants to test with real deals.',
@@ -639,7 +664,12 @@ Marcus Chen: Sure. Send me some times.
         confidenceScore: 65, confidenceChange: 5, interactionType: 'POC Check-in', keyParticipant: 'Rachel Torres'
       },
     ],
-    interactions: [
+    nextActions: [
+      { id: 'na-3a', dealId: 'deal-3', text: 'Prepare private cloud architecture documentation for Kevin', dueDate: '2026-03-22', stakeholderId: 'sk3-s2', completed: false, priority: 'high' },
+      { id: 'na-3b', dealId: 'deal-3', text: 'Get security team to join next call with Kevin', dueDate: '2026-03-25', stakeholderId: 'sk3-s2', completed: false, priority: 'high' },
+      { id: 'na-3c', dealId: 'deal-3', text: 'Send Okta SSO certification docs to Kevin', dueDate: '2026-03-23', stakeholderId: 'sk3-s2', completed: true, priority: 'medium' },
+    ],
+    meetings: [
       {
         id: 'int-3d', dealId: 'deal-3', date: '2026-03-19', type: 'POC Check-in', keyParticipant: 'Lisa Huang',
         summary: 'POC users love the product. 3 reps actively using. But IT has blocked API access.',
@@ -849,7 +879,12 @@ Leo Zhou: Absolutely. That's our standard approach. I'll put together a POC prop
         confidenceScore: 75, confidenceChange: 5, interactionType: 'Negotiation', keyParticipant: 'Amanda Foster'
       },
     ],
-    interactions: [
+    nextActions: [
+      { id: 'na-4a', dealId: 'deal-4', text: 'Prepare Q3 start proposal with pilot pricing ($90K)', dueDate: '2026-03-25', stakeholderId: 'lu4-s1', completed: false, priority: 'high' },
+      { id: 'na-4b', dealId: 'deal-4', text: 'Get executive briefing scheduled for CFO James Liu', dueDate: '2026-03-28', stakeholderId: 'lu4-s2', completed: false, priority: 'high' },
+      { id: 'na-4c', dealId: 'deal-4', text: 'Monthly check-in with Amanda to maintain momentum', dueDate: '2026-04-01', stakeholderId: 'lu4-s1', completed: false, priority: 'medium' },
+    ],
+    meetings: [
       {
         id: 'int-4c', dealId: 'deal-4', date: '2026-03-01', type: 'Negotiation', keyParticipant: 'Amanda Foster',
         summary: 'Amanda confirmed budget freeze. Suggested creative structuring — start billing in Q3.',
@@ -999,7 +1034,12 @@ Leo Zhou: Absolutely. I'll send a calendar invite.
         confidenceScore: 83, confidenceChange: 18, interactionType: 'Executive Briefing', keyParticipant: 'Ivan Zhao'
       },
     ],
-    interactions: [
+    nextActions: [
+      { id: 'na-5a', dealId: 'deal-5', text: 'Send final contract for signature to Michelle', dueDate: '2026-03-22', stakeholderId: 'no5-s1', completed: false, priority: 'high' },
+      { id: 'na-5b', dealId: 'deal-5', text: 'Schedule onboarding kickoff for March 24', dueDate: '2026-03-22', stakeholderId: 'no5-s4', completed: false, priority: 'high' },
+      { id: 'na-5c', dealId: 'deal-5', text: 'Resolve DPA sub-processor exhibit with Legal', dueDate: '2026-03-21', stakeholderId: 'no5-s1', completed: true, priority: 'medium' },
+    ],
+    meetings: [
       {
         id: 'int-5d', dealId: 'deal-5', date: '2026-03-02', type: 'Negotiation', keyParticipant: 'Michelle Wang',
         summary: 'Final terms agreed. 3-year deal with annual billing. Onboarding to start March 15.',

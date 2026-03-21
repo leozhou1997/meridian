@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Globe, Clock, TrendingUp, TrendingDown, AlertTriangle,
   ChevronRight, User, MessageSquare, FileText, Map, BarChart3, X, ExternalLink,
-  Mic, Check, Edit2, Save
+  Mic, Check, Edit2, Save, Camera
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -141,6 +141,24 @@ export default function DealDetail() {
     setEditRoles(prev =>
       prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]
     );
+  };
+
+  // Avatar upload handler
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedStakeholder) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      const updated = localStakeholders.map(s =>
+        s.id === selectedStakeholder.id ? { ...s, avatar: dataUrl } : s
+      );
+      setLocalStakeholders(updated);
+      setSelectedStakeholder({ ...selectedStakeholder, avatar: dataUrl });
+      toast.success('Avatar updated');
+    };
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -471,14 +489,31 @@ export default function DealDetail() {
 
                   {/* Avatar + Name/Title */}
                   <div className="flex items-center gap-3 mb-5">
-                    <img
-                      src={selectedStakeholder.avatar}
-                      alt={selectedStakeholder.name}
-                      className="w-14 h-14 rounded-full object-cover border-2 border-border shrink-0"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedStakeholder.name)}&background=1a1f36&color=fff&size=56`;
-                      }}
-                    />
+                    <div className="relative shrink-0 group">
+                      <img
+                        src={selectedStakeholder.avatar}
+                        alt={selectedStakeholder.name}
+                        className="w-14 h-14 rounded-full object-cover border-2 border-border"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedStakeholder.name)}&background=1a1f36&color=fff&size=56`;
+                        }}
+                      />
+                      {/* Upload overlay — always visible on hover */}
+                      <button
+                        onClick={() => avatarInputRef.current?.click()}
+                        className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Change photo"
+                      >
+                        <Camera className="w-4 h-4 text-white" />
+                      </button>
+                      <input
+                        ref={avatarInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleAvatarUpload}
+                      />
+                    </div>
                     <div className="flex-1 min-w-0">
                       {isEditingProfile ? (
                         <div className="space-y-1.5">

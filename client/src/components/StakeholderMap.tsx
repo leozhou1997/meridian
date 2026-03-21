@@ -1,23 +1,26 @@
 /**
  * StakeholderMap — Intelligence Cartography design system
- * Features:
+ * v6 Features:
+ * - Larger node cards with engagement heat bar (L7D / L14D / L30D switchable)
+ * - Hover tooltip: rich info panel near the card
+ * - Click: full-screen modal with blurred backdrop (edit mode)
  * - View / Edit mode toggle
  * - Drag nodes (edit mode)
  * - Add / Remove stakeholders
  * - Draw, re-route, and type-label connections
  * - Connection types: Reports To | Influences | Collaborates | Blocks
  * - localStorage persistence per deal
- * - Correct layout on deal switch (positions reset per deal)
  */
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Stakeholder, Deal } from '@/lib/data';
 import { getRoleColor } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import {
   ZoomIn, ZoomOut, Maximize2, Edit2, Eye, Plus, Trash2,
-  Link2, Link2Off, Save, RotateCcw, Settings2
+  Link2, Link2Off, Save, X, Check, Camera, Mail, Flame
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { nanoid } from 'nanoid';
@@ -28,11 +31,7 @@ interface StakeholderMapProps {
   onStakeholdersChange?: (stakeholders: Stakeholder[]) => void;
 }
 
-interface NodePosition {
-  id: string;
-  x: number;
-  y: number;
-}
+interface NodePosition { id: string; x: number; y: number; }
 
 export type ConnectionType = 'reports_to' | 'influences' | 'collaborates' | 'blocks';
 
@@ -43,6 +42,8 @@ export interface Connection {
   type: ConnectionType;
 }
 
+type HeatWindow = 'L7D' | 'L14D' | 'L30D';
+
 const CONNECTION_TYPES: { value: ConnectionType; label: string; color: string; dash?: string }[] = [
   { value: 'reports_to',   label: 'Reports To',   color: 'rgba(99,130,255,0.55)',  dash: 'none' },
   { value: 'influences',   label: 'Influences',   color: 'rgba(16,185,129,0.5)',   dash: 'none' },
@@ -50,8 +51,8 @@ const CONNECTION_TYPES: { value: ConnectionType; label: string; color: string; d
   { value: 'blocks',       label: 'Blocks',       color: 'rgba(239,68,68,0.5)',    dash: '4 3' },
 ];
 
-const NODE_W = 160;
-const NODE_H = 110;
+const NODE_W = 200;
+const NODE_H = 140;
 
 const AVATAR_POOL = [
   'https://api.dicebear.com/7.x/avataaars/svg?seed=Mx&backgroundColor=b6e3f4',
@@ -61,13 +62,11 @@ const AVATAR_POOL = [
 ];
 
 // ── localStorage helpers ──────────────────────────────────────────────────────
-function storageKey(dealId: string) { return `meridian_map_${dealId}`; }
+function storageKey(dealId: string) { return `meridian_map_v2_${dealId}`; }
 
 interface PersistedMapState {
   positions: NodePosition[];
   connections: Connection[];
-  // NOTE: stakeholders are NOT persisted here — they always come from deal.stakeholders
-  // to avoid stale/cross-deal contamination. Only layout (positions + connections) is saved.
 }
 
 function loadState(dealId: string): PersistedMapState | null {
@@ -75,7 +74,6 @@ function loadState(dealId: string): PersistedMapState | null {
     const raw = localStorage.getItem(storageKey(dealId));
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    // Strip out any legacy stakeholders field that may have been saved before
     const { positions, connections } = parsed;
     if (!Array.isArray(positions)) return null;
     return { positions, connections: connections ?? [] };
@@ -83,13 +81,47 @@ function loadState(dealId: string): PersistedMapState | null {
 }
 
 function saveState(dealId: string, state: PersistedMapState) {
-  // Only save layout — never save stakeholders to avoid cross-deal contamination
   try {
     localStorage.setItem(storageKey(dealId), JSON.stringify({
       positions: state.positions,
       connections: state.connections,
     }));
   } catch {}
+}
+
+// ── Heat score calculation ────────────────────────────────────────────────────
+function computeHeatScore(
+  stakeholderName: string,
+  interactions: Deal['interactions'],
+  window: HeatWindow,
+  maxCount: number,
+): number {
+  const days = window === 'L7D' ? 7 : window === 'L14D' ? 14 : 30;
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+
+  const count = interactions.filter(i => {
+    const d = new Date(i.date);
+    return d >= cutoff && i.keyParticipant.toLowerCase().includes(stakeholderName.split(' ')[0].toLowerCase());
+  }).length;
+
+  if (maxCount === 0) return 0;
+  return Math.min(count / maxCount, 1);
+}
+
+function getHeatColor(score: number): string {
+  if (score === 0) return 'rgba(100,116,139,0.3)'; // slate-500 cold
+  if (score < 0.3) return 'rgba(59,130,246,0.6)';  // blue cool
+  if (score < 0.6) return 'rgba(245,158,11,0.7)';  // amber warm
+  return 'rgba(239,68,68,0.85)';                    // red hot
+}
+
+function getHeatLabel(score: number): string {
+  if (score === 0) return 'No contact';
+  if (score < 0.3) return 'Low';
+  if (score < 0.6) return 'Moderate';
+  if (score < 0.85) return 'Active';
+  return 'Hot';
 }
 
 // ── Auto-layout ───────────────────────────────────────────────────────────────
@@ -110,22 +142,43 @@ function computeInitialPositions(
     return {
       id: s.id,
       x: col * colW + (colW - NODE_W) / 2,
-      y: 30 + row * (NODE_H + 30),
+      y: 40 + row * (NODE_H + 36),
     };
   });
 }
+
+// ── Sentiment dot color ───────────────────────────────────────────────────────
+const sentimentDot = (s: string) =>
+  s === 'Positive' ? '#10b981' : s === 'Neutral' ? '#f59e0b' : '#ef4444';
+
+const sentimentLabel = (s: string) =>
+  s === 'Positive' ? 'text-emerald-400' : s === 'Neutral' ? 'text-amber-400' : 'text-red-400';
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function StakeholderMap({ deal, onStakeholderClick, onStakeholdersChange }: StakeholderMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerW, setContainerW] = useState(800);
   const [mode, setMode] = useState<'view' | 'edit'>('view');
+  const [heatWindow, setHeatWindow] = useState<HeatWindow>('L14D');
 
-  // ── Per-deal state (reset when deal.id changes) ───────────────────────────
+  // ── Per-deal state ────────────────────────────────────────────────────────
   const [currentDealId, setCurrentDealId] = useState(deal.id);
   const [localStakeholders, setLocalStakeholders] = useState<Stakeholder[]>([]);
   const [positions, setPositions] = useState<NodePosition[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
+
+  // ── Hover tooltip state ───────────────────────────────────────────────────
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [hoverPos, setHoverPos] = useState({ x: 0, y: 0 });
+
+  // ── Click modal state ─────────────────────────────────────────────────────
+  const [modalStakeholder, setModalStakeholder] = useState<Stakeholder | null>(null);
+  const [isEditingModal, setIsEditingModal] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editTitle, setEditTitle] = useState('');
+  const [editSentiment, setEditSentiment] = useState<'Positive' | 'Neutral' | 'Negative'>('Neutral');
+  const [editRoles, setEditRoles] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load or initialise state when deal changes
   useEffect(() => {
@@ -134,35 +187,28 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     setConnectingFrom(null);
     setSelectedConnId(null);
     setSelectedNodeId(null);
+    setHoveredId(null);
+    setModalStakeholder(null);
 
-    // Always use deal.stakeholders as the source of truth for people
     const stks = deal.stakeholders;
     setLocalStakeholders(stks);
 
-    // Get actual container width — fall back to measured or 900
     const actualW = containerRef.current?.getBoundingClientRect().width || containerW || 900;
-
     const saved = loadState(deal.id);
+
     if (saved && saved.positions.length > 0) {
-      // Validate saved positions belong to current deal's stakeholders
       const validIds = new Set(stks.map(s => s.id));
       const validPositions = saved.positions.filter(p => validIds.has(p.id));
-      // If all stakeholders have saved positions, use them; otherwise recompute
       if (validPositions.length === stks.length) {
         setPositions(validPositions);
         setConnections(saved.connections ?? []);
       } else {
-        // Partial or mismatched — recompute layout
-        const pos = computeInitialPositions(stks, deal.buyingStages, actualW);
-        const defConns = buildDefaultConnections(stks, deal.buyingStages);
-        setPositions(pos);
-        setConnections(defConns);
+        setPositions(computeInitialPositions(stks, deal.buyingStages, actualW));
+        setConnections(buildDefaultConnections(stks, deal.buyingStages));
       }
     } else {
-      const pos = computeInitialPositions(stks, deal.buyingStages, actualW);
-      const defConns = buildDefaultConnections(stks, deal.buyingStages);
-      setPositions(pos);
-      setConnections(defConns);
+      setPositions(computeInitialPositions(stks, deal.buyingStages, actualW));
+      setConnections(buildDefaultConnections(stks, deal.buyingStages));
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deal.id]);
@@ -171,12 +217,34 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const obs = new ResizeObserver(entries => {
-      setContainerW(entries[0].contentRect.width);
-    });
+    const obs = new ResizeObserver(entries => setContainerW(entries[0].contentRect.width));
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
+
+  // ── Heat scores ───────────────────────────────────────────────────────────
+  const maxTouchpoints = Math.max(
+    ...localStakeholders.map(s => {
+      const days = heatWindow === 'L7D' ? 7 : heatWindow === 'L14D' ? 14 : 30;
+      const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - days);
+      return deal.interactions.filter(i => {
+        const d = new Date(i.date);
+        return d >= cutoff && i.keyParticipant.toLowerCase().includes(s.name.split(' ')[0].toLowerCase());
+      }).length;
+    }),
+    1
+  );
+
+  const getHeat = (s: Stakeholder) => computeHeatScore(s.name, deal.interactions, heatWindow, maxTouchpoints);
+
+  const getTouchpointCount = (s: Stakeholder) => {
+    const days = heatWindow === 'L7D' ? 7 : heatWindow === 'L14D' ? 14 : 30;
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - days);
+    return deal.interactions.filter(i => {
+      const d = new Date(i.date);
+      return d >= cutoff && i.keyParticipant.toLowerCase().includes(s.name.split(' ')[0].toLowerCase());
+    }).length;
+  };
 
   // ── Drag state ────────────────────────────────────────────────────────────
   const [dragging, setDragging] = useState<string | null>(null);
@@ -187,23 +255,20 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
   // ── Connection drawing state ──────────────────────────────────────────────
   const [connectingFrom, setConnectingFrom] = useState<string | null>(null);
   const [pendingConnType, setPendingConnType] = useState<ConnectionType>('reports_to');
-
-  // ── Connection editing state ──────────────────────────────────────────────
   const [selectedConnId, setSelectedConnId] = useState<string | null>(null);
   const [connEditPopup, setConnEditPopup] = useState<{ connId: string; x: number; y: number } | null>(null);
+  const [reroutingConn, setReroutingConn] = useState<{ connId: string; end: 'from' | 'to' } | null>(null);
 
   const getPos = useCallback((id: string) => positions.find(p => p.id === id), [positions]);
 
-  // ── Save to localStorage ──────────────────────────────────────────────────
+  // ── Save ──────────────────────────────────────────────────────────────────
   const handleSave = () => {
     saveState(currentDealId, { positions, connections });
     toast.success('Map saved');
   };
 
-  // ── Reset layout ──────────────────────────────────────────────────────────
   const handleReset = () => {
-    const pos = computeInitialPositions(localStakeholders, deal.buyingStages, containerW);
-    setPositions(pos);
+    setPositions(computeInitialPositions(localStakeholders, deal.buyingStages, containerW));
     setZoom(1);
   };
 
@@ -245,11 +310,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     setConnEditPopup(null);
 
     if (mode === 'edit' && connectingFrom) {
-      if (connectingFrom === stakeholder.id) {
-        setConnectingFrom(null);
-        return;
-      }
-      // Toggle connection
+      if (connectingFrom === stakeholder.id) { setConnectingFrom(null); return; }
       const exists = connections.find(
         c => (c.from === connectingFrom && c.to === stakeholder.id) ||
              (c.from === stakeholder.id && c.to === connectingFrom)
@@ -258,23 +319,57 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
         setConnections(prev => prev.filter(c => c.id !== exists.id));
         toast('Connection removed');
       } else {
-        setConnections(prev => [...prev, {
-          id: nanoid(8),
-          from: connectingFrom,
-          to: stakeholder.id,
-          type: pendingConnType,
-        }]);
+        setConnections(prev => [...prev, { id: nanoid(8), from: connectingFrom, to: stakeholder.id, type: pendingConnType }]);
         toast(`"${pendingConnType.replace('_', ' ')}" connection added`);
       }
       setConnectingFrom(null);
       return;
     }
 
-    setSelectedNodeId(prev => prev === stakeholder.id ? null : stakeholder.id);
+    // Open modal
+    setHoveredId(null);
+    setModalStakeholder(stakeholder);
+    setIsEditingModal(false);
+    setEditName(stakeholder.name);
+    setEditTitle(stakeholder.title);
+    setEditSentiment(stakeholder.sentiment);
+    setEditRoles(stakeholder.roles ?? [stakeholder.role]);
     onStakeholderClick?.(stakeholder);
   };
 
-  // ── Connection line click (edit mode) ─────────────────────────────────────
+  // ── Modal save ────────────────────────────────────────────────────────────
+  const handleModalSave = () => {
+    if (!modalStakeholder) return;
+    const updated: Stakeholder = {
+      ...modalStakeholder,
+      name: editName,
+      title: editTitle,
+      sentiment: editSentiment,
+      role: (editRoles[0] as Stakeholder['role']) ?? modalStakeholder.role,
+      roles: editRoles,
+    };
+    setLocalStakeholders(prev => prev.map(s => s.id === updated.id ? updated : s));
+    setModalStakeholder(updated);
+    setIsEditingModal(false);
+    onStakeholdersChange?.(localStakeholders.map(s => s.id === updated.id ? updated : s));
+    toast.success('Profile updated');
+  };
+
+  // ── Avatar upload ─────────────────────────────────────────────────────────
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !modalStakeholder) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      const updated = { ...modalStakeholder, avatar: dataUrl };
+      setLocalStakeholders(prev => prev.map(s => s.id === updated.id ? updated : s));
+      setModalStakeholder(updated);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // ── Connection handlers ───────────────────────────────────────────────────
   const handleConnClick = (e: React.MouseEvent, connId: string) => {
     if (mode !== 'edit') return;
     e.stopPropagation();
@@ -282,13 +377,13 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     setConnEditPopup({ connId, x: e.clientX, y: e.clientY });
   };
 
-  // ── Add / Remove stakeholder ──────────────────────────────────────────────
   const handleAddStakeholder = () => {
     const newS: Stakeholder = {
       id: `s-${nanoid(6)}`,
       name: 'New Contact',
       title: 'Title',
       role: 'Influencer',
+      roles: ['Influencer'],
       sentiment: 'Neutral',
       engagement: 'Medium',
       avatar: AVATAR_POOL[Math.floor(Math.random() * AVATAR_POOL.length)],
@@ -303,19 +398,12 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
 
   const handleRemoveStakeholder = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setLocalStakeholders(prev => {
-      const updated = prev.filter(s => s.id !== id);
-      onStakeholdersChange?.(updated);
-      return updated;
-    });
+    setLocalStakeholders(prev => { const u = prev.filter(s => s.id !== id); onStakeholdersChange?.(u); return u; });
     setConnections(prev => prev.filter(c => c.from !== id && c.to !== id));
     setPositions(prev => prev.filter(p => p.id !== id));
     if (selectedNodeId === id) setSelectedNodeId(null);
     toast('Stakeholder removed');
   };
-
-  // ── Connection endpoint re-routing ────────────────────────────────────────
-  const [reroutingConn, setReroutingConn] = useState<{ connId: string; end: 'from' | 'to' } | null>(null);
 
   const handleRerouteClick = (connId: string, end: 'from' | 'to') => {
     setConnEditPopup(null);
@@ -328,22 +416,16 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     e.stopPropagation();
     setConnections(prev => prev.map(c => {
       if (c.id !== reroutingConn.connId) return c;
-      return reroutingConn.end === 'from'
-        ? { ...c, from: stakeholderId }
-        : { ...c, to: stakeholderId };
+      return reroutingConn.end === 'from' ? { ...c, from: stakeholderId } : { ...c, to: stakeholderId };
     }));
     setReroutingConn(null);
     toast('Connection re-routed');
   };
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
-  const sentimentDot = (s: string) =>
-    s === 'Positive' ? '#10b981' : s === 'Neutral' ? '#f59e0b' : '#ef4444';
-
-  const connConfig = (type: ConnectionType) =>
-    CONNECTION_TYPES.find(t => t.value === type) ?? CONNECTION_TYPES[0];
-
+  const connConfig = (type: ConnectionType) => CONNECTION_TYPES.find(t => t.value === type) ?? CONNECTION_TYPES[0];
   const stageOrder = deal.buyingStages;
+
+  const ALL_ROLES = ['Champion', 'Decision Maker', 'Influencer', 'Blocker', 'User', 'Evaluator'];
 
   return (
     <div className="relative h-full w-full" ref={containerRef}>
@@ -359,6 +441,22 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
 
       {/* Top-right controls */}
       <div className="absolute top-14 right-3 z-20 flex flex-col gap-1.5">
+        {/* Heat window selector */}
+        <div className="flex rounded-lg overflow-hidden border border-border/50 bg-muted/80 mb-1">
+          {(['L7D', 'L14D', 'L30D'] as HeatWindow[]).map(w => (
+            <button
+              key={w}
+              onClick={() => setHeatWindow(w)}
+              className={`flex items-center gap-1 px-2 py-1.5 text-[10px] font-medium transition-colors ${
+                heatWindow === w ? 'bg-card text-foreground' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {w === heatWindow && <Flame className="w-2.5 h-2.5 text-orange-400" />}
+              {w}
+            </button>
+          ))}
+        </div>
+
         {/* View / Edit toggle */}
         <div className="flex rounded-lg overflow-hidden border border-border/50 bg-muted/80">
           <button
@@ -385,9 +483,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
           { icon: ZoomOut,   action: () => setZoom(z => Math.max(z - 0.15, 0.4)) },
           { icon: Maximize2, action: handleReset },
         ].map((btn, i) => (
-          <button
-            key={i}
-            onClick={btn.action}
+          <button key={i} onClick={btn.action}
             className="w-7 h-7 rounded bg-muted/80 border border-border/50 flex items-center justify-center hover:bg-muted transition-colors"
           >
             <btn.icon className="w-3.5 h-3.5" />
@@ -399,64 +495,44 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
       <AnimatePresence>
         {mode === 'edit' && (
           <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
             className="absolute bottom-12 right-3 z-20 flex flex-col gap-1.5"
           >
-            {/* Save */}
-            <button
-              onClick={handleSave}
+            <button onClick={handleSave}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-[10px] font-medium hover:bg-emerald-700 transition-colors shadow-md"
             >
               <Save className="w-3 h-3" /> Save Map
             </button>
-
-            {/* Add Person */}
-            <button
-              onClick={handleAddStakeholder}
+            <button onClick={handleAddStakeholder}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-[10px] font-medium hover:bg-primary/90 transition-colors shadow-md"
             >
               <Plus className="w-3 h-3" /> Add Person
             </button>
-
-            {/* Draw Link — with type selector */}
             <div className="flex flex-col gap-1">
               <button
                 onClick={() => {
                   if (connectingFrom) { setConnectingFrom(null); toast('Connection mode cancelled'); }
-                  else { setConnectingFrom('__pending__'); toast('Select connection type below, then click two people'); }
+                  else { setConnectingFrom('__pending__'); toast('Select connection type, then click two people'); }
                 }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium transition-colors shadow-md ${
-                  connectingFrom
-                    ? 'bg-amber-500 text-white hover:bg-amber-600'
-                    : 'bg-muted border border-border/50 hover:bg-muted/80'
+                  connectingFrom ? 'bg-amber-500 text-white hover:bg-amber-600' : 'bg-muted border border-border/50 hover:bg-muted/80'
                 }`}
               >
                 {connectingFrom ? <Link2Off className="w-3 h-3" /> : <Link2 className="w-3 h-3" />}
                 {connectingFrom ? 'Cancel Link' : 'Draw Link'}
               </button>
-
-              {/* Connection type selector (shown when draw mode active) */}
               <AnimatePresence>
                 {connectingFrom && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
                     className="flex flex-col gap-0.5 overflow-hidden"
                   >
                     {CONNECTION_TYPES.map(ct => (
-                      <button
-                        key={ct.value}
-                        onClick={() => setPendingConnType(ct.value)}
+                      <button key={ct.value} onClick={() => setPendingConnType(ct.value)}
                         className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] transition-colors ${
-                          pendingConnType === ct.value
-                            ? 'bg-card border border-primary/50 text-foreground'
-                            : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                          pendingConnType === ct.value ? 'bg-card border border-primary/50 text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                         }`}
                       >
-                        <div className="w-4 h-px" style={{ background: ct.color, borderTop: ct.dash !== 'none' ? `1px dashed ${ct.color}` : undefined }} />
+                        <div className="w-4 h-px" style={{ background: ct.color }} />
                         {ct.label}
                       </button>
                     ))}
@@ -468,23 +544,17 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
         )}
       </AnimatePresence>
 
-      {/* Connecting / re-routing hint banner */}
+      {/* Hint banners */}
       <AnimatePresence>
         {(connectingFrom && connectingFrom !== '__pending__') && (
-          <motion.div
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
+          <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             className="absolute top-[58px] left-1/2 -translate-x-1/2 z-30 bg-amber-500/90 text-white text-[10px] px-3 py-1 rounded-full shadow-md"
           >
             Click another person to link — or click same person to cancel
           </motion.div>
         )}
         {reroutingConn && (
-          <motion.div
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
+          <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             className="absolute top-[58px] left-1/2 -translate-x-1/2 z-30 bg-blue-500/90 text-white text-[10px] px-3 py-1 rounded-full shadow-md"
           >
             Click a person to re-route the {reroutingConn.end === 'from' ? 'source' : 'target'} end
@@ -496,9 +566,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
       <AnimatePresence>
         {connEditPopup && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.92 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.92 }}
+            initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }}
             className="fixed z-50 bg-card border border-border/60 rounded-xl shadow-2xl p-3 w-52"
             style={{ left: Math.min(connEditPopup.x, window.innerWidth - 220), top: Math.min(connEditPopup.y, window.innerHeight - 260) }}
           >
@@ -506,64 +574,39 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
               <span className="text-[11px] font-display font-semibold">Edit Connection</span>
               <button onClick={() => setConnEditPopup(null)} className="text-muted-foreground hover:text-foreground text-xs">✕</button>
             </div>
-
-            {/* Type selector */}
             <div className="mb-3">
               <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Relationship Type</div>
-              <div className="flex flex-col gap-1">
-                {CONNECTION_TYPES.map(ct => {
-                  const conn = connections.find(c => c.id === connEditPopup.connId);
-                  const isActive = conn?.type === ct.value;
-                  return (
-                    <button
-                      key={ct.value}
-                      onClick={() => {
-                        setConnections(prev => prev.map(c =>
-                          c.id === connEditPopup.connId ? { ...c, type: ct.value } : c
-                        ));
-                      }}
-                      className={`flex items-center gap-2 px-2 py-1 rounded text-[10px] transition-colors ${
-                        isActive ? 'bg-primary/10 text-primary border border-primary/30' : 'hover:bg-muted text-muted-foreground'
-                      }`}
-                    >
-                      <div className="w-5 h-px shrink-0" style={{ background: ct.color }} />
-                      {ct.label}
-                    </button>
-                  );
-                })}
-              </div>
+              {CONNECTION_TYPES.map(ct => {
+                const conn = connections.find(c => c.id === connEditPopup.connId);
+                const isActive = conn?.type === ct.value;
+                return (
+                  <button key={ct.value}
+                    onClick={() => setConnections(prev => prev.map(c => c.id === connEditPopup.connId ? { ...c, type: ct.value } : c))}
+                    className={`flex items-center gap-2 px-2 py-1 rounded text-[10px] transition-colors w-full ${
+                      isActive ? 'bg-primary/10 text-primary border border-primary/30' : 'hover:bg-muted text-muted-foreground'
+                    }`}
+                  >
+                    <div className="w-5 h-px shrink-0" style={{ background: ct.color }} />
+                    {ct.label}
+                  </button>
+                );
+              })}
             </div>
-
-            {/* Re-route endpoints */}
             <div className="mb-3">
               <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Re-route Endpoint</div>
               <div className="flex gap-1.5">
-                <button
-                  onClick={() => handleRerouteClick(connEditPopup.connId, 'from')}
+                <button onClick={() => handleRerouteClick(connEditPopup.connId, 'from')}
                   className="flex-1 text-[10px] px-2 py-1 rounded bg-muted hover:bg-muted/80 transition-colors"
-                >
-                  Change Source
-                </button>
-                <button
-                  onClick={() => handleRerouteClick(connEditPopup.connId, 'to')}
+                >Change Source</button>
+                <button onClick={() => handleRerouteClick(connEditPopup.connId, 'to')}
                   className="flex-1 text-[10px] px-2 py-1 rounded bg-muted hover:bg-muted/80 transition-colors"
-                >
-                  Change Target
-                </button>
+                >Change Target</button>
               </div>
             </div>
-
-            {/* Delete connection */}
             <button
-              onClick={() => {
-                setConnections(prev => prev.filter(c => c.id !== connEditPopup.connId));
-                setConnEditPopup(null);
-                toast('Connection deleted');
-              }}
+              onClick={() => { setConnections(prev => prev.filter(c => c.id !== connEditPopup.connId)); setConnEditPopup(null); toast('Connection deleted'); }}
               className="w-full text-[10px] px-2 py-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
-            >
-              Delete Connection
-            </button>
+            >Delete Connection</button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -572,7 +615,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
       <div
         className="absolute inset-0 top-[52px] overflow-auto"
         style={{ cursor: dragging ? 'grabbing' : (connectingFrom || reroutingConn) ? 'crosshair' : 'default' }}
-        onClick={() => { setConnEditPopup(null); }}
+        onClick={() => { setConnEditPopup(null); setHoveredId(null); }}
       >
         {/* Dot grid */}
         <svg className="absolute inset-0 w-full h-full opacity-[0.03] pointer-events-none">
@@ -586,22 +629,12 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
 
         {/* Column dividers */}
         {stageOrder.map((_, i) => i === 0 ? null : (
-          <div
-            key={i}
-            className="absolute top-0 bottom-0 w-px bg-border/10"
+          <div key={i} className="absolute top-0 bottom-0 w-px bg-border/10"
             style={{ left: `${(i / stageOrder.length) * 100}%` }}
           />
         ))}
 
-        <div
-          style={{
-            transform: `scale(${zoom})`,
-            transformOrigin: 'top left',
-            width: '100%',
-            minHeight: '100%',
-            position: 'relative',
-          }}
-        >
+        <div style={{ transform: `scale(${zoom})`, transformOrigin: 'top left', width: '100%', minHeight: '100%', position: 'relative' }}>
           {/* SVG connections */}
           <svg className="absolute inset-0 w-full h-full" style={{ overflow: 'visible', pointerEvents: mode === 'edit' ? 'all' : 'none' }}>
             <defs>
@@ -611,7 +644,6 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                 </marker>
               ))}
             </defs>
-
             {connections.map(conn => {
               const fromPos = getPos(conn.from);
               const toPos = getPos(conn.to);
@@ -624,25 +656,16 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
               const cpx2 = x1 + (x2 - x1) * 0.6;
               const cfg = connConfig(conn.type);
               const isSelected = selectedConnId === conn.id;
-
-              // Midpoint for label
               const mx = (x1 + x2) / 2;
               const my = (y1 + y2) / 2 - 8;
-
               return (
                 <g key={conn.id}>
-                  {/* Invisible wide hit area */}
-                  <path
-                    d={`M ${x1} ${y1} C ${cpx1} ${y1}, ${cpx2} ${y2}, ${x2} ${y2}`}
-                    fill="none"
-                    stroke="transparent"
-                    strokeWidth="12"
+                  <path d={`M ${x1} ${y1} C ${cpx1} ${y1}, ${cpx2} ${y2}, ${x2} ${y2}`}
+                    fill="none" stroke="transparent" strokeWidth="12"
                     style={{ cursor: mode === 'edit' ? 'pointer' : 'default' }}
                     onClick={(e) => handleConnClick(e as unknown as React.MouseEvent, conn.id)}
                   />
-                  {/* Visible line */}
-                  <path
-                    d={`M ${x1} ${y1} C ${cpx1} ${y1}, ${cpx2} ${y2}, ${x2} ${y2}`}
+                  <path d={`M ${x1} ${y1} C ${cpx1} ${y1}, ${cpx2} ${y2}, ${x2} ${y2}`}
                     fill="none"
                     stroke={isSelected ? 'rgba(255,255,255,0.7)' : cfg.color}
                     strokeWidth={isSelected ? 2 : 1.5}
@@ -650,17 +673,10 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                     markerEnd={`url(#arrow-${conn.type})`}
                     style={{ pointerEvents: 'none' }}
                   />
-                  {/* Relationship label on line */}
                   {mode === 'edit' && (
-                    <text
-                      x={mx} y={my}
-                      textAnchor="middle"
-                      fontSize="9"
-                      fill={cfg.color}
+                    <text x={mx} y={my} textAnchor="middle" fontSize="9" fill={cfg.color}
                       style={{ pointerEvents: 'none', userSelect: 'none' }}
-                    >
-                      {cfg.label}
-                    </text>
+                    >{cfg.label}</text>
                   )}
                 </g>
               );
@@ -671,11 +687,13 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
           {localStakeholders.map((stakeholder, idx) => {
             const pos = getPos(stakeholder.id);
             if (!pos) return null;
-            const isSelected = selectedNodeId === stakeholder.id;
             const isDragging = dragging === stakeholder.id;
             const isConnSrc = connectingFrom === stakeholder.id;
             const isPendingConn = connectingFrom === '__pending__';
             const isRerouting = !!reroutingConn;
+            const heat = getHeat(stakeholder);
+            const heatColor = getHeatColor(heat);
+            const touchpoints = getTouchpointCount(stakeholder);
 
             return (
               <motion.div
@@ -686,6 +704,12 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                 animate={{ opacity: 1, scale: isDragging ? 1.04 : 1 }}
                 transition={{ duration: 0.25, delay: idx * 0.04 }}
                 onMouseDown={(e) => handleMouseDown(e, stakeholder.id)}
+                onMouseEnter={(e) => {
+                  if (mode === 'edit' && dragging) return;
+                  setHoveredId(stakeholder.id);
+                  setHoverPos({ x: e.clientX, y: e.clientY });
+                }}
+                onMouseLeave={() => setHoveredId(null)}
               >
                 <Card
                   className={`bg-card border transition-all duration-150 ${
@@ -694,12 +718,10 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                     isConnSrc
                       ? 'border-amber-400/80 shadow-lg shadow-amber-400/20 ring-1 ring-amber-400/30'
                       : (isPendingConn || isRerouting)
-                        ? 'border-blue-400/60 hover:border-blue-400/90 hover:shadow-md hover:shadow-blue-400/10'
-                        : isSelected
-                          ? 'border-primary/60 shadow-lg shadow-primary/10 ring-1 ring-primary/20'
-                          : isDragging
-                            ? 'border-primary/40 shadow-xl'
-                            : 'border-border/50 hover:border-border/80 hover:shadow-md'
+                        ? 'border-blue-400/60 hover:border-blue-400/90'
+                        : isDragging
+                          ? 'border-primary/40 shadow-xl'
+                          : 'border-border/50 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5'
                   }`}
                   onClick={(e) => {
                     if (reroutingConn) { handleRerouteTarget(e, stakeholder.id); return; }
@@ -707,24 +729,24 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                     handleNodeClick(e, stakeholder);
                   }}
                 >
-                  <div className="p-3">
-                    <div className="flex items-center gap-2.5 mb-2">
+                  <div className="p-3.5">
+                    {/* Avatar + name row */}
+                    <div className="flex items-center gap-3 mb-3">
                       <div className="relative shrink-0">
                         <img
                           src={stakeholder.avatar}
                           alt={stakeholder.name}
-                          className="w-11 h-11 rounded-full object-cover border-2 border-background"
+                          className="w-12 h-12 rounded-full object-cover border-2 border-background"
                           onError={(e) => {
-                            (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(stakeholder.name)}&background=1a1f36&color=fff&size=44`;
+                            (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(stakeholder.name)}&background=1a1f36&color=fff&size=48`;
                           }}
                         />
-                        <div
-                          className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-card"
+                        <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-card"
                           style={{ backgroundColor: sentimentDot(stakeholder.sentiment) }}
                         />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="text-[11px] font-semibold leading-tight truncate">{stakeholder.name}</div>
+                        <div className="text-[12px] font-semibold leading-tight truncate">{stakeholder.name}</div>
                         <div className="text-[10px] text-muted-foreground leading-tight mt-0.5 truncate">{stakeholder.title}</div>
                       </div>
                       {mode === 'edit' && (
@@ -736,15 +758,38 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                         </button>
                       )}
                     </div>
-                    <div className="flex flex-wrap gap-1">
-                      <Badge variant="outline" className={`text-[9px] px-1.5 py-0 h-4 ${getRoleColor(stakeholder.role)}`}>
-                        {stakeholder.role}
-                      </Badge>
-                      {stakeholder.engagement === 'Low' && (
-                        <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-status-warning/10 text-status-warning border-status-warning/30">
-                          Locked
+
+                    {/* Role badges */}
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      {(stakeholder.roles ?? [stakeholder.role]).slice(0, 2).map(r => (
+                        <Badge key={r} variant="outline" className={`text-[9px] px-1.5 py-0 h-4 ${getRoleColor(r as Stakeholder['role'])}`}>
+                          {r}
                         </Badge>
-                      )}
+                      ))}
+                    </div>
+
+                    {/* Heat bar */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1">
+                          <Flame className="w-2.5 h-2.5" style={{ color: heatColor }} />
+                          <span className="text-[9px] text-muted-foreground font-mono">{heatWindow}</span>
+                        </div>
+                        <span className="text-[9px] font-medium" style={{ color: heatColor }}>
+                          {touchpoints > 0 ? `${touchpoints} touchpoint${touchpoints !== 1 ? 's' : ''}` : 'No contact'}
+                        </span>
+                      </div>
+                      {/* Bar track */}
+                      <div className="h-1.5 rounded-full bg-muted/60 overflow-hidden">
+                        <motion.div
+                          className="h-full rounded-full"
+                          style={{ background: heatColor }}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${heat * 100}%` }}
+                          transition={{ duration: 0.6, ease: 'easeOut' }}
+                        />
+                      </div>
+                      <div className="text-[9px] text-muted-foreground">{getHeatLabel(heat)}</div>
                     </div>
                   </div>
                 </Card>
@@ -753,6 +798,107 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
           })}
         </div>
       </div>
+
+      {/* Hover Tooltip */}
+      <AnimatePresence>
+        {hoveredId && !modalStakeholder && (() => {
+          const s = localStakeholders.find(x => x.id === hoveredId);
+          if (!s) return null;
+          const heat = getHeat(s);
+          const touchpoints = getTouchpointCount(s);
+          const recentInteractions = deal.interactions
+            .filter(i => i.keyParticipant.toLowerCase().includes(s.name.split(' ')[0].toLowerCase()))
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+            .slice(0, 3);
+
+          // Position tooltip to the right of cursor, flip left if near right edge
+          const tooltipW = 260;
+          const left = hoverPos.x + 16 + tooltipW > window.innerWidth
+            ? hoverPos.x - tooltipW - 8
+            : hoverPos.x + 16;
+          const top = Math.min(hoverPos.y - 20, window.innerHeight - 320);
+
+          return (
+            <motion.div
+              key={hoveredId}
+              initial={{ opacity: 0, scale: 0.95, y: 4 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 4 }}
+              transition={{ duration: 0.15 }}
+              className="fixed z-50 pointer-events-none"
+              style={{ left, top, width: tooltipW }}
+            >
+              <div className="bg-card/95 backdrop-blur-md border border-border/60 rounded-xl shadow-2xl p-4">
+                {/* Header */}
+                <div className="flex items-center gap-3 mb-3">
+                  <img src={s.avatar} alt={s.name}
+                    className="w-10 h-10 rounded-full object-cover border-2 border-background"
+                    onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=1a1f36&color=fff&size=40`; }}
+                  />
+                  <div>
+                    <div className="text-[13px] font-semibold">{s.name}</div>
+                    <div className="text-[11px] text-muted-foreground">{s.title}</div>
+                  </div>
+                </div>
+
+                {/* Sentiment + roles */}
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: sentimentDot(s.sentiment) }} />
+                    <span className={`text-[11px] font-medium ${sentimentLabel(s.sentiment)}`}>{s.sentiment}</span>
+                  </div>
+                  {(s.roles ?? [s.role]).map(r => (
+                    <Badge key={r} variant="outline" className={`text-[9px] px-1.5 py-0 h-4 ${getRoleColor(r as Stakeholder['role'])}`}>{r}</Badge>
+                  ))}
+                </div>
+
+                {/* Heat */}
+                <div className="mb-3 p-2 rounded-lg bg-muted/40">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-1">
+                      <Flame className="w-3 h-3" style={{ color: getHeatColor(heat) }} />
+                      <span className="text-[10px] font-medium">Engagement ({heatWindow})</span>
+                    </div>
+                    <span className="text-[10px]" style={{ color: getHeatColor(heat) }}>{touchpoints} touchpoints</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div className="h-full rounded-full transition-all" style={{ width: `${heat * 100}%`, background: getHeatColor(heat) }} />
+                  </div>
+                  <div className="text-[9px] text-muted-foreground mt-1">{getHeatLabel(heat)}</div>
+                </div>
+
+                {/* Key insight */}
+                {s.keyInsights && (
+                  <div className="mb-3">
+                    <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Key Insight</div>
+                    <div className="text-[11px] text-foreground/80 leading-relaxed line-clamp-3">{s.keyInsights}</div>
+                  </div>
+                )}
+
+                {/* Recent interactions */}
+                {recentInteractions.length > 0 && (
+                  <div>
+                    <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Recent Touchpoints</div>
+                    <div className="space-y-1">
+                      {recentInteractions.map(i => (
+                        <div key={i.id} className="flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-primary/60 shrink-0" />
+                          <span className="text-[10px] text-muted-foreground truncate">{i.type}</span>
+                          <span className="text-[10px] text-muted-foreground/60 ml-auto shrink-0">{i.date.slice(5)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-3 pt-2 border-t border-border/30 text-[9px] text-muted-foreground/60 text-center">
+                  Click to view & edit full profile
+                </div>
+              </div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
 
       {/* Legend */}
       <div className="absolute bottom-3 left-3 z-20 flex items-center gap-3 text-[10px] text-muted-foreground bg-card/90 backdrop-blur-sm rounded-md px-3 py-2 border border-border/30 flex-wrap">
@@ -763,17 +909,241 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
           </div>
         ))}
         <div className="w-px h-3 bg-border/40 mx-0.5" />
-        {[
-          { color: '#10b981', label: 'Positive' },
-          { color: '#f59e0b', label: 'Neutral' },
-          { color: '#ef4444', label: 'Negative' },
-        ].map(s => (
+        {[{ color: '#10b981', label: 'Positive' }, { color: '#f59e0b', label: 'Neutral' }, { color: '#ef4444', label: 'Negative' }].map(s => (
           <div key={s.label} className="flex items-center gap-1.5">
             <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.color }} />
             <span>{s.label}</span>
           </div>
         ))}
+        <div className="w-px h-3 bg-border/40 mx-0.5" />
+        <div className="flex items-center gap-1.5">
+          <Flame className="w-3 h-3 text-orange-400" />
+          <span>Heat = {heatWindow} touchpoints</span>
+        </div>
       </div>
+
+      {/* ── Stakeholder Modal ─────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {modalStakeholder && (() => {
+          const s = modalStakeholder;
+          const heat = getHeat(s);
+          const touchpoints = getTouchpointCount(s);
+          const allInteractions = deal.interactions
+            .filter(i => i.keyParticipant.toLowerCase().includes(s.name.split(' ')[0].toLowerCase()))
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+          return (
+            <>
+              {/* Backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="fixed inset-0 z-40 bg-background/60 backdrop-blur-md"
+                onClick={() => { setModalStakeholder(null); setIsEditingModal(false); }}
+              />
+
+              {/* Modal */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.94, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.94, y: 20 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+                className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[560px] max-h-[80vh] overflow-hidden rounded-2xl bg-card border border-border/60 shadow-2xl flex flex-col"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Modal header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-border/40">
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <img src={s.avatar} alt={s.name}
+                        className="w-14 h-14 rounded-full object-cover border-2 border-background"
+                        onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=1a1f36&color=fff&size=56`; }}
+                      />
+                      {isEditingModal && (
+                        <>
+                          <button
+                            onClick={() => fileInputRef.current?.click()}
+                            className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
+                          >
+                            <Camera className="w-4 h-4 text-white" />
+                          </button>
+                          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+                        </>
+                      )}
+                      <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-card"
+                        style={{ backgroundColor: sentimentDot(s.sentiment) }}
+                      />
+                    </div>
+                    <div>
+                      {isEditingModal ? (
+                        <Input value={editName} onChange={e => setEditName(e.target.value)}
+                          className="h-7 text-sm font-semibold mb-1 bg-muted/50 border-border/50"
+                        />
+                      ) : (
+                        <div className="text-[15px] font-semibold">{s.name}</div>
+                      )}
+                      {isEditingModal ? (
+                        <Input value={editTitle} onChange={e => setEditTitle(e.target.value)}
+                          className="h-6 text-xs bg-muted/50 border-border/50"
+                        />
+                      ) : (
+                        <div className="text-[12px] text-muted-foreground">{s.title}</div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {isEditingModal ? (
+                      <>
+                        <button onClick={handleModalSave}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
+                        >
+                          <Check className="w-3 h-3" /> Save
+                        </button>
+                        <button onClick={() => setIsEditingModal(false)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted text-muted-foreground text-xs font-medium hover:bg-muted/80 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <button onClick={() => setIsEditingModal(true)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted text-foreground text-xs font-medium hover:bg-muted/80 transition-colors"
+                      >
+                        <Edit2 className="w-3 h-3" /> Edit
+                      </button>
+                    )}
+                    <button onClick={() => { setModalStakeholder(null); setIsEditingModal(false); }}
+                      className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Modal body */}
+                <div className="overflow-y-auto flex-1 px-6 py-4 space-y-5">
+                  {/* Sentiment + Roles */}
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Sentiment */}
+                    <div>
+                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Decision Stance</div>
+                      {isEditingModal ? (
+                        <div className="flex gap-2">
+                          {(['Positive', 'Neutral', 'Negative'] as const).map(sent => (
+                            <button key={sent} onClick={() => setEditSentiment(sent)}
+                              className={`flex-1 py-1.5 rounded-lg text-[11px] font-medium transition-colors border ${
+                                editSentiment === sent
+                                  ? sent === 'Positive' ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
+                                    : sent === 'Neutral' ? 'bg-amber-500/20 border-amber-500/50 text-amber-400'
+                                    : 'bg-red-500/20 border-red-500/50 text-red-400'
+                                  : 'bg-muted/40 border-border/30 text-muted-foreground hover:bg-muted/60'
+                              }`}
+                            >
+                              {sent}
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: sentimentDot(s.sentiment) }} />
+                          <span className={`text-[13px] font-medium ${sentimentLabel(s.sentiment)}`}>{s.sentiment}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Email */}
+                    {s.email && (
+                      <div>
+                        <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Contact</div>
+                        <a href={`mailto:${s.email}`} className="flex items-center gap-1.5 text-[11px] text-primary hover:underline">
+                          <Mail className="w-3 h-3" /> {s.email}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Roles */}
+                  <div>
+                    <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Roles</div>
+                    {isEditingModal ? (
+                      <div className="flex flex-wrap gap-2">
+                        {ALL_ROLES.map(r => {
+                          const active = editRoles.includes(r);
+                          return (
+                            <button key={r}
+                              onClick={() => setEditRoles(prev =>
+                                active ? prev.filter(x => x !== r) : [...prev, r]
+                              )}
+                              className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors border ${
+                                active ? 'bg-primary/20 border-primary/50 text-primary' : 'bg-muted/40 border-border/30 text-muted-foreground hover:bg-muted/60'
+                              }`}
+                            >
+                              {r}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5">
+                        {(s.roles ?? [s.role]).map(r => (
+                          <Badge key={r} variant="outline" className={`text-[11px] px-2 py-0.5 ${getRoleColor(r as Stakeholder['role'])}`}>{r}</Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Engagement heat */}
+                  <div className="p-3 rounded-xl bg-muted/30 border border-border/30">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-1.5">
+                        <Flame className="w-3.5 h-3.5" style={{ color: getHeatColor(heat) }} />
+                        <span className="text-[11px] font-semibold">Engagement Heat ({heatWindow})</span>
+                      </div>
+                      <span className="text-[11px] font-medium" style={{ color: getHeatColor(heat) }}>
+                        {touchpoints} touchpoints · {getHeatLabel(heat)}
+                      </span>
+                    </div>
+                    <div className="h-2.5 rounded-full bg-muted overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: `${heat * 100}%`, background: getHeatColor(heat) }} />
+                    </div>
+                  </div>
+
+                  {/* Key insights */}
+                  {s.keyInsights && (
+                    <div>
+                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Key Insights</div>
+                      <p className="text-[12px] text-foreground/80 leading-relaxed">{s.keyInsights}</p>
+                    </div>
+                  )}
+
+                  {/* Interaction history */}
+                  {allInteractions.length > 0 && (
+                    <div>
+                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                        Interaction History ({allInteractions.length})
+                      </div>
+                      <div className="space-y-2">
+                        {allInteractions.map(i => (
+                          <div key={i.id} className="flex items-start gap-3 p-2.5 rounded-lg bg-muted/30 border border-border/20">
+                            <div className="w-1.5 h-1.5 rounded-full bg-primary/60 mt-1.5 shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <span className="text-[11px] font-medium">{i.type}</span>
+                                <span className="text-[10px] text-muted-foreground">{i.date}</span>
+                                <span className="text-[10px] text-muted-foreground ml-auto">{i.duration}m</span>
+                              </div>
+                              <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">{i.summary}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            </>
+          );
+        })()}
+      </AnimatePresence>
     </div>
   );
 }

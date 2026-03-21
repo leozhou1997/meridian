@@ -123,21 +123,21 @@ export const deals: Deal[] = [
     ],
     snapshots: [
       {
-        id: 'snap-1c', dealId: 'deal-1', date: '2026-02-28',
+        id: 'snap-1c', dealId: 'deal-1', date: '2026-03-08',
         whatsHappening: 'Completed 2 rounds of demo. Legal review pending with Christos. Champion Benny has gone quiet for 17 days — likely preparing for role transition. CFO approval is the final hurdle before procurement.',
         whatsNext: 'Schedule ROI presentation for CFO Annie. Get SOC2 Type II docs to Legal. Re-engage Benny to understand succession plan.',
         keyRisks: ['Champion Benny may leave company in Q2', 'Legal review stalled — Christos blocking on data residency', 'CFO needs 6-month ROI proof before sign-off'],
         confidenceScore: 70, confidenceChange: -5, interactionType: 'POC Check-in', keyParticipant: 'Benny Joseph'
       },
       {
-        id: 'snap-1b', dealId: 'deal-1', date: '2026-02-14',
+        id: 'snap-1b', dealId: 'deal-1', date: '2026-03-12',
         whatsHappening: 'POC going well. Benny enthusiastic about results. Engineering team approved integration approach. Zoe running internal pilot with 3 reps.',
         whatsNext: 'Present POC results to broader stakeholder group. Schedule CFO meeting.',
         keyRisks: ['Need to expand beyond champion', 'Budget cycle ends in March'],
         confidenceScore: 75, confidenceChange: 10, interactionType: 'Technical Review', keyParticipant: 'Robert Osburn'
       },
       {
-        id: 'snap-1a', dealId: 'deal-1', date: '2026-01-20',
+        id: 'snap-1a', dealId: 'deal-1', date: '2026-02-23',
         whatsHappening: 'CFO demo completed. Annie engaged but skeptical. Requested case studies from similar-sized companies. Benny pushing hard internally.',
         whatsNext: 'Send 3 relevant case studies. Prepare ROI model with Allbirds-specific numbers.',
         keyRisks: ['CFO skepticism about AI tools', 'No executive sponsor above CTO yet'],
@@ -146,7 +146,7 @@ export const deals: Deal[] = [
     ],
     interactions: [
       {
-        id: 'int-1f', dealId: 'deal-1', date: '2026-02-28', type: 'POC Check-in', keyParticipant: 'Benny Joseph',
+        id: 'int-1f', dealId: 'deal-1', date: '2026-03-02', type: 'POC Check-in', keyParticipant: 'Benny Joseph',
         summary: 'Reviewed POC metrics. 23% improvement in deal velocity. Benny mentioned potential role change in Q2.',
         duration: 30,
         transcript: `[Recording starts mid-conversation]
@@ -192,7 +192,7 @@ Leo Zhou: I really appreciate that, Benny. We're going to make this work.
 [Recording ends]`
       },
       {
-        id: 'int-1e', dealId: 'deal-1', date: '2026-02-14', type: 'Technical Review', keyParticipant: 'Robert Osburn',
+        id: 'int-1e', dealId: 'deal-1', date: '2026-03-12', type: 'Technical Review', keyParticipant: 'Robert Osburn',
         summary: 'Engineering approved API integration. No security concerns. Robert will champion internally.',
         duration: 45,
         transcript: `[Auto-transcribed via Fireflies.ai — accuracy ~82%]
@@ -236,7 +236,7 @@ Robert Osburn: Perfect. Talk soon.
 [Meeting ended — duration 44 minutes]`
       },
       {
-        id: 'int-1d', dealId: 'deal-1', date: '2026-02-05', type: 'POC Check-in', keyParticipant: 'Zoe Daniels',
+        id: 'int-1d', dealId: 'deal-1', date: '2026-03-17', type: 'POC Check-in', keyParticipant: 'Zoe Daniels',
         summary: 'Zoe running internal pilot with 3 reps. Early results positive. Needs help with Salesforce field mapping.',
         duration: 25,
         transcript: `[Zoom recording — auto-transcribed]
@@ -274,7 +274,7 @@ Zoe Daniels: That would be amazing. I'll send you the data this week.
 [Recording ends — 24 minutes]`
       },
       {
-        id: 'int-1c', dealId: 'deal-1', date: '2026-01-20', type: 'Demo', keyParticipant: 'Annie Mitchell',
+        id: 'int-1c', dealId: 'deal-1', date: '2026-02-25', type: 'Demo', keyParticipant: 'Annie Mitchell',
         summary: 'CFO demo focused on ROI. Annie wants 6-month payback proof. Requested case studies.',
         duration: 60,
         transcript: `[Chorus recording — Allbirds CFO Demo — Jan 20, 2026]
@@ -338,7 +338,7 @@ Annie Mitchell: Good. Thanks, Leo.
 [Recording ends — 58 minutes]`
       },
       {
-        id: 'int-1b', dealId: 'deal-1', date: '2026-01-08', type: 'Discovery Call', keyParticipant: 'Benny Joseph',
+        id: 'int-1b', dealId: 'deal-1', date: '2026-02-28', type: 'Discovery Call', keyParticipant: 'Benny Joseph',
         summary: 'Initial discovery. Benny frustrated with current CRM. Looking for AI-native solution.',
         duration: 45,
         transcript: `[Zoom auto-transcript — Discovery Call — Jan 8, 2026]
@@ -424,14 +424,14 @@ Leo Zhou: Perfect. I'll send the invite to both of you.
     ],
     snapshots: [
       {
-        id: 'snap-2b', dealId: 'deal-2', date: '2026-02-25',
+        id: 'snap-2b', dealId: 'deal-2', date: '2026-03-15',
         whatsHappening: 'Full platform demo completed. Sarah running parallel eval with Clari. Marcus pushing for POC. CRO David not yet engaged — needs to be brought in before decision stage.',
         whatsNext: 'Send competitive comparison doc vs Gong and Clari. Schedule POC kickoff with Sarah and Priya.',
         keyRisks: ['Competing with Gong (incumbent) and Clari', 'CRO not yet engaged — decision risk', 'Gong may offer renewal discount to retain'],
         confidenceScore: 68, confidenceChange: 8, interactionType: 'Demo', keyParticipant: 'Sarah Kim'
       },
       {
-        id: 'snap-2a', dealId: 'deal-2', date: '2026-02-10',
+        id: 'snap-2a', dealId: 'deal-2', date: '2026-03-18',
         whatsHappening: 'Discovery call with Marcus. Clear pain around relationship intelligence gap in Gong. Gong contract expires in 4 months — good timing.',
         whatsNext: 'Schedule full demo with Marcus and Sarah. Prepare Gymshark-specific demo environment.',
         keyRisks: ['Gong renewal pressure', 'Need to get Sarah involved early'],
@@ -440,7 +440,7 @@ Leo Zhou: Perfect. I'll send the invite to both of you.
     ],
     interactions: [
       {
-        id: 'int-2c', dealId: 'deal-2', date: '2026-02-25', type: 'Demo', keyParticipant: 'Sarah Kim',
+        id: 'int-2c', dealId: 'deal-2', date: '2026-03-14', type: 'Demo', keyParticipant: 'Sarah Kim',
         summary: 'Full platform demo. Sarah impressed by stakeholder map. Wants to test with real deals.',
         duration: 60,
         transcript: `[Chorus recording — Gymshark Demo — Feb 25, 2026]
@@ -498,7 +498,7 @@ Leo Zhou: Great. I'll send over the POC agreement and we can kick off next week.
 [Recording ends — 57 minutes]`
       },
       {
-        id: 'int-2b', dealId: 'deal-2', date: '2026-02-10', type: 'Discovery Call', keyParticipant: 'Marcus Chen',
+        id: 'int-2b', dealId: 'deal-2', date: '2026-03-14', type: 'Discovery Call', keyParticipant: 'Marcus Chen',
         summary: 'Marcus looking for relationship intelligence layer on top of Salesforce. Current Gong contract ends in 4 months.',
         duration: 30,
         transcript: `[Zoom auto-transcript — Discovery Call — Feb 10, 2026]
@@ -540,7 +540,7 @@ Leo Zhou: Perfect. I'll send a calendar invite.
 [Recording ends — 28 minutes]`
       },
       {
-        id: 'int-2a', dealId: 'deal-2', date: '2026-01-28', type: 'Follow-up', keyParticipant: 'Marcus Chen',
+        id: 'int-2a', dealId: 'deal-2', date: '2026-03-10', type: 'Follow-up', keyParticipant: 'Marcus Chen',
         summary: 'Initial outbound — Marcus responded to LinkedIn message about stakeholder intelligence.',
         duration: 15,
         transcript: `[Phone call — brief intro — Jan 28, 2026]
@@ -589,21 +589,21 @@ Marcus Chen: Sure. Send me some times.
     ],
     snapshots: [
       {
-        id: 'snap-3c', dealId: 'deal-3', date: '2026-02-20',
+        id: 'snap-3c', dealId: 'deal-3', date: '2026-03-13',
         whatsHappening: 'POC running but IT blocking full API integration. Kevin insists on on-prem or private cloud option. Rachel trying to override but limited bandwidth. Lisa\'s reps love the product but can\'t access full features without the integration.',
         whatsNext: 'Prepare private cloud deployment proposal. Schedule IT security review with Kevin and CISO Carlos. Get Rachel to escalate internally.',
         keyRisks: ['IT Director actively blocking — 3 weeks stalled', 'CISO not yet engaged — could be additional blocker', 'POC losing momentum — rep enthusiasm fading', 'Rachel\'s bandwidth limited — may lose champion attention'],
         confidenceScore: 45, confidenceChange: -15, interactionType: 'POC Check-in', keyParticipant: 'Lisa Huang'
       },
       {
-        id: 'snap-3b', dealId: 'deal-3', date: '2026-02-05',
+        id: 'snap-3b', dealId: 'deal-3', date: '2026-03-13',
         whatsHappening: 'Technical review with Kevin raised data residency concerns. Kevin wants on-prem deployment. We don\'t offer on-prem — need to position private cloud as alternative.',
         whatsNext: 'Prepare private cloud architecture documentation. Get security team to join next call with Kevin.',
         keyRisks: ['On-prem requirement we can\'t meet', 'Kevin has blocked deals before'],
         confidenceScore: 60, confidenceChange: -5, interactionType: 'Technical Review', keyParticipant: 'Kevin Wright'
       },
       {
-        id: 'snap-3a', dealId: 'deal-3', date: '2026-01-15',
+        id: 'snap-3a', dealId: 'deal-3', date: '2026-02-21',
         whatsHappening: 'POC kicked off. Rachel enthusiastic. Lisa\'s team onboarded. Early results positive — reps reporting time savings.',
         whatsNext: 'Continue POC. Schedule mid-point review with Rachel.',
         keyRisks: ['IT integration not yet complete', 'Need to engage procurement early'],
@@ -612,7 +612,7 @@ Marcus Chen: Sure. Send me some times.
     ],
     interactions: [
       {
-        id: 'int-3d', dealId: 'deal-3', date: '2026-02-20', type: 'POC Check-in', keyParticipant: 'Lisa Huang',
+        id: 'int-3d', dealId: 'deal-3', date: '2026-03-19', type: 'POC Check-in', keyParticipant: 'Lisa Huang',
         summary: 'POC users love the product. 3 reps actively using. But IT has blocked API access.',
         duration: 25,
         transcript: `[Zoom recording — POC Check-in — Feb 20, 2026]
@@ -648,7 +648,7 @@ Lisa Huang: Yeah, I'll talk to Rachel today. She's been frustrated with Kevin to
 [Recording ends — 24 minutes]`
       },
       {
-        id: 'int-3c', dealId: 'deal-3', date: '2026-02-05', type: 'Technical Review', keyParticipant: 'Kevin Wright',
+        id: 'int-3c', dealId: 'deal-3', date: '2026-03-08', type: 'Technical Review', keyParticipant: 'Kevin Wright',
         summary: 'Kevin raised data residency and SSO concerns. Wants on-prem deployment option.',
         duration: 45,
         transcript: `[Chorus recording — Technical Review — Feb 5, 2026]
@@ -708,7 +708,7 @@ Kevin Wright: Send me some times.
 [Recording ends — 43 minutes]`
       },
       {
-        id: 'int-3b', dealId: 'deal-3', date: '2026-01-15', type: 'POC Check-in', keyParticipant: 'Rachel Torres',
+        id: 'int-3b', dealId: 'deal-3', date: '2026-02-28', type: 'POC Check-in', keyParticipant: 'Rachel Torres',
         summary: 'POC kickoff. Rachel enthusiastic. Lisa\'s team onboarded. Early results positive.',
         duration: 30,
         transcript: `[Zoom recording — POC Kickoff — Jan 15, 2026]
@@ -740,7 +740,7 @@ Leo Zhou: Understood. I'll set up a separate call with Kevin.
 [Recording ends — 28 minutes]`
       },
       {
-        id: 'int-3a', dealId: 'deal-3', date: '2026-01-05', type: 'Discovery Call', keyParticipant: 'Rachel Torres',
+        id: 'int-3a', dealId: 'deal-3', date: '2026-03-16', type: 'Discovery Call', keyParticipant: 'Rachel Torres',
         summary: 'Initial discovery. Rachel frustrated with lack of deal visibility across 30-person sales team.',
         duration: 40,
         transcript: `[Zoom auto-transcript — Discovery Call — Jan 5, 2026]
@@ -813,7 +813,7 @@ Leo Zhou: Absolutely. That's our standard approach. I'll put together a POC prop
         confidenceScore: 60, confidenceChange: -15, interactionType: 'Negotiation', keyParticipant: 'Amanda Foster'
       },
       {
-        id: 'snap-4a', dealId: 'deal-4', date: '2026-02-01',
+        id: 'snap-4a', dealId: 'deal-4', date: '2026-03-11',
         whatsHappening: 'Terms negotiation going well. Amanda pushing for Q1 close. Legal review started. Then CFO change happened.',
         whatsNext: 'Navigate CFO transition. Get intro to new CFO James Liu.',
         keyRisks: ['CFO change — new CFO unknown quantity', 'Q1 close at risk'],
@@ -858,7 +858,7 @@ Leo Zhou: Perfect. I'll send the pilot proposal today.
 [Recording ends — 38 minutes]`
       },
       {
-        id: 'int-4b', dealId: 'deal-4', date: '2026-01-20', type: 'Executive Briefing', keyParticipant: 'Derek Walsh',
+        id: 'int-4b', dealId: 'deal-4', date: '2026-03-04', type: 'Executive Briefing', keyParticipant: 'Derek Walsh',
         summary: 'CRO Derek briefing. Strong advocate. Pushed for Q1 close. CFO change happened two weeks later.',
         duration: 35,
         transcript: `[Chorus recording — Executive Briefing — Jan 20, 2026]
@@ -890,7 +890,7 @@ Leo Zhou: Two years works for us. I'll update the contract accordingly.
 [Recording ends — 33 minutes]`
       },
       {
-        id: 'int-4a', dealId: 'deal-4', date: '2025-12-10', type: 'Discovery Call', keyParticipant: 'Amanda Foster',
+        id: 'int-4a', dealId: 'deal-4', date: '2026-03-07', type: 'Discovery Call', keyParticipant: 'Amanda Foster',
         summary: 'Initial discovery with Amanda. Pain around deal visibility and rep coaching.',
         duration: 45,
         transcript: `[Zoom auto-transcript — Discovery Call — Dec 10, 2025]
@@ -963,7 +963,7 @@ Leo Zhou: Absolutely. I'll send a calendar invite.
         confidenceScore: 88, confidenceChange: 5, interactionType: 'Negotiation', keyParticipant: 'Michelle Wang'
       },
       {
-        id: 'snap-5a', dealId: 'deal-5', date: '2026-02-10',
+        id: 'snap-5a', dealId: 'deal-5', date: '2026-03-01',
         whatsHappening: 'POC completed successfully. Camille\'s team loved it. Ivan briefed and approved budget. Moving to contract stage.',
         whatsNext: 'Send contract. Begin legal review.',
         keyRisks: ['None significant — deal on track'],
@@ -1010,7 +1010,7 @@ Michelle Wang: You too. The team is really excited to get started.
 [Recording ends — 28 minutes]`
       },
       {
-        id: 'int-5c', dealId: 'deal-5', date: '2026-02-10', type: 'Executive Briefing', keyParticipant: 'Ivan Zhao',
+        id: 'int-5c', dealId: 'deal-5', date: '2026-02-25', type: 'Executive Briefing', keyParticipant: 'Ivan Zhao',
         summary: 'CEO briefing went well. Ivan sees strategic value. Approved budget immediately.',
         duration: 25,
         transcript: `[Zoom recording — CEO Briefing — Feb 10, 2026]
@@ -1040,7 +1040,7 @@ Leo Zhou: Thank you, Ivan. We're going to make sure this delivers real value for
 [Recording ends — 23 minutes]`
       },
       {
-        id: 'int-5b', dealId: 'deal-5', date: '2026-01-25', type: 'POC Check-in', keyParticipant: 'Camille Ricketts',
+        id: 'int-5b', dealId: 'deal-5', date: '2026-02-25', type: 'POC Check-in', keyParticipant: 'Camille Ricketts',
         summary: 'POC results excellent. Camille\'s team reporting significant time savings. Ready to recommend.',
         duration: 35,
         transcript: `[Zoom recording — POC Readout — Jan 25, 2026]
@@ -1072,7 +1072,7 @@ Leo Zhou: I'll have it to you by end of week.
 [Recording ends — 33 minutes]`
       },
       {
-        id: 'int-5a', dealId: 'deal-5', date: '2026-01-05', type: 'Discovery Call', keyParticipant: 'Michelle Wang',
+        id: 'int-5a', dealId: 'deal-5', date: '2026-03-14', type: 'Discovery Call', keyParticipant: 'Michelle Wang',
         summary: 'Initial discovery. Michelle building enterprise sales team from scratch. Needs intelligence infrastructure.',
         duration: 40,
         transcript: `[Zoom auto-transcript — Discovery Call — Jan 5, 2026]

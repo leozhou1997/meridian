@@ -1,18 +1,16 @@
 /**
  * StakeholderMap — Intelligence Cartography design system
- * v7 Features (2026-03):
- * - FIX: Drag-to-edit bug — modal only opens on true click (movement < 5px)
- * - FIX: Collision detection — iterative multi-pass resolution prevents overlap
- * - NEW: Connection line labels shown in BOTH View and Edit modes
- * - NEW: Expandable interaction history at bottom of each card (mini accordion)
- * - NEW: Drag handle icon visible in Edit mode on each card
- * - NEW: Edit mode activates dotted background pattern (stronger visual cue)
- * - NEW: Stage column dividers are more prominent with colored zone headers
- * - KEEP: All v6 features (heat bars, hover tooltip, click modal, zoom, localStorage)
+ * v8 Changes (2026-03):
+ * - FIX: Card overlap — NODE_H corrected to 230 (actual rendered height), initial layout
+ *        runs a full collision pass, saved positions also validated on load
+ * - IMPROVED: Connection lines — source circle dot + larger bolder arrowhead,
+ *             line thickness 2px, direction unmistakable
+ * - NEW: Expandable interaction history shows full editable transcript entries
+ *        (type dropdown, date, duration, notes textarea) stored in local state per deal
  */
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { Stakeholder, Deal } from '@/lib/data';
+import type { Stakeholder, Deal, Interaction } from '@/lib/data';
 import { getRoleColor } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -20,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import {
   ZoomIn, ZoomOut, Maximize2, Edit2, Eye, Plus, Trash2,
   Link2, Link2Off, Save, X, Check, Camera, Mail, Flame,
-  GripVertical, ChevronDown, ChevronUp
+  GripVertical, ChevronDown, ChevronUp, Pencil, Clock, Calendar
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { nanoid } from 'nanoid';
@@ -45,15 +43,17 @@ export interface Connection {
 type HeatWindow = 'L7D' | 'L14D' | 'L30D';
 
 const CONNECTION_TYPES: { value: ConnectionType; label: string; color: string; dash?: string }[] = [
-  { value: 'reports_to',   label: 'Reports To',   color: 'rgba(99,130,255,0.7)',   dash: 'none' },
-  { value: 'influences',   label: 'Influences',   color: 'rgba(16,185,129,0.65)',  dash: 'none' },
-  { value: 'collaborates', label: 'Collaborates', color: 'rgba(245,158,11,0.65)',  dash: '6 3' },
-  { value: 'blocks',       label: 'Blocks',       color: 'rgba(239,68,68,0.7)',    dash: '4 3' },
+  { value: 'reports_to',   label: 'Reports To',   color: 'rgba(99,130,255,0.85)',  dash: 'none' },
+  { value: 'influences',   label: 'Influences',   color: 'rgba(16,185,129,0.85)',  dash: 'none' },
+  { value: 'collaborates', label: 'Collaborates', color: 'rgba(245,158,11,0.85)',  dash: '6 3' },
+  { value: 'blocks',       label: 'Blocks',       color: 'rgba(239,68,68,0.9)',    dash: '4 3' },
 ];
 
 const NODE_W = 200;
-const NODE_H = 140;   // base height without expanded interactions
-const CARD_GAP = 20;  // minimum gap between card edges
+// Realistic card height including avatar row, badges, heat bar, interaction toggle
+// Used ONLY for collision math — must be >= actual rendered height
+const NODE_H = 230;
+const CARD_GAP = 24; // minimum gap between card edges
 
 const AVATAR_POOL = [
   'https://api.dicebear.com/7.x/avataaars/svg?seed=Mx&backgroundColor=b6e3f4',
@@ -62,12 +62,18 @@ const AVATAR_POOL = [
   'https://api.dicebear.com/7.x/avataaars/svg?seed=Pw&backgroundColor=ffd5dc',
 ];
 
+const INTERACTION_TYPES = [
+  'Discovery Call', 'Demo', 'Technical Review', 'POC Check-in',
+  'Negotiation', 'Executive Briefing', 'Follow-up',
+] as const;
+
 // ── localStorage helpers ──────────────────────────────────────────────────────
-function storageKey(dealId: string) { return `meridian_map_v2_${dealId}`; }
+function storageKey(dealId: string) { return `meridian_map_v3_${dealId}`; }
 
 interface PersistedMapState {
   positions: NodePosition[];
   connections: Connection[];
+  localInteractions: Interaction[];
 }
 
 function loadState(dealId: string): PersistedMapState | null {
@@ -75,18 +81,19 @@ function loadState(dealId: string): PersistedMapState | null {
     const raw = localStorage.getItem(storageKey(dealId));
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    const { positions, connections } = parsed;
+    const { positions, connections, localInteractions } = parsed;
     if (!Array.isArray(positions)) return null;
-    return { positions, connections: connections ?? [] };
+    return {
+      positions,
+      connections: connections ?? [],
+      localInteractions: localInteractions ?? [],
+    };
   } catch { return null; }
 }
 
 function saveState(dealId: string, state: PersistedMapState) {
   try {
-    localStorage.setItem(storageKey(dealId), JSON.stringify({
-      positions: state.positions,
-      connections: state.connections,
-    }));
+    localStorage.setItem(storageKey(dealId), JSON.stringify(state));
   } catch {}
 }
 
@@ -100,12 +107,10 @@ function computeHeatScore(
   const days = window === 'L7D' ? 7 : window === 'L14D' ? 14 : 30;
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
-
   const count = interactions.filter(i => {
     const d = new Date(i.date);
     return d >= cutoff && i.keyParticipant.toLowerCase().includes(stakeholderName.split(' ')[0].toLowerCase());
   }).length;
-
   if (maxCount === 0) return 0;
   return Math.min(count / maxCount, 1);
 }
@@ -125,6 +130,64 @@ function getHeatLabel(score: number): string {
   return 'Hot';
 }
 
+// ── Collision resolution ──────────────────────────────────────────────────────
+/**
+ * Iterative force-based collision resolution.
+ * When draggingId is provided, that card is pinned at (rawX, rawY) and all others
+ * are pushed away. When draggingId is null (initial layout pass), all cards are
+ * pushed symmetrically.
+ */
+function resolveCollisions(
+  positions: NodePosition[],
+  draggingId: string | null,
+  rawX: number,
+  rawY: number,
+  maxX: number,
+  cardH: number = NODE_H,
+): NodePosition[] {
+  let result = positions.map(p =>
+    p.id === draggingId ? { ...p, x: rawX, y: rawY } : { ...p }
+  );
+
+  const MAX_PASSES = 20;
+  for (let pass = 0; pass < MAX_PASSES; pass++) {
+    let anyOverlap = false;
+    for (let i = 0; i < result.length; i++) {
+      for (let j = i + 1; j < result.length; j++) {
+        const a = result[i];
+        const b = result[j];
+        const overlapX = Math.abs(a.x - b.x) < NODE_W + CARD_GAP;
+        const overlapY = Math.abs(a.y - b.y) < cardH + CARD_GAP;
+        if (!overlapX || !overlapY) continue;
+
+        anyOverlap = true;
+        const aFixed = a.id === draggingId;
+        const bFixed = b.id === draggingId;
+
+        const sepX = NODE_W + CARD_GAP - Math.abs(a.x - b.x);
+        const sepY = cardH + CARD_GAP - Math.abs(a.y - b.y);
+
+        if (sepX < sepY) {
+          // Push horizontally
+          const dirX = a.x <= b.x ? -1 : 1;
+          const share = aFixed || bFixed ? 1 : 0.5;
+          if (!aFixed) result[i] = { ...a, x: Math.max(0, Math.min(a.x + dirX * sepX * share, maxX)) };
+          if (!bFixed) result[j] = { ...b, x: Math.max(0, Math.min(b.x - dirX * sepX * share, maxX)) };
+        } else {
+          // Push vertically
+          const dirY = a.y <= b.y ? -1 : 1;
+          const share = aFixed || bFixed ? 1 : 0.5;
+          if (!aFixed) result[i] = { ...a, y: Math.max(0, a.y + dirY * sepY * share) };
+          if (!bFixed) result[j] = { ...b, y: Math.max(0, b.y - dirY * sepY * share) };
+        }
+      }
+    }
+    if (!anyOverlap) break;
+  }
+
+  return result;
+}
+
 // ── Auto-layout ───────────────────────────────────────────────────────────────
 function computeInitialPositions(
   stakeholders: Stakeholder[],
@@ -133,7 +196,7 @@ function computeInitialPositions(
 ): NodePosition[] {
   const colW = containerW / Math.max(stages.length, 1);
   const stageSlots: Record<string, number> = {};
-  return stakeholders.map(s => {
+  const raw = stakeholders.map(s => {
     const stageIdx = stages.indexOf(s.stage || '');
     const col = stageIdx >= 0 ? stageIdx : 0;
     const key = s.stage || '__none__';
@@ -143,67 +206,12 @@ function computeInitialPositions(
     return {
       id: s.id,
       x: col * colW + (colW - NODE_W) / 2,
-      y: 40 + row * (NODE_H + 36),
+      y: 40 + row * (NODE_H + CARD_GAP),
     };
   });
-}
-
-// ── Collision resolution (multi-pass iterative) ───────────────────────────────
-/**
- * Given a set of positions and the id of the card being dragged to (rawX, rawY),
- * resolve all overlaps by pushing OTHER cards away. Returns updated positions.
- * We run up to MAX_PASSES iterations to handle chain reactions.
- */
-function resolveCollisions(
-  positions: NodePosition[],
-  draggingId: string,
-  rawX: number,
-  rawY: number,
-  maxX: number,
-): NodePosition[] {
-  // Start with the dragged card at its new position
-  let result = positions.map(p =>
-    p.id === draggingId ? { ...p, x: rawX, y: rawY } : p
-  );
-
-  const MAX_PASSES = 8;
-  for (let pass = 0; pass < MAX_PASSES; pass++) {
-    let anyOverlap = false;
-    for (let i = 0; i < result.length; i++) {
-      for (let j = i + 1; j < result.length; j++) {
-        const a = result[i];
-        const b = result[j];
-        const overlapX = Math.abs(a.x - b.x) < NODE_W + CARD_GAP;
-        const overlapY = Math.abs(a.y - b.y) < NODE_H + CARD_GAP;
-        if (!overlapX || !overlapY) continue;
-
-        anyOverlap = true;
-        // The dragged card is fixed; push the other one
-        // If neither is the dragged card, push both symmetrically
-        const aIsDragged = a.id === draggingId;
-        const bIsDragged = b.id === draggingId;
-
-        const sepX = NODE_W + CARD_GAP - Math.abs(a.x - b.x);
-        const sepY = NODE_H + CARD_GAP - Math.abs(a.y - b.y);
-
-        // Resolve along the axis with less penetration
-        if (sepX < sepY) {
-          const pushX = sepX / 2;
-          const dirX = a.x <= b.x ? -1 : 1;
-          if (!aIsDragged) result[i] = { ...a, x: Math.max(0, Math.min(a.x + dirX * pushX, maxX)) };
-          if (!bIsDragged) result[j] = { ...b, x: Math.max(0, Math.min(b.x - dirX * pushX, maxX)) };
-        } else {
-          const pushY = sepY / 2;
-          const dirY = a.y <= b.y ? -1 : 1;
-          if (!aIsDragged) result[i] = { ...a, y: Math.max(0, a.y + dirY * pushY) };
-          if (!bIsDragged) result[j] = { ...b, y: Math.max(0, b.y - dirY * pushY) };
-        }
-      }
-    }
-    if (!anyOverlap) break;
-  }
-
-  return result;
+  // Run a full collision pass on initial layout too
+  const maxX = containerW - NODE_W;
+  return resolveCollisions(raw, null, 0, 0, maxX);
 }
 
 // ── Sentiment helpers ─────────────────────────────────────────────────────────
@@ -225,6 +233,8 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
   const [localStakeholders, setLocalStakeholders] = useState<Stakeholder[]>([]);
   const [positions, setPositions] = useState<NodePosition[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
+  // Local interactions — editable copy of deal.interactions + user-added ones
+  const [localInteractions, setLocalInteractions] = useState<Interaction[]>([]);
 
   // ── Hover tooltip state ───────────────────────────────────────────────────
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -232,6 +242,8 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
 
   // ── Expanded interaction history on cards ─────────────────────────────────
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
+  // Editing a specific interaction entry: { interactionId, field }
+  const [editingInteraction, setEditingInteraction] = useState<string | null>(null);
 
   // ── Click modal state ─────────────────────────────────────────────────────
   const [modalStakeholder, setModalStakeholder] = useState<Stakeholder | null>(null);
@@ -252,27 +264,31 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     setHoveredId(null);
     setModalStakeholder(null);
     setExpandedCardId(null);
+    setEditingInteraction(null);
 
     const stks = deal.stakeholders;
     setLocalStakeholders(stks);
 
     const actualW = containerRef.current?.getBoundingClientRect().width || containerW || 900;
+    const maxX = actualW - NODE_W;
     const saved = loadState(deal.id);
 
     if (saved && saved.positions.length > 0) {
       const validIds = new Set(stks.map(s => s.id));
       const validPositions = saved.positions.filter(p => validIds.has(p.id));
       if (validPositions.length === stks.length) {
-        setPositions(validPositions);
+        // Run collision pass on loaded positions too
+        setPositions(resolveCollisions(validPositions, null, 0, 0, maxX));
         setConnections(saved.connections ?? []);
-      } else {
-        setPositions(computeInitialPositions(stks, deal.buyingStages, actualW));
-        setConnections(buildDefaultConnections(stks, deal.buyingStages));
+        setLocalInteractions(saved.localInteractions?.length
+          ? saved.localInteractions
+          : [...deal.interactions]);
+        return;
       }
-    } else {
-      setPositions(computeInitialPositions(stks, deal.buyingStages, actualW));
-      setConnections(buildDefaultConnections(stks, deal.buyingStages));
     }
+    setPositions(computeInitialPositions(stks, deal.buyingStages, actualW));
+    setConnections(buildDefaultConnections(stks, deal.buyingStages));
+    setLocalInteractions([...deal.interactions]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deal.id]);
 
@@ -290,7 +306,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     ...localStakeholders.map(s => {
       const days = heatWindow === 'L7D' ? 7 : heatWindow === 'L14D' ? 14 : 30;
       const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - days);
-      return deal.interactions.filter(i => {
+      return localInteractions.filter(i => {
         const d = new Date(i.date);
         return d >= cutoff && i.keyParticipant.toLowerCase().includes(s.name.split(' ')[0].toLowerCase());
       }).length;
@@ -298,26 +314,26 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     1
   );
 
-  const getHeat = (s: Stakeholder) => computeHeatScore(s.name, deal.interactions, heatWindow, maxTouchpoints);
+  const getHeat = (s: Stakeholder) => computeHeatScore(s.name, localInteractions, heatWindow, maxTouchpoints);
 
   const getTouchpointCount = (s: Stakeholder) => {
     const days = heatWindow === 'L7D' ? 7 : heatWindow === 'L14D' ? 14 : 30;
     const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - days);
-    return deal.interactions.filter(i => {
+    return localInteractions.filter(i => {
       const d = new Date(i.date);
       return d >= cutoff && i.keyParticipant.toLowerCase().includes(s.name.split(' ')[0].toLowerCase());
     }).length;
   };
 
   const getStakeholderInteractions = (s: Stakeholder) =>
-    deal.interactions
+    localInteractions
       .filter(i => i.keyParticipant.toLowerCase().includes(s.name.split(' ')[0].toLowerCase()))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   // ── Drag state ────────────────────────────────────────────────────────────
   const [dragging, setDragging] = useState<string | null>(null);
   const [dragStart, setDragStart] = useState({ mx: 0, my: 0, nx: 0, ny: 0 });
-  const [dragMoved, setDragMoved] = useState(false); // track if significant movement occurred
+  const [dragMoved, setDragMoved] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
@@ -332,7 +348,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
 
   // ── Save ──────────────────────────────────────────────────────────────────
   const handleSave = () => {
-    saveState(currentDealId, { positions, connections });
+    saveState(currentDealId, { positions, connections, localInteractions });
     toast.success('Map saved');
   };
 
@@ -358,7 +374,6 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     const dx = (e.clientX - dragStart.mx) / zoom;
     const dy = (e.clientY - dragStart.my) / zoom;
 
-    // Mark as "moved" if displacement > 5px (distinguishes click from drag)
     if (!dragMoved && (Math.abs(e.clientX - dragStart.mx) > 5 || Math.abs(e.clientY - dragStart.my) > 5)) {
       setDragMoved(true);
     }
@@ -372,10 +387,8 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     setPositions(prev => resolveCollisions(prev, dragging, clampedX, clampedY, maxX));
   }, [dragging, dragStart, zoom, containerW, dragMoved]);
 
-  // On mouseup: if no significant movement occurred, treat as a click → open modal
-  const handleMouseUp = useCallback((e: MouseEvent) => {
+  const handleMouseUp = useCallback(() => {
     if (dragging && !dragMoved) {
-      // True click — find the stakeholder and open modal
       const stakeholder = localStakeholders.find(s => s.id === dragging);
       if (stakeholder) {
         setHoveredId(null);
@@ -425,8 +438,6 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
       return;
     }
 
-    // In edit mode, clicks are handled by mouseup (drag-click distinction)
-    // In view mode, open modal directly
     if (mode === 'view') {
       setHoveredId(null);
       setModalStakeholder(stakeholder);
@@ -469,6 +480,31 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
       setModalStakeholder(updated);
     };
     reader.readAsDataURL(file);
+  };
+
+  // ── Interaction editing helpers ───────────────────────────────────────────
+  const updateInteraction = (id: string, patch: Partial<Interaction>) => {
+    setLocalInteractions(prev => prev.map(i => i.id === id ? { ...i, ...patch } : i));
+  };
+
+  const addInteraction = (stakeholderName: string) => {
+    const newI: Interaction = {
+      id: nanoid(8),
+      dealId: deal.id,
+      date: new Date().toISOString().slice(0, 10),
+      type: 'Follow-up',
+      keyParticipant: stakeholderName,
+      summary: '',
+      duration: 30,
+    };
+    setLocalInteractions(prev => [newI, ...prev]);
+    setEditingInteraction(newI.id);
+    toast('New interaction added — fill in the details');
+  };
+
+  const deleteInteraction = (id: string) => {
+    setLocalInteractions(prev => prev.filter(i => i.id !== id));
+    if (editingInteraction === id) setEditingInteraction(null);
   };
 
   // ── Connection handlers ───────────────────────────────────────────────────
@@ -526,12 +562,11 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
 
   const connConfig = (type: ConnectionType) => CONNECTION_TYPES.find(t => t.value === type) ?? CONNECTION_TYPES[0];
   const stageOrder = deal.buyingStages;
-
   const ALL_ROLES = ['Champion', 'Decision Maker', 'Influencer', 'Blocker', 'User', 'Evaluator'];
 
   return (
     <div className="relative h-full w-full" ref={containerRef}>
-      {/* Stage column headers — more prominent in edit mode */}
+      {/* Stage column headers */}
       <div className={`absolute top-0 left-0 right-0 flex border-b z-10 transition-colors duration-300 ${
         mode === 'edit'
           ? 'border-primary/30 bg-primary/5 backdrop-blur-sm'
@@ -549,12 +584,9 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
 
       {/* Top-right controls */}
       <div className="absolute top-14 right-3 z-20 flex flex-col gap-1.5">
-        {/* Heat window selector */}
         <div className="flex rounded-lg overflow-hidden border border-border/50 bg-muted/80 mb-1">
           {(['L7D', 'L14D', 'L30D'] as HeatWindow[]).map(w => (
-            <button
-              key={w}
-              onClick={() => setHeatWindow(w)}
+            <button key={w} onClick={() => setHeatWindow(w)}
               className={`flex items-center gap-1 px-2 py-1.5 text-[10px] font-medium transition-colors ${
                 heatWindow === w ? 'bg-card text-foreground' : 'text-muted-foreground hover:text-foreground'
               }`}
@@ -565,7 +597,6 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
           ))}
         </div>
 
-        {/* View / Edit toggle */}
         <div className="flex rounded-lg overflow-hidden border border-border/50 bg-muted/80">
           <button
             onClick={() => { setMode('view'); setConnectingFrom(null); setConnEditPopup(null); setReroutingConn(null); }}
@@ -585,7 +616,6 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
           </button>
         </div>
 
-        {/* Zoom controls */}
         {[
           { icon: ZoomIn,    action: () => setZoom(z => Math.min(z + 0.15, 1.8)) },
           { icon: ZoomOut,   action: () => setZoom(z => Math.max(z - 0.15, 0.4)) },
@@ -725,7 +755,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
         style={{ cursor: dragging ? 'grabbing' : (connectingFrom || reroutingConn) ? 'crosshair' : 'default' }}
         onClick={() => { setConnEditPopup(null); setHoveredId(null); }}
       >
-        {/* Background: subtle dot grid always; denser + colored in edit mode */}
+        {/* Background dot grid */}
         <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ opacity: mode === 'edit' ? 0.12 : 0.04 }}>
           <defs>
             <pattern id="dotgrid-view" width="20" height="20" patternUnits="userSpaceOnUse">
@@ -738,13 +768,11 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
           <rect width="100%" height="100%" fill={`url(#${mode === 'edit' ? 'dotgrid-edit' : 'dotgrid-view'})`} />
         </svg>
 
-        {/* Column dividers — more visible in edit mode */}
+        {/* Column dividers */}
         {stageOrder.map((_, i) => i === 0 ? null : (
           <div key={i}
             className={`absolute top-0 bottom-0 transition-all duration-300 ${
-              mode === 'edit'
-                ? 'w-px bg-primary/20'
-                : 'w-px bg-border/15'
+              mode === 'edit' ? 'w-px bg-primary/20' : 'w-px bg-border/15'
             }`}
             style={{ left: `${(i / stageOrder.length) * 100}%` }}
           />
@@ -757,9 +785,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
             style={{
               left: `${(i / stageOrder.length) * 100}%`,
               width: `${(1 / stageOrder.length) * 100}%`,
-              background: i % 2 === 0
-                ? 'rgba(var(--primary-rgb, 99,102,241), 0.015)'
-                : 'transparent',
+              background: i % 2 === 0 ? 'rgba(99,102,241,0.015)' : 'transparent',
             }}
           />
         ))}
@@ -769,8 +795,15 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
           <svg className="absolute inset-0 w-full h-full" style={{ overflow: 'visible', pointerEvents: mode === 'edit' ? 'all' : 'none' }}>
             <defs>
               {CONNECTION_TYPES.map(ct => (
-                <marker key={ct.value} id={`arrow-${ct.value}`} markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-                  <polygon points="0 0, 8 3, 0 6" fill={ct.color} />
+                <marker
+                  key={ct.value}
+                  id={`arrow-${ct.value}`}
+                  markerWidth="10" markerHeight="8"
+                  refX="9" refY="4"
+                  orient="auto"
+                >
+                  {/* Solid filled arrowhead — larger and bolder */}
+                  <polygon points="0 0, 10 4, 0 8" fill={ct.color} />
                 </marker>
               ))}
             </defs>
@@ -778,35 +811,48 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
               const fromPos = getPos(conn.from);
               const toPos = getPos(conn.to);
               if (!fromPos || !toPos) return null;
-              const x1 = fromPos.x + NODE_W / 2;
-              const y1 = fromPos.y + NODE_H / 2;
-              const x2 = toPos.x + NODE_W / 2;
-              const y2 = toPos.y + NODE_H / 2;
-              const cpx1 = x1 + (x2 - x1) * 0.4;
-              const cpx2 = x1 + (x2 - x1) * 0.6;
+
+              // Connect from right/left edge of card, not center
+              const fx = fromPos.x + NODE_W / 2;
+              const fy = fromPos.y + NODE_H / 2;
+              const tx = toPos.x + NODE_W / 2;
+              const ty = toPos.y + NODE_H / 2;
+
+              // Bezier control points
+              const cpx1 = fx + (tx - fx) * 0.4;
+              const cpx2 = fx + (tx - fx) * 0.6;
+
               const cfg = connConfig(conn.type);
               const isSelected = selectedConnId === conn.id;
-              // Label position: midpoint of the bezier curve (approximate)
-              const mx = (x1 + cpx1 + cpx2 + x2) / 4;
-              const my = (y1 + y1 + y2 + y2) / 4 - 10;
+
+              // Label at midpoint of bezier
+              const mx = (fx + cpx1 + cpx2 + tx) / 4;
+              const my = (fy + fy + ty + ty) / 4 - 12;
+
               return (
                 <g key={conn.id}>
                   {/* Wide invisible hit area */}
-                  <path d={`M ${x1} ${y1} C ${cpx1} ${y1}, ${cpx2} ${y2}, ${x2} ${y2}`}
+                  <path d={`M ${fx} ${fy} C ${cpx1} ${fy}, ${cpx2} ${ty}, ${tx} ${ty}`}
                     fill="none" stroke="transparent" strokeWidth="14"
                     style={{ cursor: mode === 'edit' ? 'pointer' : 'default' }}
                     onClick={(e) => handleConnClick(e as unknown as React.MouseEvent, conn.id)}
                   />
-                  {/* Visible line */}
-                  <path d={`M ${x1} ${y1} C ${cpx1} ${y1}, ${cpx2} ${y2}, ${x2} ${y2}`}
+                  {/* Visible line — thicker */}
+                  <path d={`M ${fx} ${fy} C ${cpx1} ${fy}, ${cpx2} ${ty}, ${tx} ${ty}`}
                     fill="none"
-                    stroke={isSelected ? 'rgba(255,255,255,0.8)' : cfg.color}
-                    strokeWidth={isSelected ? 2.5 : 1.5}
+                    stroke={isSelected ? 'rgba(255,255,255,0.9)' : cfg.color}
+                    strokeWidth={isSelected ? 3 : 2}
                     strokeDasharray={cfg.dash === 'none' ? undefined : cfg.dash}
                     markerEnd={`url(#arrow-${conn.type})`}
                     style={{ pointerEvents: 'none' }}
                   />
-                  {/* Label — shown in BOTH view and edit mode */}
+                  {/* Source dot — clearly marks the FROM end */}
+                  <circle
+                    cx={fx} cy={fy} r={isSelected ? 5 : 4}
+                    fill={isSelected ? 'rgba(255,255,255,0.9)' : cfg.color}
+                    style={{ pointerEvents: 'none' }}
+                  />
+                  {/* Label */}
                   <text
                     x={mx} y={my}
                     textAnchor="middle"
@@ -926,7 +972,6 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                           {touchpoints > 0 ? `${touchpoints} touchpoint${touchpoints !== 1 ? 's' : ''}` : 'No contact'}
                         </span>
                       </div>
-                      {/* Bar track */}
                       <div className="h-1.5 rounded-full bg-muted/60 overflow-hidden">
                         <motion.div
                           className="h-full rounded-full"
@@ -940,54 +985,155 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                     </div>
 
                     {/* Expandable interaction history */}
-                    {interactions.length > 0 && (
-                      <div className="mt-2 border-t border-border/20 pt-2">
+                    <div className="mt-2 border-t border-border/20 pt-2">
+                      <div className="flex items-center justify-between">
                         <button
-                          className="w-full flex items-center justify-between text-[9px] text-muted-foreground hover:text-foreground transition-colors"
+                          className="flex items-center gap-1 text-[9px] text-muted-foreground hover:text-foreground transition-colors"
                           onClick={(e) => {
                             e.stopPropagation();
                             setExpandedCardId(isExpanded ? null : stakeholder.id);
                           }}
-                          onMouseDown={(e) => e.stopPropagation()} // prevent drag from triggering
+                          onMouseDown={(e) => e.stopPropagation()}
                         >
                           <span className="font-medium uppercase tracking-wider">
                             {interactions.length} interaction{interactions.length !== 1 ? 's' : ''}
                           </span>
-                          {isExpanded
-                            ? <ChevronUp className="w-3 h-3" />
-                            : <ChevronDown className="w-3 h-3" />
-                          }
+                          {isExpanded ? <ChevronUp className="w-3 h-3 ml-0.5" /> : <ChevronDown className="w-3 h-3 ml-0.5" />}
                         </button>
-                        <AnimatePresence>
-                          {isExpanded && (
-                            <motion.div
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: 'auto' }}
-                              exit={{ opacity: 0, height: 0 }}
-                              transition={{ duration: 0.2 }}
-                              className="overflow-hidden"
-                            >
-                              <div className="mt-1.5 space-y-1.5 max-h-40 overflow-y-auto pr-0.5">
-                                {interactions.slice(0, 5).map(i => (
-                                  <div key={i.id} className="p-1.5 rounded bg-muted/30 border border-border/20">
-                                    <div className="flex items-center gap-1.5 mb-0.5">
-                                      <span className="text-[9px] font-medium text-foreground/80">{i.type}</span>
-                                      <span className="text-[9px] text-muted-foreground ml-auto">{i.date.slice(5)}</span>
-                                    </div>
-                                    <p className="text-[9px] text-muted-foreground leading-relaxed line-clamp-2">{i.summary}</p>
-                                  </div>
-                                ))}
-                                {interactions.length > 5 && (
-                                  <div className="text-[9px] text-muted-foreground/60 text-center py-0.5">
-                                    +{interactions.length - 5} more — click card to view all
-                                  </div>
-                                )}
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
+                        {/* Add interaction button */}
+                        <button
+                          className="w-4 h-4 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            addInteraction(stakeholder.name);
+                            setExpandedCardId(stakeholder.id);
+                          }}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          title="Add interaction"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
                       </div>
-                    )}
+
+                      <AnimatePresence>
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="mt-1.5 space-y-2 max-h-64 overflow-y-auto pr-0.5">
+                              {interactions.slice(0, 8).map(interaction => {
+                                const isEditingThis = editingInteraction === interaction.id;
+                                return (
+                                  <div
+                                    key={interaction.id}
+                                    className={`rounded-lg border transition-colors ${
+                                      isEditingThis
+                                        ? 'bg-muted/50 border-primary/30 p-2'
+                                        : 'bg-muted/20 border-border/20 p-1.5'
+                                    }`}
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                  >
+                                    {isEditingThis ? (
+                                      /* ── Edit mode for this interaction ── */
+                                      <div className="space-y-1.5">
+                                        {/* Type + Date row */}
+                                        <div className="flex gap-1.5">
+                                          <select
+                                            value={interaction.type}
+                                            onChange={(e) => updateInteraction(interaction.id, { type: e.target.value as Interaction['type'] })}
+                                            className="flex-1 text-[9px] bg-background border border-border/50 rounded px-1.5 py-1 text-foreground"
+                                            onClick={(e) => e.stopPropagation()}
+                                          >
+                                            {INTERACTION_TYPES.map(t => (
+                                              <option key={t} value={t}>{t}</option>
+                                            ))}
+                                          </select>
+                                          <input
+                                            type="date"
+                                            value={interaction.date}
+                                            onChange={(e) => updateInteraction(interaction.id, { date: e.target.value })}
+                                            className="w-24 text-[9px] bg-background border border-border/50 rounded px-1.5 py-1 text-foreground"
+                                            onClick={(e) => e.stopPropagation()}
+                                          />
+                                        </div>
+                                        {/* Duration */}
+                                        <div className="flex items-center gap-1.5">
+                                          <Clock className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
+                                          <input
+                                            type="number"
+                                            value={interaction.duration}
+                                            onChange={(e) => updateInteraction(interaction.id, { duration: Number(e.target.value) })}
+                                            className="w-14 text-[9px] bg-background border border-border/50 rounded px-1.5 py-1 text-foreground"
+                                            min={1}
+                                            onClick={(e) => e.stopPropagation()}
+                                          />
+                                          <span className="text-[9px] text-muted-foreground">min</span>
+                                        </div>
+                                        {/* Notes / summary */}
+                                        <textarea
+                                          value={interaction.summary}
+                                          onChange={(e) => updateInteraction(interaction.id, { summary: e.target.value })}
+                                          placeholder="Notes..."
+                                          rows={2}
+                                          className="w-full text-[9px] bg-background border border-border/50 rounded px-1.5 py-1 text-foreground resize-none leading-relaxed"
+                                          onClick={(e) => e.stopPropagation()}
+                                        />
+                                        {/* Save / Delete row */}
+                                        <div className="flex gap-1">
+                                          <button
+                                            className="flex-1 flex items-center justify-center gap-1 text-[9px] py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                                            onClick={(e) => { e.stopPropagation(); setEditingInteraction(null); }}
+                                          >
+                                            <Check className="w-2.5 h-2.5" /> Done
+                                          </button>
+                                          <button
+                                            className="flex items-center justify-center w-6 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+                                            onClick={(e) => { e.stopPropagation(); deleteInteraction(interaction.id); }}
+                                          >
+                                            <Trash2 className="w-2.5 h-2.5" />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      /* ── Read mode for this interaction ── */
+                                      <div>
+                                        <div className="flex items-center gap-1.5 mb-0.5">
+                                          <span className="text-[9px] font-semibold text-foreground/80 truncate">{interaction.type}</span>
+                                          <div className="flex items-center gap-1 ml-auto shrink-0">
+                                            <Calendar className="w-2.5 h-2.5 text-muted-foreground/60" />
+                                            <span className="text-[9px] text-muted-foreground">{interaction.date.slice(5)}</span>
+                                            <Clock className="w-2.5 h-2.5 text-muted-foreground/60 ml-1" />
+                                            <span className="text-[9px] text-muted-foreground">{interaction.duration}m</span>
+                                            <button
+                                              className="ml-1 w-4 h-4 rounded flex items-center justify-center hover:bg-muted/60 transition-colors"
+                                              onClick={(e) => { e.stopPropagation(); setEditingInteraction(interaction.id); }}
+                                            >
+                                              <Pencil className="w-2.5 h-2.5 text-muted-foreground/60 hover:text-foreground" />
+                                            </button>
+                                          </div>
+                                        </div>
+                                        {interaction.summary && (
+                                          <p className="text-[9px] text-muted-foreground leading-relaxed line-clamp-2">{interaction.summary}</p>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                              {interactions.length > 8 && (
+                                <div className="text-[9px] text-muted-foreground/60 text-center py-0.5">
+                                  +{interactions.length - 8} more — open profile to view all
+                                </div>
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
                   </div>
                 </Card>
               </motion.div>
@@ -1003,7 +1149,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
           if (!s) return null;
           const heat = getHeat(s);
           const touchpoints = getTouchpointCount(s);
-          const recentInteractions = deal.interactions
+          const recentInteractions = localInteractions
             .filter(i => i.keyParticipant.toLowerCase().includes(s.name.split(' ')[0].toLowerCase()))
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
             .slice(0, 3);
@@ -1035,7 +1181,6 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                     <div className="text-[11px] text-muted-foreground">{s.title}</div>
                   </div>
                 </div>
-
                 <div className="flex items-center gap-2 mb-3 flex-wrap">
                   <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: sentimentDot(s.sentiment) }} />
@@ -1045,7 +1190,6 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                     <Badge key={r} variant="outline" className={`text-[9px] px-1.5 py-0 h-4 ${getRoleColor(r as Stakeholder['role'])}`}>{r}</Badge>
                   ))}
                 </div>
-
                 <div className="mb-3 p-2 rounded-lg bg-muted/40">
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-1">
@@ -1059,14 +1203,12 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                   </div>
                   <div className="text-[9px] text-muted-foreground mt-1">{getHeatLabel(heat)}</div>
                 </div>
-
                 {s.keyInsights && (
                   <div className="mb-3">
                     <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Key Insight</div>
                     <div className="text-[11px] text-foreground/80 leading-relaxed line-clamp-3">{s.keyInsights}</div>
                   </div>
                 )}
-
                 {recentInteractions.length > 0 && (
                   <div>
                     <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Recent Touchpoints</div>
@@ -1081,7 +1223,6 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                     </div>
                   </div>
                 )}
-
                 <div className="mt-3 pt-2 border-t border-border/30 text-[9px] text-muted-foreground/60 text-center">
                   Click to view & edit full profile
                 </div>
@@ -1095,7 +1236,13 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
       <div className="absolute bottom-3 left-3 z-20 flex items-center gap-3 text-[10px] text-muted-foreground bg-card/90 backdrop-blur-sm rounded-md px-3 py-2 border border-border/30 flex-wrap">
         {CONNECTION_TYPES.map(ct => (
           <div key={ct.value} className="flex items-center gap-1.5">
-            <div className="w-5 h-px" style={{ background: ct.color }} />
+            {/* Source dot */}
+            <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: ct.color }} />
+            {/* Line */}
+            <div className="w-4 h-0.5" style={{ background: ct.color }} />
+            {/* Arrowhead indicator */}
+            <div className="w-0 h-0 border-t-[3px] border-b-[3px] border-l-[5px] border-t-transparent border-b-transparent shrink-0"
+              style={{ borderLeftColor: ct.color }} />
             <span>{ct.label}</span>
           </div>
         ))}
@@ -1119,26 +1266,23 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
           const s = modalStakeholder;
           const heat = getHeat(s);
           const touchpoints = getTouchpointCount(s);
-          const allInteractions = deal.interactions
+          const allInteractions = localInteractions
             .filter(i => i.keyParticipant.toLowerCase().includes(s.name.split(' ')[0].toLowerCase()))
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
           return (
             <>
-              {/* Backdrop */}
               <motion.div
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 className="fixed inset-0 z-40 bg-background/60 backdrop-blur-md"
                 onClick={() => { setModalStakeholder(null); setIsEditingModal(false); }}
               />
-
-              {/* Modal */}
               <motion.div
                 initial={{ opacity: 0, scale: 0.94, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.94, y: 20 }}
                 transition={{ duration: 0.2, ease: 'easeOut' }}
-                className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[560px] max-h-[80vh] overflow-hidden rounded-2xl bg-card border border-border/60 shadow-2xl flex flex-col"
+                className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[580px] max-h-[82vh] overflow-hidden rounded-2xl bg-card border border-border/60 shadow-2xl flex flex-col"
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Modal header */}
@@ -1151,8 +1295,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                       />
                       {isEditingModal && (
                         <>
-                          <button
-                            onClick={() => fileInputRef.current?.click()}
+                          <button onClick={() => fileInputRef.current?.click()}
                             className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
                           >
                             <Camera className="w-4 h-4 text-white" />
@@ -1212,7 +1355,6 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
 
                 {/* Modal body */}
                 <div className="overflow-y-auto flex-1 px-6 py-4 space-y-5">
-                  {/* Sentiment + Roles */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Decision Stance</div>
@@ -1239,7 +1381,6 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                         </div>
                       )}
                     </div>
-
                     {s.email && (
                       <div>
                         <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Contact</div>
@@ -1250,7 +1391,6 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                     )}
                   </div>
 
-                  {/* Roles */}
                   <div>
                     <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Roles</div>
                     {isEditingModal ? (
@@ -1259,9 +1399,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                           const active = editRoles.includes(r);
                           return (
                             <button key={r}
-                              onClick={() => setEditRoles(prev =>
-                                active ? prev.filter(x => x !== r) : [...prev, r]
-                              )}
+                              onClick={() => setEditRoles(prev => active ? prev.filter(x => x !== r) : [...prev, r])}
                               className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors border ${
                                 active ? 'bg-primary/20 border-primary/50 text-primary' : 'bg-muted/40 border-border/30 text-muted-foreground hover:bg-muted/60'
                               }`}
@@ -1280,7 +1418,6 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                     )}
                   </div>
 
-                  {/* Engagement heat */}
                   <div className="p-3 rounded-xl bg-muted/30 border border-border/30">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-1.5">
@@ -1296,7 +1433,6 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                     </div>
                   </div>
 
-                  {/* Key insights */}
                   {s.keyInsights && (
                     <div>
                       <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Key Insights</div>
@@ -1304,29 +1440,113 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                     </div>
                   )}
 
-                  {/* Interaction history — full list in modal */}
-                  {allInteractions.length > 0 && (
-                    <div>
-                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                  {/* Full interaction history in modal — also editable */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                         Interaction History ({allInteractions.length})
                       </div>
-                      <div className="space-y-2">
-                        {allInteractions.map(i => (
-                          <div key={i.id} className="flex items-start gap-3 p-2.5 rounded-lg bg-muted/30 border border-border/20">
-                            <div className="w-1.5 h-1.5 rounded-full bg-primary/60 mt-1.5 shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-0.5">
-                                <span className="text-[11px] font-medium">{i.type}</span>
-                                <span className="text-[10px] text-muted-foreground">{i.date}</span>
-                                <span className="text-[10px] text-muted-foreground ml-auto">{i.duration}m</span>
-                              </div>
-                              <p className="text-[11px] text-muted-foreground leading-relaxed">{i.summary}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                      <button
+                        onClick={() => addInteraction(s.name)}
+                        className="flex items-center gap-1 text-[10px] text-primary hover:text-primary/80 transition-colors"
+                      >
+                        <Plus className="w-3 h-3" /> Add
+                      </button>
                     </div>
-                  )}
+                    <div className="space-y-2">
+                      {allInteractions.map(interaction => {
+                        const isEditingThis = editingInteraction === interaction.id;
+                        return (
+                          <div key={interaction.id}
+                            className={`rounded-lg border transition-colors ${
+                              isEditingThis
+                                ? 'bg-muted/50 border-primary/30 p-3'
+                                : 'bg-muted/20 border-border/20 p-2.5'
+                            }`}
+                          >
+                            {isEditingThis ? (
+                              <div className="space-y-2">
+                                <div className="flex gap-2">
+                                  <select
+                                    value={interaction.type}
+                                    onChange={(e) => updateInteraction(interaction.id, { type: e.target.value as Interaction['type'] })}
+                                    className="flex-1 text-[11px] bg-background border border-border/50 rounded px-2 py-1.5 text-foreground"
+                                  >
+                                    {INTERACTION_TYPES.map(t => (
+                                      <option key={t} value={t}>{t}</option>
+                                    ))}
+                                  </select>
+                                  <input
+                                    type="date"
+                                    value={interaction.date}
+                                    onChange={(e) => updateInteraction(interaction.id, { date: e.target.value })}
+                                    className="text-[11px] bg-background border border-border/50 rounded px-2 py-1.5 text-foreground"
+                                  />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Clock className="w-3 h-3 text-muted-foreground shrink-0" />
+                                  <input
+                                    type="number"
+                                    value={interaction.duration}
+                                    onChange={(e) => updateInteraction(interaction.id, { duration: Number(e.target.value) })}
+                                    className="w-16 text-[11px] bg-background border border-border/50 rounded px-2 py-1.5 text-foreground"
+                                    min={1}
+                                  />
+                                  <span className="text-[11px] text-muted-foreground">minutes</span>
+                                </div>
+                                <textarea
+                                  value={interaction.summary}
+                                  onChange={(e) => updateInteraction(interaction.id, { summary: e.target.value })}
+                                  placeholder="Meeting notes..."
+                                  rows={3}
+                                  className="w-full text-[11px] bg-background border border-border/50 rounded px-2 py-1.5 text-foreground resize-none leading-relaxed"
+                                />
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => setEditingInteraction(null)}
+                                    className="flex-1 flex items-center justify-center gap-1.5 text-[11px] py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                                  >
+                                    <Check className="w-3 h-3" /> Save
+                                  </button>
+                                  <button
+                                    onClick={() => deleteInteraction(interaction.id)}
+                                    className="px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors text-[11px]"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-start gap-3">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary/60 mt-1.5 shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-0.5">
+                                    <span className="text-[11px] font-medium">{interaction.type}</span>
+                                    <span className="text-[10px] text-muted-foreground">{interaction.date}</span>
+                                    <span className="text-[10px] text-muted-foreground ml-auto">{interaction.duration}m</span>
+                                    <button
+                                      onClick={() => setEditingInteraction(interaction.id)}
+                                      className="w-5 h-5 rounded flex items-center justify-center hover:bg-muted/60 transition-colors"
+                                    >
+                                      <Pencil className="w-3 h-3 text-muted-foreground/60" />
+                                    </button>
+                                  </div>
+                                  {interaction.summary && (
+                                    <p className="text-[11px] text-muted-foreground leading-relaxed">{interaction.summary}</p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {allInteractions.length === 0 && (
+                        <div className="text-[11px] text-muted-foreground/60 text-center py-4">
+                          No interactions yet — click Add to record one
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             </>

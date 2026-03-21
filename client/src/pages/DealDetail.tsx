@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRoute, Link } from 'wouter';
 import { deals, formatCurrency, getConfidenceColor, getConfidenceBg, getRoleColor, getSentimentColor, formatDate, getStageColor } from '@/lib/data';
 import type { Stakeholder } from '@/lib/data';
@@ -74,6 +74,19 @@ export default function DealDetail() {
 
   // Local editable stakeholder state (per-deal, in-memory)
   const [localStakeholders, setLocalStakeholders] = useState<Stakeholder[]>(deal?.stakeholders ?? []);
+
+  // Reset all per-deal state when deal changes
+  useEffect(() => {
+    if (deal) {
+      setLocalStakeholders(deal.stakeholders);
+      setSelectedStakeholder(null);
+      setIsEditingProfile(false);
+      setShowSummary(true);
+      setSummaryPos({ x: 16, y: 16 });
+      setActiveTab('map');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deal?.id]);
 
   // Editing state for the profile panel
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -244,7 +257,8 @@ export default function DealDetail() {
               <div className="absolute inset-0 flex">
                 <div className="flex-1 relative">
                   <StakeholderMap
-                    deal={{ ...deal, stakeholders: localStakeholders }}
+                    key={deal.id}
+                    deal={deal}
                     onStakeholderClick={handleStakeholderClick}
                     onStakeholdersChange={setLocalStakeholders}
                   />

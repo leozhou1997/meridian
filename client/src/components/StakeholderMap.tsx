@@ -66,18 +66,30 @@ function storageKey(dealId: string) { return `meridian_map_${dealId}`; }
 interface PersistedMapState {
   positions: NodePosition[];
   connections: Connection[];
-  stakeholders: Stakeholder[];
+  // NOTE: stakeholders are NOT persisted here — they always come from deal.stakeholders
+  // to avoid stale/cross-deal contamination. Only layout (positions + connections) is saved.
 }
 
 function loadState(dealId: string): PersistedMapState | null {
   try {
     const raw = localStorage.getItem(storageKey(dealId));
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    // Strip out any legacy stakeholders field that may have been saved before
+    const { positions, connections } = parsed;
+    if (!Array.isArray(positions)) return null;
+    return { positions, connections: connections ?? [] };
   } catch { return null; }
 }
 
 function saveState(dealId: string, state: PersistedMapState) {
-  try { localStorage.setItem(storageKey(dealId), JSON.stringify(state)); } catch {}
+  // Only save layout — never save stakeholders to avoid cross-deal contamination
+  try {
+    localStorage.setItem(storageKey(dealId), JSON.stringify({
+      positions: state.positions,
+      connections: state.connections,
+    }));
+  } catch {}
 }
 
 // ── Auto-layout ───────────────────────────────────────────────────────────────
@@ -121,18 +133,34 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     setMode('view');
     setConnectingFrom(null);
     setSelectedConnId(null);
+    setSelectedNodeId(null);
+
+    // Always use deal.stakeholders as the source of truth for people
+    const stks = deal.stakeholders;
+    setLocalStakeholders(stks);
+
+    // Get actual container width — fall back to measured or 900
+    const actualW = containerRef.current?.getBoundingClientRect().width || containerW || 900;
 
     const saved = loadState(deal.id);
-    if (saved) {
-      setLocalStakeholders(saved.stakeholders);
-      setPositions(saved.positions);
-      setConnections(saved.connections);
+    if (saved && saved.positions.length > 0) {
+      // Validate saved positions belong to current deal's stakeholders
+      const validIds = new Set(stks.map(s => s.id));
+      const validPositions = saved.positions.filter(p => validIds.has(p.id));
+      // If all stakeholders have saved positions, use them; otherwise recompute
+      if (validPositions.length === stks.length) {
+        setPositions(validPositions);
+        setConnections(saved.connections ?? []);
+      } else {
+        // Partial or mismatched — recompute layout
+        const pos = computeInitialPositions(stks, deal.buyingStages, actualW);
+        const defConns = buildDefaultConnections(stks, deal.buyingStages);
+        setPositions(pos);
+        setConnections(defConns);
+      }
     } else {
-      const stks = deal.stakeholders;
-      const pos = computeInitialPositions(stks, deal.buyingStages, containerW || 800);
-      // build default connections from adjacency
+      const pos = computeInitialPositions(stks, deal.buyingStages, actualW);
       const defConns = buildDefaultConnections(stks, deal.buyingStages);
-      setLocalStakeholders(stks);
       setPositions(pos);
       setConnections(defConns);
     }
@@ -168,7 +196,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
 
   // ── Save to localStorage ──────────────────────────────────────────────────
   const handleSave = () => {
-    saveState(currentDealId, { positions, connections, stakeholders: localStakeholders });
+    saveState(currentDealId, { positions, connections });
     toast.success('Map saved');
   };
 

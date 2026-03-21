@@ -1,6 +1,13 @@
 /**
  * StakeholderMap — Intelligence Cartography design system
- * Supports View mode (read-only) and Edit mode (drag, add/remove nodes, edit connections)
+ * Features:
+ * - View / Edit mode toggle
+ * - Drag nodes (edit mode)
+ * - Add / Remove stakeholders
+ * - Draw, re-route, and type-label connections
+ * - Connection types: Reports To | Influences | Collaborates | Blocks
+ * - localStorage persistence per deal
+ * - Correct layout on deal switch (positions reset per deal)
  */
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,7 +15,10 @@ import type { Stakeholder, Deal } from '@/lib/data';
 import { getRoleColor } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { ZoomIn, ZoomOut, Maximize2, Edit2, Eye, Plus, Trash2, Link2, Link2Off } from 'lucide-react';
+import {
+  ZoomIn, ZoomOut, Maximize2, Edit2, Eye, Plus, Trash2,
+  Link2, Link2Off, Save, RotateCcw, Settings2
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { nanoid } from 'nanoid';
 
@@ -24,122 +34,156 @@ interface NodePosition {
   y: number;
 }
 
-interface Connection {
+export type ConnectionType = 'reports_to' | 'influences' | 'collaborates' | 'blocks';
+
+export interface Connection {
+  id: string;
   from: string;
   to: string;
-  type: 'critical' | 'support';
+  type: ConnectionType;
 }
+
+const CONNECTION_TYPES: { value: ConnectionType; label: string; color: string; dash?: string }[] = [
+  { value: 'reports_to',   label: 'Reports To',   color: 'rgba(99,130,255,0.55)',  dash: 'none' },
+  { value: 'influences',   label: 'Influences',   color: 'rgba(16,185,129,0.5)',   dash: 'none' },
+  { value: 'collaborates', label: 'Collaborates', color: 'rgba(245,158,11,0.5)',   dash: '6 3' },
+  { value: 'blocks',       label: 'Blocks',       color: 'rgba(239,68,68,0.5)',    dash: '4 3' },
+];
 
 const NODE_W = 160;
 const NODE_H = 110;
 
 const AVATAR_POOL = [
-  'https://api.dicebear.com/7.x/avataaars/svg?seed=A&backgroundColor=b6e3f4',
-  'https://api.dicebear.com/7.x/avataaars/svg?seed=B&backgroundColor=c0aede',
-  'https://api.dicebear.com/7.x/avataaars/svg?seed=C&backgroundColor=d1d4f9',
-  'https://api.dicebear.com/7.x/avataaars/svg?seed=D&backgroundColor=ffd5dc',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Mx&backgroundColor=b6e3f4',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Ny&backgroundColor=c0aede',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Oz&backgroundColor=d1d4f9',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Pw&backgroundColor=ffd5dc',
 ];
 
+// ── localStorage helpers ──────────────────────────────────────────────────────
+function storageKey(dealId: string) { return `meridian_map_${dealId}`; }
+
+interface PersistedMapState {
+  positions: NodePosition[];
+  connections: Connection[];
+  stakeholders: Stakeholder[];
+}
+
+function loadState(dealId: string): PersistedMapState | null {
+  try {
+    const raw = localStorage.getItem(storageKey(dealId));
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+function saveState(dealId: string, state: PersistedMapState) {
+  try { localStorage.setItem(storageKey(dealId), JSON.stringify(state)); } catch {}
+}
+
+// ── Auto-layout ───────────────────────────────────────────────────────────────
+function computeInitialPositions(
+  stakeholders: Stakeholder[],
+  stages: string[],
+  containerW: number,
+): NodePosition[] {
+  const colW = containerW / Math.max(stages.length, 1);
+  const stageSlots: Record<string, number> = {};
+  return stakeholders.map(s => {
+    const stageIdx = stages.indexOf(s.stage || '');
+    const col = stageIdx >= 0 ? stageIdx : 0;
+    const key = s.stage || '__none__';
+    stageSlots[key] = (stageSlots[key] ?? 0);
+    const row = stageSlots[key];
+    stageSlots[key] = row + 1;
+    return {
+      id: s.id,
+      x: col * colW + (colW - NODE_W) / 2,
+      y: 30 + row * (NODE_H + 30),
+    };
+  });
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
 export default function StakeholderMap({ deal, onStakeholderClick, onStakeholdersChange }: StakeholderMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [containerSize, setContainerSize] = useState({ w: 800, h: 500 });
+  const [containerW, setContainerW] = useState(800);
   const [mode, setMode] = useState<'view' | 'edit'>('view');
 
-  // Local stakeholder state (editable copy)
-  const [localStakeholders, setLocalStakeholders] = useState<Stakeholder[]>(deal.stakeholders);
+  // ── Per-deal state (reset when deal.id changes) ───────────────────────────
+  const [currentDealId, setCurrentDealId] = useState(deal.id);
+  const [localStakeholders, setLocalStakeholders] = useState<Stakeholder[]>([]);
+  const [positions, setPositions] = useState<NodePosition[]>([]);
+  const [connections, setConnections] = useState<Connection[]>([]);
 
-  // Sync when deal changes from outside
+  // Load or initialise state when deal changes
   useEffect(() => {
-    setLocalStakeholders(deal.stakeholders);
+    setCurrentDealId(deal.id);
+    setMode('view');
+    setConnectingFrom(null);
+    setSelectedConnId(null);
+
+    const saved = loadState(deal.id);
+    if (saved) {
+      setLocalStakeholders(saved.stakeholders);
+      setPositions(saved.positions);
+      setConnections(saved.connections);
+    } else {
+      const stks = deal.stakeholders;
+      const pos = computeInitialPositions(stks, deal.buyingStages, containerW || 800);
+      // build default connections from adjacency
+      const defConns = buildDefaultConnections(stks, deal.buyingStages);
+      setLocalStakeholders(stks);
+      setPositions(pos);
+      setConnections(defConns);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deal.id]);
 
-  // Observe container size
+  // Observe container width
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const obs = new ResizeObserver(entries => {
-      const { width, height } = entries[0].contentRect;
-      setContainerSize({ w: width, h: height - 52 });
+      setContainerW(entries[0].contentRect.width);
     });
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
 
-  // Compute initial positions
-  const initialPositions = useMemo(() => {
-    const stageOrder = deal.buyingStages;
-    const colW = containerSize.w / stageOrder.length;
-    const stageSlots: Record<string, number> = {};
-
-    return localStakeholders.map(s => {
-      const stageIdx = stageOrder.indexOf(s.stage || '');
-      const col = stageIdx >= 0 ? stageIdx : 0;
-      stageSlots[s.stage || ''] = stageSlots[s.stage || ''] || 0;
-      const row = stageSlots[s.stage || ''];
-      stageSlots[s.stage || ''] = row + 1;
-      return {
-        id: s.id,
-        x: col * colW + (colW - NODE_W) / 2,
-        y: 30 + row * (NODE_H + 30),
-      };
-    });
-  }, [localStakeholders, deal.buyingStages, containerSize.w]);
-
-  const [positions, setPositions] = useState<NodePosition[]>(initialPositions);
+  // ── Drag state ────────────────────────────────────────────────────────────
   const [dragging, setDragging] = useState<string | null>(null);
   const [dragStart, setDragStart] = useState({ mx: 0, my: 0, nx: 0, ny: 0 });
   const [zoom, setZoom] = useState(1);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
-  // Manual connections (edit mode)
-  const [manualConnections, setManualConnections] = useState<Connection[]>([]);
-  const [connectingFrom, setConnectingFrom] = useState<string | null>(null); // id of node being connected
+  // ── Connection drawing state ──────────────────────────────────────────────
+  const [connectingFrom, setConnectingFrom] = useState<string | null>(null);
+  const [pendingConnType, setPendingConnType] = useState<ConnectionType>('reports_to');
 
-  // Sync positions when stakeholders change
-  useEffect(() => {
-    setPositions(prev => {
-      const existing = new Map(prev.map(p => [p.id, p]));
-      return initialPositions.map(ip => existing.get(ip.id) || ip);
-    });
-  }, [initialPositions]);
+  // ── Connection editing state ──────────────────────────────────────────────
+  const [selectedConnId, setSelectedConnId] = useState<string | null>(null);
+  const [connEditPopup, setConnEditPopup] = useState<{ connId: string; x: number; y: number } | null>(null);
 
   const getPos = useCallback((id: string) => positions.find(p => p.id === id), [positions]);
 
-  // Auto-derived connections (view mode)
-  const autoConnections = useMemo<Connection[]>(() => {
-    const result: Connection[] = [];
-    const stageOrder = deal.buyingStages;
-    localStakeholders.forEach(s1 => {
-      localStakeholders.forEach(s2 => {
-        if (s1.id >= s2.id) return;
-        const idx1 = stageOrder.indexOf(s1.stage || '');
-        const idx2 = stageOrder.indexOf(s2.stage || '');
-        if (Math.abs(idx1 - idx2) <= 1 && idx1 >= 0 && idx2 >= 0) {
-          result.push({
-            from: s1.id,
-            to: s2.id,
-            type: s1.role === 'Blocker' || s2.role === 'Blocker' ? 'critical' : 'support',
-          });
-        }
-      });
-    });
-    return result;
-  }, [localStakeholders, deal.buyingStages]);
+  // ── Save to localStorage ──────────────────────────────────────────────────
+  const handleSave = () => {
+    saveState(currentDealId, { positions, connections, stakeholders: localStakeholders });
+    toast.success('Map saved');
+  };
 
-  const activeConnections = mode === 'edit' ? manualConnections : autoConnections;
+  // ── Reset layout ──────────────────────────────────────────────────────────
+  const handleReset = () => {
+    const pos = computeInitialPositions(localStakeholders, deal.buyingStages, containerW);
+    setPositions(pos);
+    setZoom(1);
+  };
 
-  // Initialize manual connections from auto when entering edit mode
-  useEffect(() => {
-    if (mode === 'edit') {
-      setManualConnections(autoConnections);
-    }
-  }, [mode]);
-
-  // Drag handlers — only in edit mode (or always for view mode dragging)
+  // ── Drag handlers ─────────────────────────────────────────────────────────
   const handleMouseDown = (e: React.MouseEvent, id: string) => {
-    if (connectingFrom) return; // don't drag while connecting
-    e.preventDefault();
-    e.stopPropagation();
+    if (mode !== 'edit') return;
+    if (connectingFrom) return;
+    e.preventDefault(); e.stopPropagation();
     const pos = getPos(id);
     if (!pos) return;
     setDragging(id);
@@ -150,72 +194,67 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     if (!dragging) return;
     const dx = (e.clientX - dragStart.mx) / zoom;
     const dy = (e.clientY - dragStart.my) / zoom;
-    setPositions(prev =>
-      prev.map(p =>
-        p.id === dragging
-          ? { ...p, x: dragStart.nx + dx, y: dragStart.ny + dy }
-          : p
-      )
-    );
+    setPositions(prev => prev.map(p =>
+      p.id === dragging ? { ...p, x: dragStart.nx + dx, y: dragStart.ny + dy } : p
+    ));
   }, [dragging, dragStart, zoom]);
 
-  const handleMouseUp = useCallback(() => {
-    setDragging(null);
-  }, []);
+  const handleMouseUp = useCallback(() => setDragging(null), []);
 
   useEffect(() => {
-    if (dragging) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-      return () => {
-        window.removeEventListener('mousemove', handleMouseMove);
-        window.removeEventListener('mouseup', handleMouseUp);
-      };
-    }
+    if (!dragging) return;
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
   }, [dragging, handleMouseMove, handleMouseUp]);
 
-  // Node click — handle both selection and connection drawing
+  // ── Node click ────────────────────────────────────────────────────────────
   const handleNodeClick = (e: React.MouseEvent, stakeholder: Stakeholder) => {
     e.stopPropagation();
+    setConnEditPopup(null);
 
     if (mode === 'edit' && connectingFrom) {
-      // Complete connection
-      if (connectingFrom !== stakeholder.id) {
-        const exists = manualConnections.some(
-          c => (c.from === connectingFrom && c.to === stakeholder.id) ||
-               (c.from === stakeholder.id && c.to === connectingFrom)
-        );
-        if (exists) {
-          // Remove existing connection
-          setManualConnections(prev =>
-            prev.filter(c =>
-              !(c.from === connectingFrom && c.to === stakeholder.id) &&
-              !(c.from === stakeholder.id && c.to === connectingFrom)
-            )
-          );
-          toast('Connection removed');
-        } else {
-          const fromStakeholder = localStakeholders.find(s => s.id === connectingFrom);
-          setManualConnections(prev => [
-            ...prev,
-            {
-              from: connectingFrom,
-              to: stakeholder.id,
-              type: fromStakeholder?.role === 'Blocker' || stakeholder.role === 'Blocker' ? 'critical' : 'support',
-            },
-          ]);
-          toast('Connection added');
-        }
+      if (connectingFrom === stakeholder.id) {
+        setConnectingFrom(null);
+        return;
+      }
+      // Toggle connection
+      const exists = connections.find(
+        c => (c.from === connectingFrom && c.to === stakeholder.id) ||
+             (c.from === stakeholder.id && c.to === connectingFrom)
+      );
+      if (exists) {
+        setConnections(prev => prev.filter(c => c.id !== exists.id));
+        toast('Connection removed');
+      } else {
+        setConnections(prev => [...prev, {
+          id: nanoid(8),
+          from: connectingFrom,
+          to: stakeholder.id,
+          type: pendingConnType,
+        }]);
+        toast(`"${pendingConnType.replace('_', ' ')}" connection added`);
       }
       setConnectingFrom(null);
       return;
     }
 
-    setSelectedId(prev => prev === stakeholder.id ? null : stakeholder.id);
+    setSelectedNodeId(prev => prev === stakeholder.id ? null : stakeholder.id);
     onStakeholderClick?.(stakeholder);
   };
 
-  // Add new stakeholder
+  // ── Connection line click (edit mode) ─────────────────────────────────────
+  const handleConnClick = (e: React.MouseEvent, connId: string) => {
+    if (mode !== 'edit') return;
+    e.stopPropagation();
+    setSelectedConnId(connId);
+    setConnEditPopup({ connId, x: e.clientX, y: e.clientY });
+  };
+
+  // ── Add / Remove stakeholder ──────────────────────────────────────────────
   const handleAddStakeholder = () => {
     const newS: Stakeholder = {
       id: `s-${nanoid(6)}`,
@@ -230,38 +269,57 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     const updated = [...localStakeholders, newS];
     setLocalStakeholders(updated);
     onStakeholdersChange?.(updated);
-
-    // Add position for new node
-    setPositions(prev => [
-      ...prev,
-      { id: newS.id, x: 20, y: 20 + prev.length * (NODE_H + 20) },
-    ]);
+    setPositions(prev => [...prev, { id: newS.id, x: 20, y: 20 + prev.length * (NODE_H + 20) }]);
     toast('New stakeholder added — click to edit their profile');
   };
 
-  // Remove stakeholder
   const handleRemoveStakeholder = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    const updated = localStakeholders.filter(s => s.id !== id);
-    setLocalStakeholders(updated);
-    setManualConnections(prev => prev.filter(c => c.from !== id && c.to !== id));
+    setLocalStakeholders(prev => {
+      const updated = prev.filter(s => s.id !== id);
+      onStakeholdersChange?.(updated);
+      return updated;
+    });
+    setConnections(prev => prev.filter(c => c.from !== id && c.to !== id));
     setPositions(prev => prev.filter(p => p.id !== id));
-    if (selectedId === id) setSelectedId(null);
-    onStakeholdersChange?.(updated);
+    if (selectedNodeId === id) setSelectedNodeId(null);
     toast('Stakeholder removed');
   };
 
-  const sentimentDot = (sentiment: string) =>
-    sentiment === 'Positive' ? '#10b981' : sentiment === 'Neutral' ? '#f59e0b' : '#ef4444';
+  // ── Connection endpoint re-routing ────────────────────────────────────────
+  const [reroutingConn, setReroutingConn] = useState<{ connId: string; end: 'from' | 'to' } | null>(null);
+
+  const handleRerouteClick = (connId: string, end: 'from' | 'to') => {
+    setConnEditPopup(null);
+    setReroutingConn({ connId, end });
+    toast(`Click a person to reconnect the ${end === 'from' ? 'source' : 'target'} of this link`);
+  };
+
+  const handleRerouteTarget = (e: React.MouseEvent, stakeholderId: string) => {
+    if (!reroutingConn) return;
+    e.stopPropagation();
+    setConnections(prev => prev.map(c => {
+      if (c.id !== reroutingConn.connId) return c;
+      return reroutingConn.end === 'from'
+        ? { ...c, from: stakeholderId }
+        : { ...c, to: stakeholderId };
+    }));
+    setReroutingConn(null);
+    toast('Connection re-routed');
+  };
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  const sentimentDot = (s: string) =>
+    s === 'Positive' ? '#10b981' : s === 'Neutral' ? '#f59e0b' : '#ef4444';
+
+  const connConfig = (type: ConnectionType) =>
+    CONNECTION_TYPES.find(t => t.value === type) ?? CONNECTION_TYPES[0];
 
   const stageOrder = deal.buyingStages;
 
-  // Effective stakeholders for rendering
-  const renderStakeholders = localStakeholders;
-
   return (
     <div className="relative h-full w-full" ref={containerRef}>
-      {/* Stage headers */}
+      {/* Stage column headers */}
       <div className="absolute top-0 left-0 right-0 flex border-b border-border/30 bg-card/80 backdrop-blur-sm z-10">
         {stageOrder.map((stage, i) => (
           <div key={stage} className="flex-1 text-center py-2.5 border-r border-border/20 last:border-r-0">
@@ -271,18 +329,17 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
         ))}
       </div>
 
-      {/* Top-right controls: mode toggle + zoom */}
+      {/* Top-right controls */}
       <div className="absolute top-14 right-3 z-20 flex flex-col gap-1.5">
         {/* View / Edit toggle */}
         <div className="flex rounded-lg overflow-hidden border border-border/50 bg-muted/80">
           <button
-            onClick={() => { setMode('view'); setConnectingFrom(null); }}
+            onClick={() => { setMode('view'); setConnectingFrom(null); setConnEditPopup(null); setReroutingConn(null); }}
             className={`flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-medium transition-colors ${
               mode === 'view' ? 'bg-card text-foreground' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Eye className="w-3 h-3" />
-            View
+            <Eye className="w-3 h-3" /> View
           </button>
           <button
             onClick={() => setMode('edit')}
@@ -290,16 +347,15 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
               mode === 'edit' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Edit2 className="w-3 h-3" />
-            Edit
+            <Edit2 className="w-3 h-3" /> Edit
           </button>
         </div>
 
         {/* Zoom controls */}
         {[
-          { icon: ZoomIn, action: () => setZoom(z => Math.min(z + 0.15, 1.5)) },
-          { icon: ZoomOut, action: () => setZoom(z => Math.max(z - 0.15, 0.5)) },
-          { icon: Maximize2, action: () => { setZoom(1); setPositions(initialPositions); } },
+          { icon: ZoomIn,    action: () => setZoom(z => Math.min(z + 0.15, 1.8)) },
+          { icon: ZoomOut,   action: () => setZoom(z => Math.max(z - 0.15, 0.4)) },
+          { icon: Maximize2, action: handleReset },
         ].map((btn, i) => (
           <button
             key={i}
@@ -311,7 +367,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
         ))}
       </div>
 
-      {/* Edit mode toolbar — bottom-right */}
+      {/* Edit mode toolbar */}
       <AnimatePresence>
         {mode === 'edit' && (
           <motion.div
@@ -320,46 +376,166 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
             exit={{ opacity: 0, y: 8 }}
             className="absolute bottom-12 right-3 z-20 flex flex-col gap-1.5"
           >
+            {/* Save */}
+            <button
+              onClick={handleSave}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-[10px] font-medium hover:bg-emerald-700 transition-colors shadow-md"
+            >
+              <Save className="w-3 h-3" /> Save Map
+            </button>
+
+            {/* Add Person */}
             <button
               onClick={handleAddStakeholder}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-[10px] font-medium hover:bg-primary/90 transition-colors shadow-md"
             >
-              <Plus className="w-3 h-3" />
-              Add Person
+              <Plus className="w-3 h-3" /> Add Person
             </button>
-            <button
-              onClick={() => {
-                if (connectingFrom) {
-                  setConnectingFrom(null);
-                  toast('Connection mode cancelled');
-                } else {
-                  setConnectingFrom('__pending__');
-                  toast('Click a person to start connecting, then click another to link them');
-                }
-              }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium transition-colors shadow-md ${
-                connectingFrom
-                  ? 'bg-amber-500 text-white hover:bg-amber-600'
-                  : 'bg-muted border border-border/50 hover:bg-muted/80'
-              }`}
-            >
-              {connectingFrom ? <Link2Off className="w-3 h-3" /> : <Link2 className="w-3 h-3" />}
-              {connectingFrom ? 'Cancel Link' : 'Draw Link'}
-            </button>
+
+            {/* Draw Link — with type selector */}
+            <div className="flex flex-col gap-1">
+              <button
+                onClick={() => {
+                  if (connectingFrom) { setConnectingFrom(null); toast('Connection mode cancelled'); }
+                  else { setConnectingFrom('__pending__'); toast('Select connection type below, then click two people'); }
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium transition-colors shadow-md ${
+                  connectingFrom
+                    ? 'bg-amber-500 text-white hover:bg-amber-600'
+                    : 'bg-muted border border-border/50 hover:bg-muted/80'
+                }`}
+              >
+                {connectingFrom ? <Link2Off className="w-3 h-3" /> : <Link2 className="w-3 h-3" />}
+                {connectingFrom ? 'Cancel Link' : 'Draw Link'}
+              </button>
+
+              {/* Connection type selector (shown when draw mode active) */}
+              <AnimatePresence>
+                {connectingFrom && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="flex flex-col gap-0.5 overflow-hidden"
+                  >
+                    {CONNECTION_TYPES.map(ct => (
+                      <button
+                        key={ct.value}
+                        onClick={() => setPendingConnType(ct.value)}
+                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] transition-colors ${
+                          pendingConnType === ct.value
+                            ? 'bg-card border border-primary/50 text-foreground'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                        }`}
+                      >
+                        <div className="w-4 h-px" style={{ background: ct.color, borderTop: ct.dash !== 'none' ? `1px dashed ${ct.color}` : undefined }} />
+                        {ct.label}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Connecting mode hint */}
+      {/* Connecting / re-routing hint banner */}
       <AnimatePresence>
-        {connectingFrom && connectingFrom !== '__pending__' && (
+        {(connectingFrom && connectingFrom !== '__pending__') && (
           <motion.div
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
             className="absolute top-[58px] left-1/2 -translate-x-1/2 z-30 bg-amber-500/90 text-white text-[10px] px-3 py-1 rounded-full shadow-md"
           >
-            Click another person to connect — or click same person to cancel
+            Click another person to link — or click same person to cancel
+          </motion.div>
+        )}
+        {reroutingConn && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="absolute top-[58px] left-1/2 -translate-x-1/2 z-30 bg-blue-500/90 text-white text-[10px] px-3 py-1 rounded-full shadow-md"
+          >
+            Click a person to re-route the {reroutingConn.end === 'from' ? 'source' : 'target'} end
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Connection edit popup */}
+      <AnimatePresence>
+        {connEditPopup && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.92 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.92 }}
+            className="fixed z-50 bg-card border border-border/60 rounded-xl shadow-2xl p-3 w-52"
+            style={{ left: Math.min(connEditPopup.x, window.innerWidth - 220), top: Math.min(connEditPopup.y, window.innerHeight - 260) }}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-display font-semibold">Edit Connection</span>
+              <button onClick={() => setConnEditPopup(null)} className="text-muted-foreground hover:text-foreground text-xs">✕</button>
+            </div>
+
+            {/* Type selector */}
+            <div className="mb-3">
+              <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Relationship Type</div>
+              <div className="flex flex-col gap-1">
+                {CONNECTION_TYPES.map(ct => {
+                  const conn = connections.find(c => c.id === connEditPopup.connId);
+                  const isActive = conn?.type === ct.value;
+                  return (
+                    <button
+                      key={ct.value}
+                      onClick={() => {
+                        setConnections(prev => prev.map(c =>
+                          c.id === connEditPopup.connId ? { ...c, type: ct.value } : c
+                        ));
+                      }}
+                      className={`flex items-center gap-2 px-2 py-1 rounded text-[10px] transition-colors ${
+                        isActive ? 'bg-primary/10 text-primary border border-primary/30' : 'hover:bg-muted text-muted-foreground'
+                      }`}
+                    >
+                      <div className="w-5 h-px shrink-0" style={{ background: ct.color }} />
+                      {ct.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Re-route endpoints */}
+            <div className="mb-3">
+              <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Re-route Endpoint</div>
+              <div className="flex gap-1.5">
+                <button
+                  onClick={() => handleRerouteClick(connEditPopup.connId, 'from')}
+                  className="flex-1 text-[10px] px-2 py-1 rounded bg-muted hover:bg-muted/80 transition-colors"
+                >
+                  Change Source
+                </button>
+                <button
+                  onClick={() => handleRerouteClick(connEditPopup.connId, 'to')}
+                  className="flex-1 text-[10px] px-2 py-1 rounded bg-muted hover:bg-muted/80 transition-colors"
+                >
+                  Change Target
+                </button>
+              </div>
+            </div>
+
+            {/* Delete connection */}
+            <button
+              onClick={() => {
+                setConnections(prev => prev.filter(c => c.id !== connEditPopup.connId));
+                setConnEditPopup(null);
+                toast('Connection deleted');
+              }}
+              className="w-full text-[10px] px-2 py-1.5 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+            >
+              Delete Connection
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -367,7 +543,8 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
       {/* Canvas */}
       <div
         className="absolute inset-0 top-[52px] overflow-auto"
-        style={{ cursor: dragging ? 'grabbing' : connectingFrom ? 'crosshair' : 'default' }}
+        style={{ cursor: dragging ? 'grabbing' : (connectingFrom || reroutingConn) ? 'crosshair' : 'default' }}
+        onClick={() => { setConnEditPopup(null); }}
       >
         {/* Dot grid */}
         <svg className="absolute inset-0 w-full h-full opacity-[0.03] pointer-events-none">
@@ -380,16 +557,13 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
         </svg>
 
         {/* Column dividers */}
-        {stageOrder.map((_, i) => {
-          if (i === 0) return null;
-          return (
-            <div
-              key={i}
-              className="absolute top-0 bottom-0 w-px bg-border/10"
-              style={{ left: `${(i / stageOrder.length) * 100}%` }}
-            />
-          );
-        })}
+        {stageOrder.map((_, i) => i === 0 ? null : (
+          <div
+            key={i}
+            className="absolute top-0 bottom-0 w-px bg-border/10"
+            style={{ left: `${(i / stageOrder.length) * 100}%` }}
+          />
+        ))}
 
         <div
           style={{
@@ -401,16 +575,16 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
           }}
         >
           {/* SVG connections */}
-          <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ overflow: 'visible' }}>
+          <svg className="absolute inset-0 w-full h-full" style={{ overflow: 'visible', pointerEvents: mode === 'edit' ? 'all' : 'none' }}>
             <defs>
-              <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-                <polygon points="0 0, 8 3, 0 6" fill="rgba(99,130,255,0.35)" />
-              </marker>
-              <marker id="arrowhead-critical" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-                <polygon points="0 0, 8 3, 0 6" fill="rgba(239,68,68,0.4)" />
-              </marker>
+              {CONNECTION_TYPES.map(ct => (
+                <marker key={ct.value} id={`arrow-${ct.value}`} markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                  <polygon points="0 0, 8 3, 0 6" fill={ct.color} />
+                </marker>
+              ))}
             </defs>
-            {activeConnections.map(conn => {
+
+            {connections.map(conn => {
               const fromPos = getPos(conn.from);
               const toPos = getPos(conn.to);
               if (!fromPos || !toPos) return null;
@@ -420,31 +594,60 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
               const y2 = toPos.y + NODE_H / 2;
               const cpx1 = x1 + (x2 - x1) * 0.4;
               const cpx2 = x1 + (x2 - x1) * 0.6;
-              const isCritical = conn.type === 'critical';
+              const cfg = connConfig(conn.type);
+              const isSelected = selectedConnId === conn.id;
+
+              // Midpoint for label
+              const mx = (x1 + x2) / 2;
+              const my = (y1 + y2) / 2 - 8;
 
               return (
-                <g key={`${conn.from}-${conn.to}`}>
+                <g key={conn.id}>
+                  {/* Invisible wide hit area */}
                   <path
                     d={`M ${x1} ${y1} C ${cpx1} ${y1}, ${cpx2} ${y2}, ${x2} ${y2}`}
                     fill="none"
-                    stroke={isCritical ? 'rgba(239,68,68,0.35)' : 'rgba(99,130,255,0.3)'}
-                    strokeWidth="1.5"
-                    strokeDasharray={isCritical ? '6 4' : 'none'}
-                    markerEnd={isCritical ? 'url(#arrowhead-critical)' : 'url(#arrowhead)'}
+                    stroke="transparent"
+                    strokeWidth="12"
+                    style={{ cursor: mode === 'edit' ? 'pointer' : 'default' }}
+                    onClick={(e) => handleConnClick(e as unknown as React.MouseEvent, conn.id)}
                   />
+                  {/* Visible line */}
+                  <path
+                    d={`M ${x1} ${y1} C ${cpx1} ${y1}, ${cpx2} ${y2}, ${x2} ${y2}`}
+                    fill="none"
+                    stroke={isSelected ? 'rgba(255,255,255,0.7)' : cfg.color}
+                    strokeWidth={isSelected ? 2 : 1.5}
+                    strokeDasharray={cfg.dash === 'none' ? undefined : cfg.dash}
+                    markerEnd={`url(#arrow-${conn.type})`}
+                    style={{ pointerEvents: 'none' }}
+                  />
+                  {/* Relationship label on line */}
+                  {mode === 'edit' && (
+                    <text
+                      x={mx} y={my}
+                      textAnchor="middle"
+                      fontSize="9"
+                      fill={cfg.color}
+                      style={{ pointerEvents: 'none', userSelect: 'none' }}
+                    >
+                      {cfg.label}
+                    </text>
+                  )}
                 </g>
               );
             })}
           </svg>
 
           {/* Stakeholder nodes */}
-          {renderStakeholders.map((stakeholder, idx) => {
+          {localStakeholders.map((stakeholder, idx) => {
             const pos = getPos(stakeholder.id);
             if (!pos) return null;
-            const isSelected = selectedId === stakeholder.id;
+            const isSelected = selectedNodeId === stakeholder.id;
             const isDragging = dragging === stakeholder.id;
-            const isConnectingSource = connectingFrom === stakeholder.id;
-            const isPendingConnect = connectingFrom === '__pending__';
+            const isConnSrc = connectingFrom === stakeholder.id;
+            const isPendingConn = connectingFrom === '__pending__';
+            const isRerouting = !!reroutingConn;
 
             return (
               <motion.div
@@ -460,9 +663,9 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                   className={`bg-card border transition-all duration-150 ${
                     mode === 'edit' ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
                   } ${
-                    isConnectingSource
+                    isConnSrc
                       ? 'border-amber-400/80 shadow-lg shadow-amber-400/20 ring-1 ring-amber-400/30'
-                      : isPendingConnect
+                      : (isPendingConn || isRerouting)
                         ? 'border-blue-400/60 hover:border-blue-400/90 hover:shadow-md hover:shadow-blue-400/10'
                         : isSelected
                           ? 'border-primary/60 shadow-lg shadow-primary/10 ring-1 ring-primary/20'
@@ -471,11 +674,8 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                             : 'border-border/50 hover:border-border/80 hover:shadow-md'
                   }`}
                   onClick={(e) => {
-                    if (connectingFrom === '__pending__') {
-                      // Start connecting from this node
-                      setConnectingFrom(stakeholder.id);
-                      return;
-                    }
+                    if (reroutingConn) { handleRerouteTarget(e, stakeholder.id); return; }
+                    if (connectingFrom === '__pending__') { setConnectingFrom(stakeholder.id); return; }
                     handleNodeClick(e, stakeholder);
                   }}
                 >
@@ -499,7 +699,6 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                         <div className="text-[11px] font-semibold leading-tight truncate">{stakeholder.name}</div>
                         <div className="text-[10px] text-muted-foreground leading-tight mt-0.5 truncate">{stakeholder.title}</div>
                       </div>
-                      {/* Remove button in edit mode */}
                       {mode === 'edit' && (
                         <button
                           onClick={(e) => handleRemoveStakeholder(stakeholder.id, e)}
@@ -528,28 +727,47 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
       </div>
 
       {/* Legend */}
-      <div className="absolute bottom-3 left-3 z-20 flex items-center gap-4 text-[10px] text-muted-foreground bg-card/90 backdrop-blur-sm rounded-md px-3 py-2 border border-border/30">
-        <div className="flex items-center gap-1.5">
-          <div className="w-5 h-px bg-blue-400/40" />
-          <span>Supporting</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-5 h-px border-t border-dashed border-red-400/50" />
-          <span>Critical</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-          <span>Positive</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-          <span>Neutral</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
-          <span>Negative</span>
-        </div>
+      <div className="absolute bottom-3 left-3 z-20 flex items-center gap-3 text-[10px] text-muted-foreground bg-card/90 backdrop-blur-sm rounded-md px-3 py-2 border border-border/30 flex-wrap">
+        {CONNECTION_TYPES.map(ct => (
+          <div key={ct.value} className="flex items-center gap-1.5">
+            <div className="w-5 h-px" style={{ background: ct.color }} />
+            <span>{ct.label}</span>
+          </div>
+        ))}
+        <div className="w-px h-3 bg-border/40 mx-0.5" />
+        {[
+          { color: '#10b981', label: 'Positive' },
+          { color: '#f59e0b', label: 'Neutral' },
+          { color: '#ef4444', label: 'Negative' },
+        ].map(s => (
+          <div key={s.label} className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.color }} />
+            <span>{s.label}</span>
+          </div>
+        ))}
       </div>
     </div>
   );
+}
+
+// ── Default connections builder ───────────────────────────────────────────────
+function buildDefaultConnections(stakeholders: Stakeholder[], stages: string[]): Connection[] {
+  const result: Connection[] = [];
+  stakeholders.forEach(s1 => {
+    stakeholders.forEach(s2 => {
+      if (s1.id >= s2.id) return;
+      const idx1 = stages.indexOf(s1.stage || '');
+      const idx2 = stages.indexOf(s2.stage || '');
+      if (idx1 < 0 || idx2 < 0) return;
+      if (Math.abs(idx1 - idx2) <= 1) {
+        result.push({
+          id: nanoid(8),
+          from: s1.id,
+          to: s2.id,
+          type: s1.role === 'Blocker' || s2.role === 'Blocker' ? 'blocks' : 'reports_to',
+        });
+      }
+    });
+  });
+  return result;
 }

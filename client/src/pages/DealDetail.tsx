@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useRoute, Link } from 'wouter';
 import { deals, formatCurrency, getConfidenceColor, getConfidenceBg, getRoleColor, getSentimentColor, formatDate, getStageColor } from '@/lib/data';
 import type { Stakeholder } from '@/lib/data';
@@ -45,6 +45,32 @@ export default function DealDetail() {
   const [selectedStakeholder, setSelectedStakeholder] = useState<Stakeholder | null>(null);
   const [activeTab, setActiveTab] = useState('map');
   const [showSummary, setShowSummary] = useState(true);
+  // Draggable Deal Summary panel
+  const [summaryPos, setSummaryPos] = useState({ x: 16, y: 16 });
+  const summaryDragRef = useRef<{ mx: number; my: number; px: number; py: number } | null>(null);
+
+  const handleSummaryMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    summaryDragRef.current = { mx: e.clientX, my: e.clientY, px: summaryPos.x, py: summaryPos.y };
+    const onMove = (ev: MouseEvent) => {
+      if (!summaryDragRef.current) return;
+      const dx = ev.clientX - summaryDragRef.current.mx;
+      const dy = ev.clientY - summaryDragRef.current.my;
+      setSummaryPos({ x: summaryDragRef.current.px + dx, y: summaryDragRef.current.py + dy });
+    };
+    const onUp = () => {
+      summaryDragRef.current = null;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, [summaryPos]);
+
+  const handleOpenSummary = () => {
+    setSummaryPos({ x: 16, y: 16 }); // reset to top-left
+    setShowSummary(true);
+  };
 
   // Local editable stakeholder state (per-deal, in-memory)
   const [localStakeholders, setLocalStakeholders] = useState<Stakeholder[]>(deal?.stakeholders ?? []);
@@ -213,12 +239,16 @@ export default function DealDetail() {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 20, scale: 0.95 }}
                         transition={{ duration: 0.2 }}
-                        className="absolute top-4 left-4 z-30 w-60"
+                        className="absolute z-30 w-60"
+                        style={{ left: summaryPos.x, top: summaryPos.y }}
                       >
                         <Card className="bg-card/95 backdrop-blur-md border-status-warning/25 shadow-lg shadow-black/20">
                           <CardContent className="p-3">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-[11px] font-display font-semibold">Deal Summary</span>
+                            <div
+                              className="flex items-center justify-between mb-2 cursor-grab active:cursor-grabbing"
+                              onMouseDown={handleSummaryMouseDown}
+                            >
+                              <span className="text-[11px] font-display font-semibold select-none">⠿ Deal Summary</span>
                               <div className="flex items-center gap-1">
                                 <span className="font-mono text-[10px] font-medium">{formatCurrency(deal.value)} ACV</span>
                                 <button
@@ -301,7 +331,7 @@ export default function DealDetail() {
 
                   {!showSummary && (
                     <button
-                      onClick={() => setShowSummary(true)}
+                      onClick={handleOpenSummary}
                       className="absolute top-4 left-4 z-30 w-8 h-8 rounded-lg bg-card/90 backdrop-blur-sm border border-border/50 flex items-center justify-center hover:bg-muted transition-colors shadow-md"
                     >
                       <AlertTriangle className="w-3.5 h-3.5 text-status-warning" />

@@ -1275,7 +1275,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                                           <span className="text-[9px] font-semibold text-foreground/80 truncate">{interaction.type}</span>
                                           <div className="flex items-center gap-1 ml-auto shrink-0">
                                             <Calendar className="w-2.5 h-2.5 text-muted-foreground/60" />
-                                            <span className="text-[9px] text-muted-foreground">{interaction.date.slice(5)}</span>
+                                            <span className="text-[9px] text-muted-foreground">{(typeof interaction.date === 'string' ? interaction.date : new Date(interaction.date).toISOString().slice(0, 10)).slice(5)}</span>
                                             <Clock className="w-2.5 h-2.5 text-muted-foreground/60 ml-1" />
                                             <span className="text-[9px] text-muted-foreground">{interaction.duration}m</span>
                                             <button
@@ -1387,7 +1387,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                         <div key={i.id} className="flex items-center gap-2">
                           <div className="w-1.5 h-1.5 rounded-full bg-primary/60 shrink-0" />
                           <span className="text-[10px] text-muted-foreground truncate">{i.type}</span>
-                          <span className="text-[10px] text-muted-foreground/60 ml-auto shrink-0">{i.date.slice(5)}</span>
+                          <span className="text-[10px] text-muted-foreground/60 ml-auto shrink-0">{(typeof i.date === 'string' ? i.date : new Date(i.date).toISOString().slice(0, 10)).slice(5)}</span>
                         </div>
                       ))}
                     </div>

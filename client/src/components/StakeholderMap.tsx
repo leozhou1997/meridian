@@ -1224,7 +1224,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                                           </select>
                                           <input
                                             type="date"
-                                            value={interaction.date}
+                                            value={typeof interaction.date === 'string' ? interaction.date : new Date(interaction.date).toISOString().slice(0, 10)}
                                             onChange={(e) => updateInteraction(interaction.id, { date: e.target.value })}
                                             className="w-24 text-[9px] bg-background border border-border/50 rounded px-1.5 py-1 text-foreground"
                                             onClick={(e) => e.stopPropagation()}
@@ -1648,7 +1648,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                                   </select>
                                   <input
                                     type="date"
-                                    value={interaction.date}
+                                    value={typeof interaction.date === 'string' ? interaction.date : new Date(interaction.date).toISOString().slice(0, 10)}
                                     onChange={(e) => updateInteraction(interaction.id, { date: e.target.value })}
                                     className="text-[11px] bg-background border border-border/50 rounded px-2 py-1.5 text-foreground"
                                   />
@@ -1692,7 +1692,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2 mb-0.5">
                                     <span className="text-[11px] font-medium">{interaction.type}</span>
-                                    <span className="text-[10px] text-muted-foreground">{interaction.date}</span>
+                                    <span className="text-[10px] text-muted-foreground">{(typeof interaction.date === 'string' ? interaction.date : new Date(interaction.date).toISOString().slice(0, 10)).slice(5)}</span>
                                     <span className="text-[10px] text-muted-foreground ml-auto">{interaction.duration}m</span>
                                     <button
                                       onClick={() => setEditingInteraction(interaction.id)}

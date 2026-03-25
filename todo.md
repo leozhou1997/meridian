@@ -49,3 +49,8 @@
 - [x] Key Risks stakeholder name highlighting (same hover+click linkage as What's Happening/What's Next)
 - [x] Deal Insight panel collapse/expand toggle (full-width Stakeholder Map when collapsed)
 - [x] What's Next redesigned as expandable action cards with AI-suggested contacts and Add to Map button
+- [x] Fix StakeholderLinkedText: match by title (CTO, VP of Engineering, etc.) in addition to full name
+- [x] Migrate whatsNext to structured array {action, rationale} in AI snapshot generation
+- [x] WhatsNextCard: add AI rationale section between title and contacts when expanded
+- [x] WhatsNextCard: add Accept/Dismiss/Later feedback buttons (Accept → add to Next Actions)
+- [x] Stakeholder Profile: redesign as centered modal with backdrop blur (replace right-side panel)

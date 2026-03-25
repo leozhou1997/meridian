@@ -72,93 +72,185 @@ type Props = {
   onStakeholderClick?: (id: number) => void;
 };
 
+type WhatsNextItem = string | { action: string; rationale: string };
+
 /** Expandable action card for What's Next items */
 function WhatsNextCard({
   item,
   stakeholders,
   onStakeholderHover,
   onStakeholderClick,
+  onAccept,
 }: {
-  item: string;
+  item: WhatsNextItem;
   stakeholders: Stakeholder[];
   onStakeholderHover?: (id: number | null) => void;
   onStakeholderClick?: (id: number) => void;
+  onAccept?: (actionText: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [feedback, setFeedback] = useState<'accepted' | 'dismissed' | 'later' | null>(null);
+
+  const actionText = typeof item === 'string' ? item : item.action;
+  const rationale = typeof item === 'string' ? null : item.rationale;
 
   // Find stakeholders mentioned in this action item
   const mentioned = stakeholders.filter(s => {
     const firstName = s.name.split(' ')[0];
-    return item.includes(s.name) || (firstName.length > 2 && item.includes(firstName));
+    return actionText.includes(s.name) || (firstName.length > 2 && actionText.includes(firstName));
   });
 
-  // Infer if this action involves outreach to someone not yet on the map
-  const hasOutreachKeyword = /reach out|contact|schedule|meet|connect|engage|introduce/i.test(item);
-  const suggestedContacts = mentioned;
+  const hasOutreachKeyword = /reach out|contact|schedule|meet|connect|engage|introduce/i.test(actionText);
+  const hasExpandContent = mentioned.length > 0 || hasOutreachKeyword || rationale;
+
+  const handleAccept = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setFeedback('accepted');
+    onAccept?.(actionText);
+  };
+
+  const handleDismiss = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setFeedback('dismissed');
+  };
+
+  const handleLater = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setFeedback('later');
+  };
+
+  if (feedback === 'dismissed') {
+    return (
+      <div className="rounded-lg border border-border/20 bg-muted/5 px-3 py-2 flex items-center gap-2 opacity-40">
+        <div className="w-3 h-3 rounded-full border border-muted-foreground/30 shrink-0" />
+        <span className="flex-1 text-[11px] text-muted-foreground/60 line-through leading-snug">{actionText}</span>
+        <button onClick={() => setFeedback(null)} className="text-[10px] text-muted-foreground/40 hover:text-muted-foreground/70">undo</button>
+      </div>
+    );
+  }
 
   return (
-    <div className="rounded-lg border border-border/30 bg-muted/10 overflow-hidden">
+    <div className={`rounded-lg border overflow-hidden transition-all ${
+      feedback === 'accepted' ? 'border-emerald-400/40 bg-emerald-400/5' :
+      feedback === 'later' ? 'border-amber-400/30 bg-amber-400/5' :
+      'border-border/30 bg-muted/10'
+    }`}>
       {/* Card header — always visible */}
       <button
         className="w-full flex items-start gap-2.5 px-3 py-2.5 text-left hover:bg-muted/20 transition-colors group"
-        onClick={() => setExpanded(e => !e)}
+        onClick={() => hasExpandContent && setExpanded(e => !e)}
       >
-        <div className="w-4 h-4 rounded-full border border-emerald-400/50 bg-emerald-400/10 flex items-center justify-center shrink-0 mt-0.5">
-          <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+        <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 mt-0.5 ${
+          feedback === 'accepted' ? 'border-emerald-400 bg-emerald-400/20' :
+          feedback === 'later' ? 'border-amber-400/60 bg-amber-400/10' :
+          'border-emerald-400/50 bg-emerald-400/10'
+        }`}>
+          {feedback === 'accepted'
+            ? <Check className="w-2.5 h-2.5 text-emerald-400" />
+            : <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
         </div>
         <span className="flex-1 text-[12px] text-foreground/85 leading-snug">
           <StakeholderLinkedText
-            text={item}
+            text={actionText}
             stakeholders={stakeholders}
             onHover={onStakeholderHover}
             onClick={onStakeholderClick}
           />
         </span>
-        {(suggestedContacts.length > 0 || hasOutreachKeyword) && (
+        {hasExpandContent && (
           <div className="shrink-0 mt-0.5 text-muted-foreground/40 group-hover:text-muted-foreground/70 transition-colors">
-            {expanded
-              ? <ChevronUp className="w-3 h-3" />
-              : <ChevronDown className="w-3 h-3" />
-            }
+            {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
           </div>
         )}
       </button>
 
-      {/* Expanded: suggested contacts */}
+      {/* Expanded content */}
       {expanded && (
-        <div className="px-3 pb-3 pt-1 border-t border-border/20">
-          <div className="text-[10px] text-muted-foreground/50 uppercase tracking-wider mb-2">
-            {suggestedContacts.length > 0 ? 'Relevant Stakeholders' : 'Suggested Contacts'}
-          </div>
-          {suggestedContacts.length > 0 ? (
-            <div className="space-y-1.5">
-              {suggestedContacts.map(s => (
-                <button
-                  key={s.id}
-                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg bg-card/60 border border-border/30 hover:border-primary/30 hover:bg-card/80 transition-all text-left"
-                  onMouseEnter={() => onStakeholderHover?.(s.id)}
-                  onMouseLeave={() => onStakeholderHover?.(null)}
-                  onClick={() => onStakeholderClick?.(s.id)}
-                >
-                  <div className="w-6 h-6 rounded-full bg-primary/15 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
-                    {s.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[11px] font-medium text-foreground/90 truncate">{s.name}</div>
-                    {s.title && <div className="text-[10px] text-muted-foreground/60 truncate">{s.title}</div>}
-                  </div>
-                  <div className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${
-                    s.sentiment === 'Positive' ? 'bg-emerald-400/10 text-emerald-400' :
-                    s.sentiment === 'Negative' ? 'bg-red-400/10 text-red-400' :
-                    'bg-amber-400/10 text-amber-400'
-                  }`}>{s.sentiment}</div>
-                </button>
-              ))}
+        <div className="px-3 pb-3 pt-1 border-t border-border/20 space-y-3">
+
+          {/* AI Rationale */}
+          {rationale && (
+            <div className="flex items-start gap-2">
+              <Sparkles className="w-3 h-3 text-primary/60 shrink-0 mt-0.5" />
+              <p className="text-[11.5px] text-foreground/70 leading-relaxed italic">{rationale}</p>
             </div>
-          ) : (
-            <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-muted/20 border border-border/20">
-              <Sparkles className="w-3 h-3 text-muted-foreground/50 shrink-0" />
-              <span className="text-[11px] text-muted-foreground/60 italic">AI contact suggestions coming soon</span>
+          )}
+
+          {/* Relevant Stakeholders */}
+          {mentioned.length > 0 && (
+            <div>
+              <div className="text-[10px] text-muted-foreground/50 uppercase tracking-wider mb-1.5">Relevant Stakeholders</div>
+              <div className="space-y-1.5">
+                {mentioned.map(s => (
+                  <button
+                    key={s.id}
+                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg bg-card/60 border border-border/30 hover:border-primary/30 hover:bg-card/80 transition-all text-left"
+                    onMouseEnter={() => onStakeholderHover?.(s.id)}
+                    onMouseLeave={() => onStakeholderHover?.(null)}
+                    onClick={() => onStakeholderClick?.(s.id)}
+                  >
+                    <div className="w-6 h-6 rounded-full bg-primary/15 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
+                      {s.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[11px] font-medium text-foreground/90 truncate">{s.name}</div>
+                      {s.title && <div className="text-[10px] text-muted-foreground/60 truncate">{s.title}</div>}
+                    </div>
+                    <div className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${
+                      s.sentiment === 'Positive' ? 'bg-emerald-400/10 text-emerald-400' :
+                      s.sentiment === 'Negative' ? 'bg-red-400/10 text-red-400' :
+                      'bg-amber-400/10 text-amber-400'
+                    }`}>{s.sentiment}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Suggested contacts placeholder (no map stakeholders found) */}
+          {mentioned.length === 0 && hasOutreachKeyword && (
+            <div>
+              <div className="text-[10px] text-muted-foreground/50 uppercase tracking-wider mb-1.5">Suggested Contacts</div>
+              <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-muted/20 border border-border/20">
+                <Sparkles className="w-3 h-3 text-muted-foreground/50 shrink-0" />
+                <span className="text-[11px] text-muted-foreground/60 italic">AI contact suggestions coming soon</span>
+              </div>
+            </div>
+          )}
+
+          {/* Accept / Dismiss / Later */}
+          {feedback === null && (
+            <div className="flex items-center gap-1.5 pt-1">
+              <button
+                onClick={handleAccept}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-400/10 hover:bg-emerald-400/20 text-emerald-400 text-[10.5px] font-medium transition-colors"
+              >
+                <Check className="w-3 h-3" /> Accept
+              </button>
+              <button
+                onClick={handleDismiss}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-muted/30 hover:bg-muted/50 text-muted-foreground/70 text-[10.5px] font-medium transition-colors"
+              >
+                <span className="text-[11px]">✕</span> Dismiss
+              </button>
+              <button
+                onClick={handleLater}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-400/10 hover:bg-amber-400/20 text-amber-400/80 text-[10.5px] font-medium transition-colors"
+              >
+                <span className="text-[11px]">=</span> Later
+              </button>
+            </div>
+          )}
+          {feedback === 'accepted' && (
+            <div className="flex items-center gap-1.5 text-[10.5px] text-emerald-400">
+              <Check className="w-3 h-3" /> Added to Next Actions
+              <button onClick={() => setFeedback(null)} className="ml-auto text-muted-foreground/40 hover:text-muted-foreground/70">undo</button>
+            </div>
+          )}
+          {feedback === 'later' && (
+            <div className="flex items-center gap-1.5 text-[10.5px] text-amber-400/80">
+              <span>= Saved for later</span>
+              <button onClick={() => setFeedback(null)} className="ml-auto text-muted-foreground/40 hover:text-muted-foreground/70">undo</button>
             </div>
           )}
         </div>
@@ -181,18 +273,36 @@ function StakeholderLinkedText({
 }) {
   if (!stakeholders.length) return <span>{text}</span>;
 
-  // Build a regex that matches any stakeholder name (first name or full name)
+  // Build a regex that matches stakeholder names, first names, and titles
+  // Title matching: only match specific role titles (not generic words)
+  // e.g. "CTO", "VP of Engineering", "CFO" — but not "Director" alone
+  const titleTerms = stakeholders
+    .filter(s => s.title)
+    .flatMap(s => {
+      const title = s.title!;
+      const terms: string[] = [];
+      // Match full title
+      terms.push(title);
+      // Match common abbreviations within the title (CTO, CFO, CIO, VP, CEO, COO)
+      const abbrevMatch = title.match(/\b(C[A-Z]O|VP|SVP|EVP|CPO|CMO|CRO)\b/);
+      if (abbrevMatch) terms.push(abbrevMatch[0]);
+      return terms;
+    });
+
   const names = stakeholders
     .flatMap(s => {
       const parts = [s.name];
       const firstName = s.name.split(' ')[0];
       if (firstName && firstName.length > 2) parts.push(firstName);
       return parts;
-    })
+    });
+
+  const allTerms = [...names, ...titleTerms]
+    .filter((v, i, a) => a.indexOf(v) === i) // dedupe
     .sort((a, b) => b.length - a.length); // longest first to avoid partial matches
 
-  const escaped = names.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-  const regex = new RegExp(`(${escaped.join('|')})`, 'g');
+  const escaped = allTerms.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const regex = new RegExp(`\\b(${escaped.join('|')})\\b`, 'g');
 
   const parts = text.split(regex);
 
@@ -200,7 +310,11 @@ function StakeholderLinkedText({
     <span>
       {parts.map((part, i) => {
         const stakeholder = stakeholders.find(
-          s => s.name === part || s.name.startsWith(part + ' ')
+          s =>
+            s.name === part ||
+            s.name.startsWith(part + ' ') ||
+            (s.title === part) ||
+            (s.title?.includes(part) && /\b(C[A-Z]O|VP|SVP|EVP|CPO|CMO|CRO)\b/.test(part))
         );
         if (!stakeholder) return <span key={i}>{part}</span>;
         return (
@@ -252,6 +366,21 @@ export default function DealInsightPanel({
     whatsNext?: string;
     updatedAt?: Date;
   }>({});
+
+  const generateInsightsMutation = trpc.ai.generateDealInsight.useMutation({
+    onSuccess: (data) => {
+      setInsightOverrides({
+        whatsHappening: data.whatsHappening,
+        keyRisks: data.keyRisks,
+        whatsNext: JSON.stringify(data.whatsNext),
+        updatedAt: new Date(),
+      });
+      toast.success('Deal insights refreshed by Meridian AI');
+    },
+    onError: (err) => {
+      toast.error('Failed to generate insights: ' + err.message);
+    },
+  });
 
   const chatMutation = trpc.ai.chatWithDeal.useMutation({
     onSuccess: (data) => {
@@ -412,6 +541,27 @@ export default function DealInsightPanel({
       <div className="px-4 pt-1 pb-3 border-b border-border/20 shrink-0">
         <div className="flex items-end justify-between mb-1">
           <span className="text-[10px] text-muted-foreground/70 uppercase tracking-wider font-medium">Win Confidence</span>
+          <button
+            onClick={() => generateInsightsMutation.mutate({
+              dealId: deal.id,
+              dealName: deal.name,
+              dealStage: deal.stage,
+              dealValue: deal.value,
+              companyInfo: deal.companyInfo,
+              stakeholders: deal.stakeholders.map(s => ({
+                name: s.name, title: s.title, role: s.role,
+                sentiment: s.sentiment, engagement: s.engagement,
+              })),
+            })}
+            disabled={generateInsightsMutation.isPending}
+            className="flex items-center gap-1 text-[9.5px] text-muted-foreground/50 hover:text-primary/70 transition-colors disabled:opacity-40"
+            title="Regenerate AI insights"
+          >
+            {generateInsightsMutation.isPending
+              ? <Loader2 className="w-3 h-3 animate-spin" />
+              : <RefreshCw className="w-3 h-3" />}
+            <span>Refresh</span>
+          </button>
           <div className="flex items-center gap-1.5">
             <span className={`text-3xl font-bold font-mono leading-none ${getConfidenceColor(deal.confidenceScore)}`}>
               {deal.confidenceScore}%
@@ -497,12 +647,23 @@ export default function DealInsightPanel({
 
           {/* ── What's Next ── */}
           {whatsNext && (() => {
-            // Split into action items by sentence or numbered list
-            const rawItems = whatsNext
-              .split(/(?<=[.!?])\s+(?=[A-Z0-9])|\n+/)
-              .map(s => s.replace(/^\d+\.\s*/, '').trim())
-              .filter(s => s.length > 10);
-            const actionItems = rawItems.length > 0 ? rawItems : [whatsNext];
+            // Try to parse as structured JSON array first
+            let actionItems: WhatsNextItem[] = [];
+            try {
+              const parsed = JSON.parse(whatsNext);
+              if (Array.isArray(parsed)) {
+                actionItems = parsed;
+              } else {
+                actionItems = [whatsNext];
+              }
+            } catch {
+              // Fallback: split plain text into sentences
+              const rawItems = whatsNext
+                .split(/(?<=[.!?])\s+(?=[A-Z0-9])|\n+/)
+                .map(s => s.replace(/^\d+\.\s*/, '').trim())
+                .filter(s => s.length > 10);
+              actionItems = rawItems.length > 0 ? rawItems : [whatsNext];
+            }
 
             return (
               <div>
@@ -518,6 +679,11 @@ export default function DealInsightPanel({
                       stakeholders={deal.stakeholders}
                       onStakeholderHover={onStakeholderHover}
                       onStakeholderClick={onStakeholderClick}
+                      onAccept={(actionText) => {
+                        // Add accepted action to Next Actions list
+                        setNewActionText(actionText);
+                        setAddingAction(true);
+                      }}
                     />
                   ))}
                 </div>

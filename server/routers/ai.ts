@@ -279,6 +279,99 @@ ${input.transcript}`;
       return { success: true };
     }),
 
+  // Generate structured deal insights (whatsHappening, keyRisks, structured whatsNext with rationale)
+  generateDealInsight: protectedProcedure
+    .input(z.object({
+      dealId: z.number(),
+      dealName: z.string(),
+      dealStage: z.string(),
+      dealValue: z.number(),
+      confidenceScore: z.number(),
+      companyInfo: z.string().optional(),
+      stakeholders: z.array(z.object({
+        name: z.string(),
+        title: z.string().optional().nullable(),
+        role: z.string(),
+        sentiment: z.string(),
+        engagement: z.string(),
+      })).optional(),
+      recentInteractions: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const tenant = await getOrCreateDefaultTenant(ctx.user.id, ctx.user.name ?? "User");
+
+      const systemPrompt = `You are Meridian, an expert B2B sales intelligence AI. Analyze the deal context and generate structured insights.
+
+Return ONLY a valid JSON object with this exact structure:
+{
+  "whatsHappening": "2-3 sentence narrative of the current deal situation, referencing specific stakeholders by name",
+  "keyRisks": ["Risk 1 description mentioning specific stakeholder or issue", "Risk 2", "Risk 3"],
+  "whatsNext": [
+    {
+      "action": "Specific action the AE should take (1 sentence, imperative)",
+      "rationale": "Why this action matters strategically — 1-2 sentences coaching the AE on the reasoning"
+    }
+  ]
+}
+
+Guidelines:
+- Reference stakeholders by name and title in your analysis
+- whatsNext should have 2-4 specific, actionable items
+- rationale should coach the AE, not just repeat the action
+- Be specific to this deal, not generic sales advice
+- Return ONLY the JSON, no markdown, no explanation`;
+
+      const stakeholderSummary = input.stakeholders?.map(s =>
+        `- ${s.name} (${s.title ?? s.role}): ${s.sentiment} sentiment, ${s.engagement} engagement`
+      ).join("\n") ?? "No stakeholders on record";
+
+      const userPrompt = `Deal: ${input.dealName}
+Stage: ${input.dealStage} | Value: $${input.dealValue.toLocaleString()} | Confidence: ${input.confidenceScore}%
+${input.companyInfo ? `Company Context: ${input.companyInfo}` : ""}
+
+Stakeholders:
+${stakeholderSummary}
+
+${input.recentInteractions ? `Recent Interactions:\n${input.recentInteractions}` : ""}`;
+
+      const { content, tokensUsed, latencyMs } = await callOpenAI(systemPrompt, userPrompt);
+
+      let insights: {
+        whatsHappening: string;
+        keyRisks: string[];
+        whatsNext: Array<{ action: string; rationale: string }>;
+      } | null = null;
+
+      try {
+        const cleaned = content.replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
+        insights = JSON.parse(cleaned);
+      } catch {
+        // Fallback: return raw content as whatsHappening
+        insights = {
+          whatsHappening: content,
+          keyRisks: [],
+          whatsNext: [],
+        };
+      }
+
+      await createAiLog({
+        tenantId: tenant.id,
+        userId: ctx.user.id,
+        feature: "deal_insight_generation",
+        promptVersion: "v1",
+        inputContext: { dealId: input.dealId } as any,
+        systemPrompt,
+        userPrompt,
+        rawOutput: content,
+        parsedOutput: insights as any,
+        modelUsed: OPENAI_MODEL,
+        tokensUsed,
+        latencyMs,
+      });
+
+      return { insights, tokensUsed, latencyMs };
+    }),
+
   // Inline contextual chat — user corrects or asks about deal insights
   chatWithDeal: protectedProcedure
     .input(z.object({

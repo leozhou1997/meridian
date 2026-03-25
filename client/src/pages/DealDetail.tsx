@@ -1257,18 +1257,26 @@ export default function DealDetail() {
           </Tabs>
         </div>
 
-        {/* ── Stakeholder Profile Panel ── */}
+        {/* ── Stakeholder Profile Modal ── */}
         <AnimatePresence>
           {selectedStakeholder && (
             <motion.div
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 300, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              className="border-l border-border/50 bg-card/50 shrink-0 overflow-hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+              onClick={() => setSelectedStakeholder(null)}
             >
-              <ScrollArea className="h-full">
-                <div className="p-4">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              transition={{ duration: 0.2 }}
+              onClick={e => e.stopPropagation()}
+              className="w-[640px] max-h-[82vh] overflow-hidden rounded-2xl bg-card border border-border/60 shadow-2xl flex flex-col"
+            >
+              <ScrollArea className="flex-1">
+                <div className="p-5">
                   {/* Panel header */}
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="font-display text-sm font-semibold">Stakeholder Profile</h3>
@@ -1619,6 +1627,7 @@ export default function DealDetail() {
                   )}
                 </div>
               </ScrollArea>
+            </motion.div>
             </motion.div>
           )}
         </AnimatePresence>

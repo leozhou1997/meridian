@@ -583,51 +583,66 @@ export default function DealDetail() {
             <TabsContent value="map" className="flex-1 m-0">
               <div className="h-full flex overflow-hidden">
 
-                {/* ── Deal Summary — fixed left sidebar ── */}
-                {latestSnapshot && (
-                  <div className="w-64 shrink-0 border-r border-border/30 bg-card/60 flex flex-col overflow-hidden">
-                    <ScrollArea className="flex-1">
-                      <div className="p-4">
-                        {/* Header */}
-                        <div className="flex items-center gap-2 mb-4">
-                          <AlertTriangle className="w-3.5 h-3.5 text-status-warning shrink-0" />
-                          <span className="text-xs font-display font-semibold">Deal Summary</span>
-                        </div>
+                {/* ── Stakeholder Map canvas — center, takes all remaining space ── */}
+                <div className="flex-1 relative overflow-hidden">
+                  <StakeholderMap
+                    key={deal.id}
+                    deal={deal as any}
+                    onStakeholderClick={(s: any) => handleStakeholderClick(s as Stakeholder)}
+                    onStakeholdersChange={() => utils.stakeholders.listByDeal.invalidate({ dealId })}
+                  />
+                </div>
 
-                        {/* Key metrics grid */}
-                        <div className="grid grid-cols-2 gap-1.5 mb-3">
-                          <div className="bg-muted/30 rounded-lg px-2.5 py-2">
-                            <div className="text-[9px] text-muted-foreground uppercase tracking-wider mb-0.5">Status</div>
-                            <div className={`text-[11px] font-semibold ${statusColor}`}>{statusLabel}</div>
-                          </div>
-                          <div className="bg-muted/30 rounded-lg px-2.5 py-2">
-                            <div className="text-[9px] text-muted-foreground uppercase tracking-wider mb-0.5">Confidence</div>
-                            <div className={`text-[11px] font-semibold font-mono ${getConfidenceColor(deal.confidenceScore)}`}>
-                              {deal.confidenceScore}%
+                {/* ── Deal Inspector — right-side panel ── */}
+                {latestSnapshot && (
+                  <div className="w-[300px] shrink-0 border-l border-border/30 bg-card/40 backdrop-blur-sm flex flex-col overflow-hidden">
+                    {/* Panel header */}
+                    <div className="px-4 py-3 border-b border-border/30 shrink-0">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-display font-semibold tracking-wide">Deal Intelligence</span>
+                        <div className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                          deal.confidenceScore >= 75 ? 'bg-status-success/15 text-status-success' :
+                          deal.confidenceScore >= 50 ? 'bg-status-warning/15 text-status-warning' :
+                          'bg-status-danger/15 text-status-danger'
+                        }`}>{statusLabel}</div>
+                      </div>
+                    </div>
+
+                    <ScrollArea className="flex-1">
+                      <div className="p-4 space-y-5">
+
+                        {/* ── Confidence block ── */}
+                        <div>
+                          <div className="flex items-end justify-between mb-2">
+                            <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Win Confidence</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className={`text-2xl font-bold font-mono leading-none ${getConfidenceColor(deal.confidenceScore)}`}>
+                                {deal.confidenceScore}%
+                              </span>
                               {latestSnapshot.confidenceChange !== 0 && (
-                                <span className="text-[9px] text-muted-foreground ml-1">
+                                <span className={`text-xs font-mono font-medium ${
+                                  latestSnapshot.confidenceChange > 0 ? 'text-status-success' : 'text-status-danger'
+                                }`}>
                                   {latestSnapshot.confidenceChange > 0 ? '↑' : '↓'}{Math.abs(latestSnapshot.confidenceChange)}
                                 </span>
                               )}
                             </div>
                           </div>
-                          <div className="bg-muted/30 rounded-lg px-2.5 py-2">
-                            <div className="text-[9px] text-muted-foreground uppercase tracking-wider mb-0.5">Stage</div>
-                            <div className="text-[10px] font-medium">{deal.stage}</div>
+                          {/* Confidence bar */}
+                          <div className="h-2 rounded-full bg-muted/50 overflow-hidden mb-3">
+                            <div
+                              className="h-full rounded-full transition-all duration-500"
+                              style={{
+                                width: `${deal.confidenceScore}%`,
+                                background: deal.confidenceScore >= 75 ? '#10b981' : deal.confidenceScore >= 50 ? '#f59e0b' : '#ef4444'
+                              }}
+                            />
                           </div>
-                          <div className="bg-muted/30 rounded-lg px-2.5 py-2">
-                            <div className="text-[9px] text-muted-foreground uppercase tracking-wider mb-0.5">ACV</div>
-                            <div className="text-[10px] font-semibold font-mono">{formatCurrency(deal.value)}</div>
-                          </div>
-                        </div>
-
-                        {/* Confidence sparkline + bar */}
-                        <div className="mb-4">
-                          {/* Sparkline SVG */}
+                          {/* Sparkline */}
                           {deal.snapshots.length >= 2 && (() => {
                             const sorted = [...deal.snapshots].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
                             const scores = sorted.map(s => s.confidenceScore);
-                            const W = 200, H = 32, PAD = 4;
+                            const W = 260, H = 40, PAD = 4;
                             const minS = Math.max(0, Math.min(...scores) - 10);
                             const maxS = Math.min(100, Math.max(...scores) + 10);
                             const toX = (i: number) => PAD + (i / (scores.length - 1)) * (W - PAD * 2);
@@ -637,79 +652,97 @@ export default function DealDetail() {
                             const lastScore = scores[scores.length - 1];
                             const lineColor = lastScore >= 75 ? '#10b981' : lastScore >= 50 ? '#f59e0b' : '#ef4444';
                             return (
-                              <div className="mb-2">
+                              <div>
                                 <div className="flex items-center justify-between mb-1">
-                                  <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Confidence Trend</span>
-                                  <span className="text-[9px] text-muted-foreground">{new Date(sorted[0].date).toLocaleDateString('en-US', {month:'short',day:'numeric'})} → {new Date(sorted[sorted.length-1].date).toLocaleDateString('en-US', {month:'short',day:'numeric'})}</span>
+                                  <span className="text-[9px] text-muted-foreground/60">Trend</span>
+                                  <span className="text-[9px] text-muted-foreground/60">
+                                    {new Date(sorted[0].date).toLocaleDateString('en-US', {month:'short',day:'numeric'})} → {new Date(sorted[sorted.length-1].date).toLocaleDateString('en-US', {month:'short',day:'numeric'})}
+                                  </span>
                                 </div>
                                 <svg width="100%" viewBox={`0 0 ${W} ${H}`} className="overflow-visible">
                                   <defs>
-                                    <linearGradient id={`cg-${deal.id}`} x1="0" y1="0" x2="0" y2="1">
-                                      <stop offset="0%" stopColor={lineColor} stopOpacity="0.25" />
+                                    <linearGradient id={`cg2-${deal.id}`} x1="0" y1="0" x2="0" y2="1">
+                                      <stop offset="0%" stopColor={lineColor} stopOpacity="0.3" />
                                       <stop offset="100%" stopColor={lineColor} stopOpacity="0.02" />
                                     </linearGradient>
                                   </defs>
-                                  <polygon points={areaPoints} fill={`url(#cg-${deal.id})`} />
-                                  <polyline points={points} fill="none" stroke={lineColor} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+                                  <polygon points={areaPoints} fill={`url(#cg2-${deal.id})`} />
+                                  <polyline points={points} fill="none" stroke={lineColor} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
                                   {scores.map((v, i) => (
-                                    <circle key={i} cx={toX(i)} cy={toY(v)} r="2" fill={lineColor} />
+                                    <circle key={i} cx={toX(i)} cy={toY(v)} r="2.5" fill={lineColor} />
                                   ))}
                                 </svg>
                               </div>
                             );
                           })()}
-                          {/* Static confidence bar */}
-                          <div className="h-1.5 rounded-full bg-muted/60 overflow-hidden">
-                            <div
-                              className="h-full rounded-full transition-all"
-                              style={{
-                                width: `${deal.confidenceScore}%`,
-                                background: deal.confidenceScore >= 75 ? '#10b981' : deal.confidenceScore >= 50 ? '#f59e0b' : '#ef4444'
-                              }}
-                            />
+                        </div>
+
+                        {/* ── Deal metrics row ── */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="bg-muted/25 rounded-xl p-3 border border-border/20">
+                            <div className="text-[10px] text-muted-foreground mb-1">Stage</div>
+                            <div className="text-sm font-semibold leading-tight">{deal.stage}</div>
+                          </div>
+                          <div className="bg-muted/25 rounded-xl p-3 border border-border/20">
+                            <div className="text-[10px] text-muted-foreground mb-1">ACV</div>
+                            <div className="text-sm font-semibold font-mono leading-tight">{formatCurrency(deal.value)}</div>
                           </div>
                         </div>
 
-                        <div className="border-t border-border/25 mb-3" />
+                        <div className="border-t border-border/20" />
 
-                        {/* What's Happening — always fully visible */}
-                        <div className="mb-3">
-                          <div className="text-[9px] font-semibold text-status-info uppercase tracking-wider mb-1.5">What's Happening</div>
-                          <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        {/* ── What's Happening ── */}
+                        <div>
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+                            <span className="text-[11px] font-semibold text-blue-400 uppercase tracking-wider">What's Happening</span>
+                          </div>
+                          <p className="text-[12px] text-foreground/80 leading-relaxed">
                             {latestSnapshot.whatsHappening}
                           </p>
                         </div>
 
-                        {/* Key Risks */}
+                        {/* ── Key Risks ── */}
                         {(latestSnapshot.keyRisks as string[] | null)?.length ? (
-                          <div className="mb-3">
-                            <div className="text-[9px] font-semibold text-status-danger uppercase tracking-wider mb-1.5">Key Risks</div>
-                            <div className="space-y-1">
+                          <div>
+                            <div className="flex items-center gap-1.5 mb-2">
+                              <div className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
+                              <span className="text-[11px] font-semibold text-red-400 uppercase tracking-wider">Key Risks</span>
+                            </div>
+                            <div className="space-y-2">
                               {(latestSnapshot.keyRisks as string[]).map((risk, i) => (
-                                <div key={i} className="flex items-start gap-1.5 text-[11px] text-muted-foreground">
-                                  <span className="text-status-danger mt-0.5 shrink-0">•</span>
-                                  <span className="leading-snug">{risk}</span>
+                                <div key={i} className="flex items-start gap-2 bg-red-500/5 border border-red-500/15 rounded-lg px-3 py-2">
+                                  <AlertTriangle className="w-3 h-3 text-red-400 shrink-0 mt-0.5" />
+                                  <span className="text-[12px] text-foreground/75 leading-snug">{risk}</span>
                                 </div>
                               ))}
                             </div>
                           </div>
                         ) : null}
 
-                        {/* What's Next */}
-                        <div className="mb-3">
-                          <div className="text-[9px] font-semibold text-status-success uppercase tracking-wider mb-1.5">What's Next</div>
-                          <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        {/* ── What's Next ── */}
+                        <div>
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                            <span className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider">What's Next</span>
+                          </div>
+                          <p className="text-[12px] text-foreground/80 leading-relaxed">
                             {latestSnapshot.whatsNext}
                           </p>
                         </div>
 
-                        {/* Next Actions */}
-                        <div className="mb-4">
-                          <div className="flex items-center justify-between mb-1.5">
-                            <div className="text-[9px] font-semibold text-primary uppercase tracking-wider">Next Actions</div>
+                        <div className="border-t border-border/20" />
+
+                        {/* ── Next Actions ── */}
+                        <div>
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                              <span className="text-[11px] font-semibold text-primary uppercase tracking-wider">Next Actions</span>
+                            </div>
                             <button
                               onClick={() => setAddingAction(v => !v)}
-                              className="w-4 h-4 rounded flex items-center justify-center hover:bg-muted/60 transition-colors text-muted-foreground hover:text-foreground"
+                              className="w-5 h-5 rounded-md flex items-center justify-center hover:bg-muted/60 transition-colors text-muted-foreground hover:text-foreground border border-border/30"
                             >
                               <Plus className="w-3 h-3" />
                             </button>
@@ -717,42 +750,42 @@ export default function DealDetail() {
 
                           {/* Add new action form */}
                           {addingAction && (
-                            <div className="mb-2 p-2 rounded-lg bg-muted/30 border border-border/30">
+                            <div className="mb-3 p-3 rounded-xl bg-muted/30 border border-border/30">
                               <input
                                 autoFocus
                                 value={newActionText}
                                 onChange={e => setNewActionText(e.target.value)}
                                 onKeyDown={e => { if (e.key === 'Enter') addAction(); if (e.key === 'Escape') { setAddingAction(false); setNewActionText(''); } }}
-                                placeholder="Action item..."
-                                className="w-full bg-transparent text-[11px] outline-none placeholder:text-muted-foreground/50 mb-1.5"
+                                placeholder="Describe the action..."
+                                className="w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground/50 mb-2"
                               />
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-2">
                                 <input
                                   type="date"
                                   value={newActionDue}
                                   onChange={e => setNewActionDue(e.target.value)}
-                                  className="flex-1 bg-transparent text-[10px] text-muted-foreground outline-none border border-border/30 rounded px-1.5 py-0.5"
+                                  className="flex-1 bg-transparent text-[11px] text-muted-foreground outline-none border border-border/30 rounded-md px-2 py-1"
                                 />
-                                <button onClick={addAction} className="text-[10px] px-2 py-0.5 rounded bg-primary text-primary-foreground font-medium">Add</button>
-                                <button onClick={() => { setAddingAction(false); setNewActionText(''); }} className="text-[10px] px-1.5 py-0.5 rounded hover:bg-muted/60 text-muted-foreground">Cancel</button>
+                                <button onClick={addAction} className="text-[11px] px-2.5 py-1 rounded-md bg-primary text-primary-foreground font-medium">Add</button>
+                                <button onClick={() => { setAddingAction(false); setNewActionText(''); }} className="text-[11px] px-2 py-1 rounded-md hover:bg-muted/60 text-muted-foreground">✕</button>
                               </div>
                             </div>
                           )}
 
                           {/* Action list */}
-                          <div className="space-y-1">
+                          <div className="space-y-1.5">
                             {nextActions.length === 0 && !addingAction && (
-                              <p className="text-[10px] text-muted-foreground/50 italic">No actions yet — click + to add</p>
+                              <p className="text-xs text-muted-foreground/40 italic text-center py-3">No actions yet — click + to add</p>
                             )}
                             {nextActions.map(action => {
                               const isOverdue = !action.completed && action.dueDate && new Date(action.dueDate) < new Date();
                               return (
-                                <div key={action.id} className={`flex items-start gap-1.5 group rounded-lg px-1.5 py-1 transition-colors hover:bg-muted/20 ${
+                                <div key={action.id} className={`flex items-start gap-2.5 group rounded-xl px-3 py-2.5 transition-colors hover:bg-muted/20 border border-transparent hover:border-border/20 ${
                                   action.completed ? 'opacity-50' : ''
                                 }`}>
                                   <button
                                     onClick={() => toggleAction(action.id)}
-                                    className={`mt-0.5 w-3.5 h-3.5 rounded border shrink-0 flex items-center justify-center transition-colors ${
+                                    className={`mt-0.5 w-4 h-4 rounded-md border shrink-0 flex items-center justify-center transition-colors ${
                                       action.completed
                                         ? 'bg-primary border-primary'
                                         : action.priority === 'high'
@@ -760,25 +793,26 @@ export default function DealDetail() {
                                           : 'border-border/60 hover:border-primary'
                                     }`}
                                   >
-                                    {action.completed && <Check className="w-2 h-2 text-primary-foreground" />}
+                                    {action.completed && <Check className="w-2.5 h-2.5 text-primary-foreground" />}
                                   </button>
                                   <div className="flex-1 min-w-0">
-                                    <p className={`text-[11px] leading-snug ${
+                                    <p className={`text-[12px] leading-snug ${
                                       action.completed ? 'line-through text-muted-foreground/50' : 'text-foreground/90'
                                     }`}>{action.text}</p>
                                     {action.dueDate && (
-                                      <p className={`text-[9px] mt-0.5 ${
+                                      <p className={`text-[10px] mt-0.5 flex items-center gap-1 ${
                                         isOverdue ? 'text-status-danger' : 'text-muted-foreground/60'
                                       }`}>
-                                        {isOverdue ? '⚠ ' : ''}Due {new Date(action.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                        <Calendar className="w-2.5 h-2.5" />
+                                        {isOverdue ? 'Overdue · ' : ''}Due {new Date(action.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                       </p>
                                     )}
                                   </div>
                                   <button
                                     onClick={() => deleteAction(action.id)}
-                                    className="opacity-0 group-hover:opacity-100 w-3.5 h-3.5 flex items-center justify-center text-muted-foreground/40 hover:text-status-danger transition-all shrink-0 mt-0.5"
+                                    className="opacity-0 group-hover:opacity-100 w-4 h-4 flex items-center justify-center text-muted-foreground/40 hover:text-status-danger transition-all shrink-0 mt-0.5"
                                   >
-                                    <Trash2 className="w-2.5 h-2.5" />
+                                    <Trash2 className="w-3 h-3" />
                                   </button>
                                 </div>
                               );
@@ -786,11 +820,12 @@ export default function DealDetail() {
                           </div>
                         </div>
 
-                        <div className="border-t border-border/25 pt-3 space-y-1.5">
+                        {/* ── Quick nav ── */}
+                        <div className="border-t border-border/20 pt-4 space-y-1.5">
                           <Button
                             size="sm"
                             variant="default"
-                            className="w-full text-[10px] h-7 font-display"
+                            className="w-full text-xs h-8 font-display"
                             onClick={() => setActiveTab('signals')}
                           >
                             Account Signals
@@ -798,26 +833,17 @@ export default function DealDetail() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="w-full text-[10px] h-7 font-display"
+                            className="w-full text-xs h-8 font-display"
                             onClick={() => setActiveTab('discussions')}
                           >
                             All Interactions
                           </Button>
                         </div>
+
                       </div>
                     </ScrollArea>
                   </div>
                 )}
-
-                {/* ── Stakeholder Map canvas ── */}
-                <div className="flex-1 relative overflow-hidden">
-                  <StakeholderMap
-                    key={deal.id}
-                    deal={deal as any}
-                    onStakeholderClick={(s: any) => handleStakeholderClick(s as Stakeholder)}
-                    onStakeholdersChange={() => utils.stakeholders.listByDeal.invalidate({ dealId })}
-                  />
-                </div>
 
               </div>
             </TabsContent>

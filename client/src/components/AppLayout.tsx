@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation, Link } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -7,7 +7,8 @@ import { formatCurrency, getConfidenceColor } from '@/lib/data';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Compass, LayoutDashboard, Users, FileText, MessageSquare,
-  Search, LogOut, ChevronDown, ChevronRight, Settings, Sun, Moon, BookOpen, Plus
+  Search, LogOut, ChevronDown, ChevronRight, Settings, Sun, Moon, BookOpen, Plus,
+  PanelLeftClose, PanelLeftOpen
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -15,6 +16,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { toast } from 'sonner';
 
 const stages = ['Discovery', 'Demo', 'Technical Evaluation', 'POC', 'Negotiation', 'Closed Won', 'Closed Lost'] as const;
+
+const PIPELINE_COLLAPSED_KEY = 'pipeline-sidebar-collapsed';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -28,6 +31,38 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const [expandedStages, setExpandedStages] = useState<Set<string>>(
     new Set(['Discovery', 'Demo', 'Technical Evaluation', 'POC', 'Negotiation'])
   );
+
+  // Determine if we're on a deal detail page
+  const isDealPage = /^\/deal\/\d+/.test(location);
+
+  // Sidebar collapsed state — auto-collapse on deal pages, remember user preference otherwise
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    // On deal pages, start collapsed
+    if (isDealPage) return true;
+    const saved = localStorage.getItem(PIPELINE_COLLAPSED_KEY);
+    return saved === 'true';
+  });
+
+  // When navigating to a deal page, auto-collapse; when leaving, restore preference
+  useEffect(() => {
+    if (isDealPage) {
+      setIsCollapsed(true);
+    } else {
+      const saved = localStorage.getItem(PIPELINE_COLLAPSED_KEY);
+      setIsCollapsed(saved === 'true');
+    }
+  }, [isDealPage]);
+
+  const toggleCollapsed = () => {
+    setIsCollapsed(prev => {
+      const next = !prev;
+      // Only persist preference when not on a deal page
+      if (!isDealPage) {
+        localStorage.setItem(PIPELINE_COLLAPSED_KEY, String(next));
+      }
+      return next;
+    });
+  };
 
   // Real data from API
   const { data: deals = [] } = trpc.deals.list.useQuery(undefined, {
@@ -145,126 +180,155 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
       </div>
 
-      {/* Pipeline sidebar */}
-      <div className="w-[260px] bg-sidebar border-r border-sidebar-border flex flex-col shrink-0">
-        <div className="p-4 border-b border-sidebar-border">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-display text-sm font-semibold text-sidebar-foreground">Pipeline Overview</h2>
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => navigate('/deal/new')}
-                  className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50 transition-all"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="font-display text-xs">New Deal</TooltipContent>
-            </Tooltip>
-          </div>
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search deals..."
-              className="h-8 pl-8 text-xs bg-sidebar-accent/50 border-sidebar-border"
-            />
-          </div>
-        </div>
-
-        <ScrollArea className="flex-1">
-          <div className="p-2">
-            {deals.length === 0 ? (
-              <div className="px-3 py-8 text-center">
-                <p className="text-xs text-muted-foreground">No deals yet.</p>
-                <button
-                  onClick={() => navigate('/deal/new')}
-                  className="text-xs text-primary hover:underline mt-1"
-                >
-                  Create your first deal
-                </button>
-              </div>
-            ) : (
-              stages.map(stage => {
-                const stageDeals = filteredDeals.filter(d => d.stage === stage);
-                if (stageDeals.length === 0) return null;
-                const isExpanded = expandedStages.has(stage);
-
-                return (
-                  <div key={stage} className="mb-1">
+      {/* Pipeline sidebar — collapsible */}
+      <div
+        className={`bg-sidebar border-r border-sidebar-border flex flex-col shrink-0 transition-all duration-300 ease-in-out overflow-hidden ${
+          isCollapsed ? 'w-0 border-r-0' : 'w-[260px]'
+        }`}
+      >
+        <div className="w-[260px] flex flex-col h-full">
+          <div className="p-4 border-b border-sidebar-border">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-display text-sm font-semibold text-sidebar-foreground">Pipeline Overview</h2>
+              <div className="flex items-center gap-1">
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger asChild>
                     <button
-                      onClick={() => toggleStage(stage)}
-                      className="w-full flex items-center gap-2 px-2 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors rounded"
+                      onClick={() => navigate('/deal/new')}
+                      className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50 transition-all"
                     >
-                      {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                      <span>{stage}</span>
-                      <span className="ml-auto text-[10px] bg-muted rounded px-1.5 py-0.5">{stageDeals.length}</span>
+                      <Plus className="w-3.5 h-3.5" />
                     </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="font-display text-xs">New Deal</TooltipContent>
+                </Tooltip>
+              </div>
+            </div>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search deals..."
+                className="h-8 pl-8 text-xs bg-sidebar-accent/50 border-sidebar-border"
+              />
+            </div>
+          </div>
 
-                    <AnimatePresence>
-                      {isExpanded && stageDeals.map(deal => {
-                        const isActive = location === `/deal/${deal.id}`;
-                        return (
-                          <motion.div
-                            key={deal.id}
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            transition={{ duration: 0.15 }}
-                          >
-                            <Link href={`/deal/${deal.id}`}>
-                              <div
-                                className={`flex items-center gap-2.5 px-2 py-2 rounded-md mx-1 mb-0.5 transition-all duration-150 ${
-                                  isActive
-                                    ? 'bg-sidebar-accent border border-sidebar-border'
-                                    : 'hover:bg-sidebar-accent/50'
-                                }`}
-                              >
-                                <div className={`w-2 h-2 rounded-full shrink-0 ${
-                                  (deal.confidenceScore ?? 0) >= 75 ? 'bg-status-success' :
-                                  (deal.confidenceScore ?? 0) >= 50 ? 'bg-status-warning' : 'bg-status-danger'
-                                }`} />
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-xs font-medium text-sidebar-foreground truncate">{deal.company}</span>
-                                    <span className="text-[10px] font-mono text-muted-foreground ml-1">{formatCurrency(deal.value ?? 0)}</span>
-                                  </div>
-                                  <div className="flex items-center justify-between mt-0.5">
-                                    <span className="text-[10px] text-muted-foreground">Day {deal.daysInStage ?? 0}</span>
-                                    <span className={`text-[10px] font-mono font-medium ${getConfidenceColor(deal.confidenceScore ?? 0)}`}>
-                                      {deal.confidenceScore ?? 0}%
-                                    </span>
+          <ScrollArea className="flex-1">
+            <div className="p-2">
+              {deals.length === 0 ? (
+                <div className="px-3 py-8 text-center">
+                  <p className="text-xs text-muted-foreground">No deals yet.</p>
+                  <button
+                    onClick={() => navigate('/deal/new')}
+                    className="text-xs text-primary hover:underline mt-1"
+                  >
+                    Create your first deal
+                  </button>
+                </div>
+              ) : (
+                stages.map(stage => {
+                  const stageDeals = filteredDeals.filter(d => d.stage === stage);
+                  if (stageDeals.length === 0) return null;
+                  const isExpanded = expandedStages.has(stage);
+
+                  return (
+                    <div key={stage} className="mb-1">
+                      <button
+                        onClick={() => toggleStage(stage)}
+                        className="w-full flex items-center gap-2 px-2 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors rounded"
+                      >
+                        {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                        <span>{stage}</span>
+                        <span className="ml-auto text-[10px] bg-muted rounded px-1.5 py-0.5">{stageDeals.length}</span>
+                      </button>
+
+                      <AnimatePresence>
+                        {isExpanded && stageDeals.map(deal => {
+                          const isActive = location === `/deal/${deal.id}`;
+                          return (
+                            <motion.div
+                              key={deal.id}
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              transition={{ duration: 0.15 }}
+                            >
+                              <Link href={`/deal/${deal.id}`}>
+                                <div
+                                  className={`flex items-center gap-2.5 px-2 py-2 rounded-md mx-1 mb-0.5 transition-all duration-150 ${
+                                    isActive
+                                      ? 'bg-sidebar-accent border border-sidebar-border'
+                                      : 'hover:bg-sidebar-accent/50'
+                                  }`}
+                                >
+                                  <div className={`w-2 h-2 rounded-full shrink-0 ${
+                                    (deal.confidenceScore ?? 0) >= 75 ? 'bg-status-success' :
+                                    (deal.confidenceScore ?? 0) >= 50 ? 'bg-status-warning' : 'bg-status-danger'
+                                  }`} />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xs font-medium text-sidebar-foreground truncate">{deal.company}</span>
+                                      <span className="text-[10px] font-mono text-muted-foreground ml-1">{formatCurrency(deal.value ?? 0)}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between mt-0.5">
+                                      <span className="text-[10px] text-muted-foreground">Day {deal.daysInStage ?? 0}</span>
+                                      <span className={`text-[10px] font-mono font-medium ${getConfidenceColor(deal.confidenceScore ?? 0)}`}>
+                                        {deal.confidenceScore ?? 0}%
+                                      </span>
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            </Link>
-                          </motion.div>
-                        );
-                      })}
-                    </AnimatePresence>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </ScrollArea>
+                              </Link>
+                            </motion.div>
+                          );
+                        })}
+                      </AnimatePresence>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </ScrollArea>
 
-        {/* Pipeline stats footer */}
-        <div className="p-4 border-t border-sidebar-border space-y-2">
-          <div className="flex justify-between text-xs">
-            <span className="text-muted-foreground">Total Pipeline</span>
-            <span className="font-mono font-medium text-foreground">{formatCurrency(totalPipeline)}</span>
-          </div>
-          <div className="flex justify-between text-xs">
-            <span className="text-muted-foreground">Predictable Revenue</span>
-            <span className="font-mono font-medium text-status-success">{formatCurrency(predictableRevenue)}</span>
+          {/* Pipeline stats footer */}
+          <div className="p-4 border-t border-sidebar-border space-y-2">
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">Total Pipeline</span>
+              <span className="font-mono font-medium text-foreground">{formatCurrency(totalPipeline)}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">Predictable Revenue</span>
+              <span className="font-mono font-medium text-status-success">{formatCurrency(predictableRevenue)}</span>
+            </div>
           </div>
         </div>
       </div>
 
+      {/* Toggle button — sits between sidebar and main content */}
+      <div className="relative shrink-0 flex items-start pt-3">
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <button
+              onClick={toggleCollapsed}
+              className="w-5 h-8 -ml-2.5 z-10 flex items-center justify-center rounded-r-md bg-sidebar border border-l-0 border-sidebar-border text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-all"
+              aria-label={isCollapsed ? 'Expand pipeline' : 'Collapse pipeline'}
+            >
+              {isCollapsed
+                ? <PanelLeftOpen className="w-3 h-3" />
+                : <PanelLeftClose className="w-3 h-3" />
+              }
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="font-display text-xs">
+            {isCollapsed ? 'Show Pipeline' : 'Hide Pipeline'}
+          </TooltipContent>
+        </Tooltip>
+      </div>
+
       {/* Main content */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto min-w-0">
         {children}
       </main>
     </div>

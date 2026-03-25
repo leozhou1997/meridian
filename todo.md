@@ -35,3 +35,5 @@
 - [ ] Voice transcription integration
 - [ ] Multi-tenancy (team invite flow)
 - [ ] Stripe billing integration
+- [x] Collapsible Pipeline sidebar (auto-collapses on DealDetail, toggle button, persists preference)
+- [x] Deal Summary moved to right-side Inspector Panel (Deal Intelligence) with improved visual hierarchy

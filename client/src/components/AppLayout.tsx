@@ -180,10 +180,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
       </div>
 
-      {/* Pipeline sidebar — collapsible */}
+      {/* Pipeline sidebar — collapsible; on deal pages it floats as overlay to avoid squeezing content */}
       <div
-        className={`bg-sidebar border-r border-sidebar-border flex flex-col shrink-0 transition-all duration-300 ease-in-out overflow-hidden ${
-          isCollapsed ? 'w-0 border-r-0' : 'w-[260px]'
+        className={`bg-sidebar border-r border-sidebar-border flex flex-col transition-all duration-300 ease-in-out overflow-hidden ${
+          isDealPage
+            ? `absolute left-[60px] top-0 bottom-0 z-30 shadow-2xl ${isCollapsed ? 'w-0 border-r-0' : 'w-[260px]'}`
+            : `shrink-0 ${isCollapsed ? 'w-0 border-r-0' : 'w-[260px]'}`
         }`}
       >
         <div className="w-[260px] flex flex-col h-full">
@@ -306,8 +308,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
       </div>
 
-      {/* Toggle button — sits between sidebar and main content */}
-      <div className="relative shrink-0 flex items-start pt-3">
+      {/* Toggle button — on deal pages it's always visible at the left edge of main content */}
+      <div className={`relative shrink-0 flex items-start pt-3 ${isDealPage ? 'z-40' : ''}`}>
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
             <button

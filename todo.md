@@ -37,3 +37,7 @@
 - [ ] Stripe billing integration
 - [x] Collapsible Pipeline sidebar (auto-collapses on DealDetail, toggle button, persists preference)
 - [x] Deal Summary moved to right-side Inspector Panel (Deal Intelligence) with improved visual hierarchy
+- [x] Deal Insight panel moved to left side of Buying Committee tab (Confidence trend + What's Happening + Key Risks + What's Next + Next Actions)
+- [x] Stakeholder Map moved to right side of Buying Committee tab
+- [x] Inline Contextual Chat input at bottom of Deal Insight panel (AI-powered update of insights)
+- [x] Deal Overview (static info) accessible separately, not blocking main insight view (Pipeline sidebar overlay mode on deal pages)

@@ -49,6 +49,7 @@ type NextAction = {
   updatedAt: Date;
 };
 import StakeholderMap from '@/components/StakeholderMap';
+import DealInsightPanel from '@/components/DealInsightPanel';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Globe, Clock, TrendingUp, TrendingDown, AlertTriangle,
@@ -583,7 +584,24 @@ export default function DealDetail() {
             <TabsContent value="map" className="flex-1 m-0">
               <div className="h-full flex overflow-hidden">
 
-                {/* ── Stakeholder Map canvas — center, takes all remaining space ── */}
+                {/* ── Deal Insight Panel — left side ── */}
+                <DealInsightPanel
+                  deal={deal}
+                  latestSnapshot={latestSnapshot}
+                  nextActions={nextActions}
+                  addingAction={addingAction}
+                  setAddingAction={setAddingAction}
+                  newActionText={newActionText}
+                  setNewActionText={setNewActionText}
+                  newActionDue={newActionDue}
+                  setNewActionDue={setNewActionDue}
+                  addAction={addAction}
+                  toggleAction={toggleAction}
+                  deleteAction={deleteAction}
+                  setActiveTab={setActiveTab}
+                />
+
+                {/* ── Stakeholder Map canvas — right side, takes remaining space ── */}
                 <div className="flex-1 relative overflow-hidden">
                   <StakeholderMap
                     key={deal.id}
@@ -593,8 +611,8 @@ export default function DealDetail() {
                   />
                 </div>
 
-                {/* ── Deal Inspector — right-side panel ── */}
-                {latestSnapshot && (
+                {/* ── OLD Inspector removed — now using DealInsightPanel on the left ── */}
+                {false && latestSnapshot && (
                   <div className="w-[300px] shrink-0 border-l border-border/30 bg-card/40 backdrop-blur-sm flex flex-col overflow-hidden">
                     {/* Panel header */}
                     <div className="px-4 py-3 border-b border-border/30 shrink-0">

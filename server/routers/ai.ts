@@ -278,4 +278,100 @@ ${input.transcript}`;
       await setActivePrompt(input.id, input.feature);
       return { success: true };
     }),
+
+  // Inline contextual chat — user corrects or asks about deal insights
+  chatWithDeal: protectedProcedure
+    .input(z.object({
+      dealId: z.number(),
+      dealName: z.string(),
+      dealStage: z.string(),
+      dealValue: z.number(),
+      confidenceScore: z.number(),
+      companyInfo: z.string().optional(),
+      currentWhatsHappening: z.string().optional(),
+      currentKeyRisks: z.array(z.string()).optional(),
+      currentWhatsNext: z.string().optional(),
+      stakeholders: z.array(z.object({
+        name: z.string(),
+        title: z.string().optional().nullable(),
+        role: z.string(),
+        sentiment: z.string(),
+        engagement: z.string(),
+      })).optional(),
+      userMessage: z.string(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const tenant = await getOrCreateDefaultTenant(ctx.user.id, ctx.user.name ?? "User");
+
+      const systemPrompt = `You are Meridian, an expert AI sales intelligence assistant. You help sales representatives understand and navigate complex B2B deals.
+
+You have access to the current deal context and the AI-generated insights. The user may:
+1. Correct an incorrect insight ("CFO is actually engaged, I met with him last week")
+2. Add new information that changes the picture ("Budget was approved yesterday")
+3. Ask why you made a certain assessment ("Why do you say the CFO is not engaged?")
+4. Ask for deeper analysis ("What's the biggest risk right now?")
+
+When the user provides new information or corrections, update your understanding and provide a revised assessment.
+When answering questions, be specific to this deal's context.
+
+Always respond in a conversational but professional tone. Be concise — 2-4 sentences for analysis, bullet points for lists.
+If the user's input changes the deal situation significantly, end your response with a JSON block (wrapped in \`\`\`json ... \`\`\`) containing updated insights:
+{
+  "updatedInsights": {
+    "whatsHappening": "...",
+    "keyRisks": ["risk1", "risk2"],
+    "whatsNext": "..."
+  }
+}
+Only include the JSON block if the insights actually need updating. Otherwise just answer conversationally.`;
+
+      const stakeholderSummary = input.stakeholders?.map(s =>
+        `- ${s.name} (${s.title ?? s.role}): ${s.sentiment} sentiment, ${s.engagement} engagement`
+      ).join("\n") ?? "No stakeholders on record";
+
+      const userPrompt = `Deal: ${input.dealName}
+Stage: ${input.dealStage} | Value: $${input.dealValue.toLocaleString()} | Confidence: ${input.confidenceScore}%
+${input.companyInfo ? `Company: ${input.companyInfo}` : ""}
+
+Stakeholders:
+${stakeholderSummary}
+
+Current AI Insights:
+What's Happening: ${input.currentWhatsHappening ?? "Not set"}
+Key Risks: ${input.currentKeyRisks?.join("; ") ?? "None"}
+What's Next: ${input.currentWhatsNext ?? "Not set"}
+
+User says: ${input.userMessage}`;
+
+      const { content, tokensUsed, latencyMs } = await callOpenAI(systemPrompt, userPrompt);
+
+      // Parse optional updated insights from response
+      let updatedInsights: { whatsHappening?: string; keyRisks?: string[]; whatsNext?: string } | null = null;
+      const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
+      if (jsonMatch) {
+        try {
+          const parsed = JSON.parse(jsonMatch[1]);
+          if (parsed.updatedInsights) updatedInsights = parsed.updatedInsights;
+        } catch { /* ignore parse errors */ }
+      }
+
+      // Strip the JSON block from the displayed response
+      const displayResponse = content.replace(/```json[\s\S]*?```/g, "").trim();
+
+      await createAiLog({
+        tenantId: tenant.id,
+        userId: ctx.user.id,
+        feature: "deal_chat",
+        promptVersion: "v1",
+        inputContext: { dealId: input.dealId, userMessage: input.userMessage } as any,
+        systemPrompt,
+        userPrompt,
+        rawOutput: content,
+        modelUsed: OPENAI_MODEL,
+        tokensUsed,
+        latencyMs,
+      });
+
+      return { response: displayResponse, updatedInsights, tokensUsed };
+    }),
 });

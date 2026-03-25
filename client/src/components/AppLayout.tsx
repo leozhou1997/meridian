@@ -308,6 +308,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
       </div>
 
+      {/* Backdrop overlay — only on deal pages when pipeline is open */}
+      {isDealPage && !isCollapsed && (
+        <div
+          className="absolute left-[60px] top-0 bottom-0 right-0 z-20 bg-background/60 backdrop-blur-[2px]"
+          onClick={toggleCollapsed}
+          aria-label="Close pipeline"
+        />
+      )}
+
       {/* Toggle button — on deal pages it's always visible at the left edge of main content */}
       <div className={`relative shrink-0 flex items-start pt-3 ${isDealPage ? 'z-40' : ''}`}>
         <Tooltip delayDuration={0}>

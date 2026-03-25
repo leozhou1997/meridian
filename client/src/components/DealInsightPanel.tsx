@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
 import { formatCurrency, getConfidenceColor } from '@/lib/data';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Button } from '@/components/ui/button';
 import {
   AlertTriangle, Check, Plus, Trash2, Calendar, Send, Loader2,
   ChevronDown, ChevronUp, RefreshCw, Sparkles
@@ -69,7 +68,61 @@ type Props = {
   toggleAction: (id: number) => void;
   deleteAction: (id: number) => void;
   setActiveTab: (tab: string) => void;
+  onStakeholderHover?: (id: number | null) => void;
+  onStakeholderClick?: (id: number) => void;
 };
+
+/** Renders text with stakeholder names highlighted as interactive links */
+function StakeholderLinkedText({
+  text,
+  stakeholders,
+  onHover,
+  onClick,
+}: {
+  text: string;
+  stakeholders: Stakeholder[];
+  onHover?: (id: number | null) => void;
+  onClick?: (id: number) => void;
+}) {
+  if (!stakeholders.length) return <span>{text}</span>;
+
+  // Build a regex that matches any stakeholder name (first name or full name)
+  const names = stakeholders
+    .flatMap(s => {
+      const parts = [s.name];
+      const firstName = s.name.split(' ')[0];
+      if (firstName && firstName.length > 2) parts.push(firstName);
+      return parts;
+    })
+    .sort((a, b) => b.length - a.length); // longest first to avoid partial matches
+
+  const escaped = names.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const regex = new RegExp(`(${escaped.join('|')})`, 'g');
+
+  const parts = text.split(regex);
+
+  return (
+    <span>
+      {parts.map((part, i) => {
+        const stakeholder = stakeholders.find(
+          s => s.name === part || s.name.startsWith(part + ' ')
+        );
+        if (!stakeholder) return <span key={i}>{part}</span>;
+        return (
+          <span
+            key={i}
+            className="text-primary underline decoration-dotted underline-offset-2 cursor-pointer hover:text-primary/80 transition-colors font-medium"
+            onMouseEnter={() => onHover?.(stakeholder.id)}
+            onMouseLeave={() => onHover?.(null)}
+            onClick={() => onClick?.(stakeholder.id)}
+          >
+            {part}
+          </span>
+        );
+      })}
+    </span>
+  );
+}
 
 export default function DealInsightPanel({
   deal,
@@ -85,6 +138,8 @@ export default function DealInsightPanel({
   toggleAction,
   deleteAction,
   setActiveTab,
+  onStakeholderHover,
+  onStakeholderClick,
 }: Props) {
   // Inline chat state
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -245,18 +300,7 @@ export default function DealInsightPanel({
             }}
           />
         </div>
-        {/* Stage + ACV row */}
-        <div className="flex items-center gap-3 mt-2">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] text-muted-foreground/60">Stage</span>
-            <span className="text-[11px] font-semibold">{deal.stage}</span>
-          </div>
-          <div className="w-px h-3 bg-border/40" />
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] text-muted-foreground/60">ACV</span>
-            <span className="text-[11px] font-semibold font-mono">{formatCurrency(deal.value)}</span>
-          </div>
-        </div>
+
         {/* Sparkline */}
         {sparklineEl}
       </div>
@@ -281,7 +325,12 @@ export default function DealInsightPanel({
                 <span className="text-[11px] font-semibold text-blue-400 uppercase tracking-wider">What's Happening</span>
               </div>
               <p className="text-[12.5px] text-foreground/85 leading-relaxed">
-                {whatsHappening}
+                <StakeholderLinkedText
+                  text={whatsHappening}
+                  stakeholders={deal.stakeholders}
+                  onHover={onStakeholderHover}
+                  onClick={onStakeholderClick}
+                />
               </p>
             </div>
           )}
@@ -312,7 +361,12 @@ export default function DealInsightPanel({
                 <span className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider">What's Next</span>
               </div>
               <p className="text-[12.5px] text-foreground/85 leading-relaxed">
-                {whatsNext}
+                <StakeholderLinkedText
+                  text={whatsNext}
+                  stakeholders={deal.stakeholders}
+                  onHover={onStakeholderHover}
+                  onClick={onStakeholderClick}
+                />
               </p>
             </div>
           )}
@@ -406,15 +460,7 @@ export default function DealInsightPanel({
             </div>
           </div>
 
-          {/* ── Quick nav ── */}
-          <div className="border-t border-border/20 pt-3 space-y-1.5 pb-2">
-            <Button size="sm" variant="default" className="w-full text-xs h-8 font-display" onClick={() => setActiveTab('signals')}>
-              Account Signals
-            </Button>
-            <Button size="sm" variant="outline" className="w-full text-xs h-8 font-display" onClick={() => setActiveTab('discussions')}>
-              All Interactions
-            </Button>
-          </div>
+
 
         </div>
       </ScrollArea>

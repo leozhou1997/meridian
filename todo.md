@@ -41,3 +41,8 @@
 - [x] Stakeholder Map moved to right side of Buying Committee tab
 - [x] Inline Contextual Chat input at bottom of Deal Insight panel (AI-powered update of insights)
 - [x] Deal Overview (static info) accessible separately, not blocking main insight view (Pipeline sidebar overlay mode on deal pages)
+- [x] Remove Account Signals / All Interactions quick-nav buttons from Deal Insight panel
+- [x] Remove Ask Meridian static bar from Stakeholder Map area
+- [x] Pipeline overlay backdrop: dim Deal Insight when Pipeline is open, click-away to close
+- [x] Simplify Deal Insight header: remove duplicate Stage/ACV, keep only Confidence score + trend chart
+- [x] Stakeholder name highlighting in What's Happening / What's Next (hover underline + map node highlight, click to open profile)

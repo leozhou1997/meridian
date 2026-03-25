@@ -27,6 +27,7 @@ interface StakeholderMapProps {
   deal: Deal;
   onStakeholderClick?: (stakeholder: Stakeholder) => void;
   onStakeholdersChange?: (stakeholders: Stakeholder[]) => void;
+  highlightedStakeholderId?: number | null;
 }
 
 interface NodePosition { id: string; x: number; y: number; }
@@ -270,7 +271,7 @@ const sentimentLabel = (s: string) =>
   s === 'Positive' ? 'text-emerald-400' : s === 'Neutral' ? 'text-amber-400' : 'text-red-400';
 
 // ── Component ─────────────────────────────────────────────────────────────────
-export default function StakeholderMap({ deal, onStakeholderClick, onStakeholdersChange }: StakeholderMapProps) {
+export default function StakeholderMap({ deal, onStakeholderClick, onStakeholdersChange, highlightedStakeholderId }: StakeholderMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerW, setContainerW] = useState(800);
   const [mode, setMode] = useState<'view' | 'edit'>('view');
@@ -1050,6 +1051,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
             const touchpoints = getTouchpointCount(stakeholder);
             const interactions = getStakeholderInteractions(stakeholder);
             const isExpanded = expandedCardId === stakeholder.id;
+            const isHighlighted = highlightedStakeholderId === stakeholder.id;
 
             return (
               <motion.div
@@ -1071,13 +1073,15 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                   className={`bg-card border transition-all duration-150 ${
                     mode === 'edit' ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
                   } ${
-                    isConnSrc
-                      ? 'border-amber-400/80 shadow-lg shadow-amber-400/20 ring-1 ring-amber-400/30'
-                      : (isPendingConn || isRerouting)
-                        ? 'border-blue-400/60 hover:border-blue-400/90'
-                        : isDragging
-                          ? 'border-primary/40 shadow-xl'
-                          : 'border-border/50 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5'
+                    isHighlighted
+                      ? 'border-primary/80 shadow-xl shadow-primary/25 ring-2 ring-primary/40 scale-105'
+                      : isConnSrc
+                        ? 'border-amber-400/80 shadow-lg shadow-amber-400/20 ring-1 ring-amber-400/30'
+                        : (isPendingConn || isRerouting)
+                          ? 'border-blue-400/60 hover:border-blue-400/90'
+                          : isDragging
+                            ? 'border-primary/40 shadow-xl'
+                            : 'border-border/50 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5'
                   }`}
                   onClick={(e) => {
                     if (reroutingConn) { handleRerouteTarget(e, stakeholder.id); return; }

@@ -188,6 +188,7 @@ export default function DealDetail() {
   const [selectedStakeholder, setSelectedStakeholder] = useState<Stakeholder | null>(null);
   const [activeTab, setActiveTab] = useState('map');
   const [showSummary, setShowSummary] = useState(true);
+  const [hoveredStakeholderId, setHoveredStakeholderId] = useState<number | null>(null);
   // Draggable Deal Summary panel
   const [summaryPos, setSummaryPos] = useState({ x: 16, y: 16 });
   const summaryDragRef = useRef<{ mx: number; my: number; px: number; py: number } | null>(null);
@@ -599,6 +600,11 @@ export default function DealDetail() {
                   toggleAction={toggleAction}
                   deleteAction={deleteAction}
                   setActiveTab={setActiveTab}
+                  onStakeholderHover={setHoveredStakeholderId}
+                  onStakeholderClick={(id) => {
+                    const s = deal.stakeholders.find((st: any) => st.id === id);
+                    if (s) handleStakeholderClick(s as Stakeholder);
+                  }}
                 />
 
                 {/* ── Stakeholder Map canvas — right side, takes remaining space ── */}
@@ -606,6 +612,7 @@ export default function DealDetail() {
                   <StakeholderMap
                     key={deal.id}
                     deal={deal as any}
+                    highlightedStakeholderId={hoveredStakeholderId}
                     onStakeholderClick={(s: any) => handleStakeholderClick(s as Stakeholder)}
                     onStakeholdersChange={() => utils.stakeholders.listByDeal.invalidate({ dealId })}
                   />
@@ -1802,33 +1809,7 @@ export default function DealDetail() {
         })()}
       </AnimatePresence>
 
-      {/* Ask Meridian bar */}
-      <div className="border-t border-border/50 bg-card/50 px-6 py-2.5 shrink-0">
-        <div className="flex items-center gap-3 max-w-3xl mx-auto">
-          <div className="flex-1 relative">
-            <input
-              type="text"
-              placeholder="Ask Meridian..."
-              className="w-full h-9 px-4 rounded-lg bg-muted/30 border border-border/50 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 transition-colors"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') toast('AI assistant coming soon — this feature requires backend integration.');
-              }}
-            />
-          </div>
-          <button
-            onClick={() => toast('File upload coming soon')}
-            className="w-9 h-9 rounded-lg border border-border/50 flex items-center justify-center hover:bg-muted transition-colors"
-          >
-            <FileText className="w-4 h-4 text-muted-foreground" />
-          </button>
-          <button
-            onClick={() => toast('Voice input coming soon')}
-            className="w-9 h-9 rounded-lg border border-border/50 flex items-center justify-center hover:bg-muted transition-colors"
-          >
-            <Mic className="w-4 h-4 text-muted-foreground" />
-          </button>
-        </div>
-      </div>
+
     </div>
   );
 }

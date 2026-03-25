@@ -72,6 +72,101 @@ type Props = {
   onStakeholderClick?: (id: number) => void;
 };
 
+/** Expandable action card for What's Next items */
+function WhatsNextCard({
+  item,
+  stakeholders,
+  onStakeholderHover,
+  onStakeholderClick,
+}: {
+  item: string;
+  stakeholders: Stakeholder[];
+  onStakeholderHover?: (id: number | null) => void;
+  onStakeholderClick?: (id: number) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  // Find stakeholders mentioned in this action item
+  const mentioned = stakeholders.filter(s => {
+    const firstName = s.name.split(' ')[0];
+    return item.includes(s.name) || (firstName.length > 2 && item.includes(firstName));
+  });
+
+  // Infer if this action involves outreach to someone not yet on the map
+  const hasOutreachKeyword = /reach out|contact|schedule|meet|connect|engage|introduce/i.test(item);
+  const suggestedContacts = mentioned;
+
+  return (
+    <div className="rounded-lg border border-border/30 bg-muted/10 overflow-hidden">
+      {/* Card header — always visible */}
+      <button
+        className="w-full flex items-start gap-2.5 px-3 py-2.5 text-left hover:bg-muted/20 transition-colors group"
+        onClick={() => setExpanded(e => !e)}
+      >
+        <div className="w-4 h-4 rounded-full border border-emerald-400/50 bg-emerald-400/10 flex items-center justify-center shrink-0 mt-0.5">
+          <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+        </div>
+        <span className="flex-1 text-[12px] text-foreground/85 leading-snug">
+          <StakeholderLinkedText
+            text={item}
+            stakeholders={stakeholders}
+            onHover={onStakeholderHover}
+            onClick={onStakeholderClick}
+          />
+        </span>
+        {(suggestedContacts.length > 0 || hasOutreachKeyword) && (
+          <div className="shrink-0 mt-0.5 text-muted-foreground/40 group-hover:text-muted-foreground/70 transition-colors">
+            {expanded
+              ? <ChevronUp className="w-3 h-3" />
+              : <ChevronDown className="w-3 h-3" />
+            }
+          </div>
+        )}
+      </button>
+
+      {/* Expanded: suggested contacts */}
+      {expanded && (
+        <div className="px-3 pb-3 pt-1 border-t border-border/20">
+          <div className="text-[10px] text-muted-foreground/50 uppercase tracking-wider mb-2">
+            {suggestedContacts.length > 0 ? 'Relevant Stakeholders' : 'Suggested Contacts'}
+          </div>
+          {suggestedContacts.length > 0 ? (
+            <div className="space-y-1.5">
+              {suggestedContacts.map(s => (
+                <button
+                  key={s.id}
+                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg bg-card/60 border border-border/30 hover:border-primary/30 hover:bg-card/80 transition-all text-left"
+                  onMouseEnter={() => onStakeholderHover?.(s.id)}
+                  onMouseLeave={() => onStakeholderHover?.(null)}
+                  onClick={() => onStakeholderClick?.(s.id)}
+                >
+                  <div className="w-6 h-6 rounded-full bg-primary/15 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
+                    {s.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[11px] font-medium text-foreground/90 truncate">{s.name}</div>
+                    {s.title && <div className="text-[10px] text-muted-foreground/60 truncate">{s.title}</div>}
+                  </div>
+                  <div className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${
+                    s.sentiment === 'Positive' ? 'bg-emerald-400/10 text-emerald-400' :
+                    s.sentiment === 'Negative' ? 'bg-red-400/10 text-red-400' :
+                    'bg-amber-400/10 text-amber-400'
+                  }`}>{s.sentiment}</div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-muted/20 border border-border/20">
+              <Sparkles className="w-3 h-3 text-muted-foreground/50 shrink-0" />
+              <span className="text-[11px] text-muted-foreground/60 italic">AI contact suggestions coming soon</span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Renders text with stakeholder names highlighted as interactive links */
 function StakeholderLinkedText({
   text,
@@ -141,6 +236,9 @@ export default function DealInsightPanel({
   onStakeholderHover,
   onStakeholderClick,
 }: Props) {
+  // Panel collapse state
+  const [collapsed, setCollapsed] = useState(false);
+
   // Inline chat state
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
@@ -271,10 +369,47 @@ export default function DealInsightPanel({
   })();
 
   return (
-    <div className="w-[340px] shrink-0 border-r border-border/30 bg-card/30 backdrop-blur-sm flex flex-col overflow-hidden">
+    <div
+      className={`shrink-0 border-r border-border/30 bg-card/30 backdrop-blur-sm flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${
+        collapsed ? 'w-[48px]' : 'w-[340px]'
+      }`}
+    >
+      {/* ── Collapse toggle button (always visible) ── */}
+      <div className="flex items-center justify-between px-3 pt-3 pb-2 shrink-0">
+        {!collapsed && (
+          <span className="text-[10px] text-muted-foreground/50 uppercase tracking-wider font-medium">Deal Insight</span>
+        )}
+        <button
+          onClick={() => setCollapsed(c => !c)}
+          className={`ml-auto flex items-center justify-center w-6 h-6 rounded-md hover:bg-muted/40 text-muted-foreground/60 hover:text-foreground transition-colors`}
+          title={collapsed ? 'Expand Deal Insight' : 'Collapse Deal Insight'}
+        >
+          {collapsed
+            ? <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            : <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          }
+        </button>
+      </div>
+
+      {/* ── Collapsed state: show vertical label ── */}
+      {collapsed && (
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 pb-4">
+          <div className="writing-mode-vertical text-[10px] text-muted-foreground/40 uppercase tracking-widest font-medium select-none"
+            style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
+          >
+            Deal Insight
+          </div>
+          <div className={`text-[11px] font-bold font-mono ${
+            deal.confidenceScore >= 75 ? 'text-emerald-400' : deal.confidenceScore >= 50 ? 'text-amber-400' : 'text-red-400'
+          }`}>{deal.confidenceScore}%</div>
+        </div>
+      )}
+
+      {/* ── Full panel content (hidden when collapsed) ── */}
+      {!collapsed && <>
 
       {/* ── Confidence Header ── */}
-      <div className="px-4 pt-4 pb-3 border-b border-border/20 shrink-0">
+      <div className="px-4 pt-1 pb-3 border-b border-border/20 shrink-0">
         <div className="flex items-end justify-between mb-1">
           <span className="text-[10px] text-muted-foreground/70 uppercase tracking-wider font-medium">Win Confidence</span>
           <div className="flex items-center gap-1.5">
@@ -346,7 +481,14 @@ export default function DealInsightPanel({
                 {keyRisks.map((risk, i) => (
                   <div key={i} className="flex items-start gap-2 bg-red-500/5 border border-red-500/15 rounded-lg px-3 py-2">
                     <AlertTriangle className="w-3 h-3 text-red-400 shrink-0 mt-0.5" />
-                    <span className="text-[12px] text-foreground/80 leading-snug">{risk}</span>
+                    <span className="text-[12px] text-foreground/80 leading-snug">
+                      <StakeholderLinkedText
+                        text={risk}
+                        stakeholders={deal.stakeholders}
+                        onHover={onStakeholderHover}
+                        onClick={onStakeholderClick}
+                      />
+                    </span>
                   </div>
                 ))}
               </div>
@@ -354,22 +496,34 @@ export default function DealInsightPanel({
           )}
 
           {/* ── What's Next ── */}
-          {whatsNext && (
-            <div>
-              <div className="flex items-center gap-1.5 mb-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-                <span className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider">What's Next</span>
+          {whatsNext && (() => {
+            // Split into action items by sentence or numbered list
+            const rawItems = whatsNext
+              .split(/(?<=[.!?])\s+(?=[A-Z0-9])|\n+/)
+              .map(s => s.replace(/^\d+\.\s*/, '').trim())
+              .filter(s => s.length > 10);
+            const actionItems = rawItems.length > 0 ? rawItems : [whatsNext];
+
+            return (
+              <div>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                  <span className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider">What's Next</span>
+                </div>
+                <div className="space-y-2">
+                  {actionItems.map((item, idx) => (
+                    <WhatsNextCard
+                      key={idx}
+                      item={item}
+                      stakeholders={deal.stakeholders}
+                      onStakeholderHover={onStakeholderHover}
+                      onStakeholderClick={onStakeholderClick}
+                    />
+                  ))}
+                </div>
               </div>
-              <p className="text-[12.5px] text-foreground/85 leading-relaxed">
-                <StakeholderLinkedText
-                  text={whatsNext}
-                  stakeholders={deal.stakeholders}
-                  onHover={onStakeholderHover}
-                  onClick={onStakeholderClick}
-                />
-              </p>
-            </div>
-          )}
+            );
+          })()}
 
           {/* ── Divider ── */}
           <div className="border-t border-border/25" />
@@ -537,6 +691,7 @@ export default function DealInsightPanel({
         </div>
       </div>
 
+      </> }
     </div>
   );
 }

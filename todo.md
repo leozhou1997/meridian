@@ -46,3 +46,6 @@
 - [x] Pipeline overlay backdrop: dim Deal Insight when Pipeline is open, click-away to close
 - [x] Simplify Deal Insight header: remove duplicate Stage/ACV, keep only Confidence score + trend chart
 - [x] Stakeholder name highlighting in What's Happening / What's Next (hover underline + map node highlight, click to open profile)
+- [x] Key Risks stakeholder name highlighting (same hover+click linkage as What's Happening/What's Next)
+- [x] Deal Insight panel collapse/expand toggle (full-width Stakeholder Map when collapsed)
+- [x] What's Next redesigned as expandable action cards with AI-suggested contacts and Add to Map button

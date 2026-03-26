@@ -1,0 +1,66 @@
+{
+  "query": "SELECT id, name, title, role, email FROM stakeholders ORDER BY dealId, id LIMIT 30;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute SELECT id, name, title, role, email FROM stakeholders ORDER BY dealId, id LIMIT 30;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "Sarah Chen",
+      "title": "VP of Engineering",
+      "role": "Decision Maker",
+      "email": "sarah.chen@acmecorp.com"
+    },
+    {
+      "id": "2",
+      "name": "Marcus Rodriguez",
+      "title": "CFO",
+      "role": "Decision Maker",
+      "email": "marcus.r@acmecorp.com"
+    },
+    {
+      "id": "3",
+      "name": "Jamie Park",
+      "title": "Senior DevOps Engineer",
+      "role": "Evaluator",
+      "email": "j.park@acmecorp.com"
+    },
+    {
+      "id": "4",
+      "name": "Alex Thompson",
+      "title": "CEO",
+      "role": "Decision Maker",
+      "email": "alex@globaltech.io"
+    },
+    {
+      "id": "5",
+      "name": "Priya Sharma",
+      "title": "Head of Product",
+      "role": "Champion",
+      "email": "priya@globaltech.io"
+    },
+    {
+      "id": "6",
+      "name": "David Kim",
+      "title": "Head of Data",
+      "role": "Champion",
+      "email": "david.kim@meridiananalytics.com"
+    },
+    {
+      "id": "7",
+      "name": "Robert Walsh",
+      "title": "CTO",
+      "role": "Decision Maker",
+      "email": "r.walsh@nexus.com"
+    },
+    {
+      "id": "8",
+      "name": "Emma Liu",
+      "title": "VP Engineering",
+      "role": "Champion",
+      "email": "emma@velocitycommerce.com"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\ttitle\trole\temail\n1\tSarah Chen\tVP of Engineering\tDecision Maker\tsarah.chen@acmecorp.com\n2\tMarcus Rodriguez\tCFO\tDecision Maker\tmarcus.r@acmecorp.com\n3\tJamie Park\tSenior DevOps Engineer\tEvaluator\tj.park@acmecorp.com\n4\tAlex Thompson\tCEO\tDecision Maker\talex@globaltech.io\n5\tPriya Sharma\tHead of Product\tChampion\tpriya@globaltech.io\n6\tDavid Kim\tHead of Data\tChampion\tdavid.kim@meridiananalytics.com\n7\tRobert Walsh\tCTO\tDecision Maker\tr.walsh@nexus.com\n8\tEmma Liu\tVP Engineering\tChampion\temma@velocitycommerce.com\n",
+  "stderr": "",
+  "execution_time_ms": 462
+}

@@ -102,8 +102,15 @@ export default function Dashboard() {
                   {atRiskDeals.map(deal => (
                     <Link key={deal.id} href={`/deal/${deal.id}`}>
                       <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 border border-transparent hover:border-border/50 transition-all group">
-                        <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center text-sm font-bold text-primary shrink-0">
-                          {deal.company.charAt(0)}
+                        <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center text-sm font-bold text-primary shrink-0 overflow-hidden">
+                          {deal.logo ? (
+                            <img
+                              src={deal.logo}
+                              alt={deal.company}
+                              className="w-full h-full object-contain"
+                              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.textContent = deal.company.charAt(0); }}
+                            />
+                          ) : deal.company.charAt(0)}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-0.5">

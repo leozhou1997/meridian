@@ -1,0 +1,50 @@
+{
+  "query": "SELECT id, name, title FROM stakeholders ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute SELECT id, name, title FROM stakeholders ORDER BY id;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "Sarah Chen",
+      "title": "VP of Engineering"
+    },
+    {
+      "id": "2",
+      "name": "Marcus Rodriguez",
+      "title": "CFO"
+    },
+    {
+      "id": "3",
+      "name": "Jamie Park",
+      "title": "Senior DevOps Engineer"
+    },
+    {
+      "id": "4",
+      "name": "Alex Thompson",
+      "title": "CEO"
+    },
+    {
+      "id": "5",
+      "name": "Priya Sharma",
+      "title": "Head of Product"
+    },
+    {
+      "id": "6",
+      "name": "David Kim",
+      "title": "Head of Data"
+    },
+    {
+      "id": "7",
+      "name": "Robert Walsh",
+      "title": "CTO"
+    },
+    {
+      "id": "8",
+      "name": "Emma Liu",
+      "title": "VP Engineering"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\ttitle\n1\tSarah Chen\tVP of Engineering\n2\tMarcus Rodriguez\tCFO\n3\tJamie Park\tSenior DevOps Engineer\n4\tAlex Thompson\tCEO\n5\tPriya Sharma\tHead of Product\n6\tDavid Kim\tHead of Data\n7\tRobert Walsh\tCTO\n8\tEmma Liu\tVP Engineering\n",
+  "stderr": "",
+  "execution_time_ms": 463
+}

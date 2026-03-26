@@ -1,0 +1,30 @@
+{
+  "query": "SELECT id, company FROM deals ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute SELECT id, company FROM deals ORDER BY id;",
+  "rows": [
+    {
+      "id": "1",
+      "company": "Acme Corp"
+    },
+    {
+      "id": "2",
+      "company": "GlobalTech"
+    },
+    {
+      "id": "3",
+      "company": "Meridian Analytics"
+    },
+    {
+      "id": "4",
+      "company": "Nexus Systems"
+    },
+    {
+      "id": "5",
+      "company": "Velocity Commerce"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tcompany\n1\tAcme Corp\n2\tGlobalTech\n3\tMeridian Analytics\n4\tNexus Systems\n5\tVelocity Commerce\n",
+  "stderr": "",
+  "execution_time_ms": 342
+}

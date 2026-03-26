@@ -66,3 +66,8 @@
 - [x] Fix Key Risks AI prompt: generates verbose/redundant text after Analyze Deal (repeats stage/value/confidence already shown in header)
 - [x] Fix left DVC panel not scrollable (content cut off on smaller screens)
 - [x] Provide AI Prompt admin link for Key Risks prompt review (see /admin/ai route in app)
+- [x] Fix Deal Insight panel scroll (still not working after h-full fix) — fixed via min-h-0 + overflow-hidden on ScrollArea
+- [x] Fix What's Next rationale inconsistency — root cause was wrong .$type<string[]>() on whatsNext JSON column; corrected to WhatsNextItem[] type
+- [x] Enrich demo data: AI-generated company logos for all 5 deals (Clearbit not applicable for fictional domains)
+- [x] Enrich demo data: AI-generated realistic headshots for all 8 stakeholders (LinkedIn-quality)
+- [x] Upload all enriched assets to CDN and update DB with real URLs (avatars + logos)

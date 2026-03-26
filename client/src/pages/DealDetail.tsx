@@ -600,7 +600,7 @@ export default function DealDetail() {
               </TabsList>
             </div>
 
-            <TabsContent value="map" className="flex-1 m-0">
+            <TabsContent value="map" className="flex-1 m-0 overflow-hidden min-h-0">
               <div className="h-full flex overflow-hidden">
 
                 {/* ── Deal Insight Panel — left side ── */}

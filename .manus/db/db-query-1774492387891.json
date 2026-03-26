@@ -1,0 +1,9 @@
+{
+  "query": "UPDATE deals SET logo = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/acme-corp-SPBBAiiFvqPZDbZ4vN59rm.png' WHERE id = 1;\nUPDATE deals SET logo = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/globaltech-frUZfrqmWZWNCwrcjW965y.png' WHERE id = 2;\nUPDATE deals SET logo = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/meridian-analytics-ikQoo35eTqDuyCsnkD2NbZ.png' WHERE id = 3;\nUPDATE deals SET logo = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/nexus-systems-Rz97kHBiTp3NyZQSe3tW7p.png' WHERE id = 4;\nUPDATE deals SET logo = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/velocity-commerce-LCD4ws94urpaHhrXuZwdAs.png' WHERE id = 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute UPDATE deals SET logo = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/acme-corp-SPBBAiiFvqPZDbZ4vN59rm.png' WHERE id = 1;\nUPDATE deals SET logo = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/globaltech-frUZfrqmWZWNCwrcjW965y.png' WHERE id = 2;\nUPDATE deals SET logo = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/meridian-analytics-ikQoo35eTqDuyCsnkD2NbZ.png' WHERE id = 3;\nUPDATE deals SET logo = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/nexus-systems-Rz97kHBiTp3NyZQSe3tW7p.png' WHERE id = 4;\nUPDATE deals SET logo = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/velocity-commerce-LCD4ws94urpaHhrXuZwdAs.png' WHERE id = 5;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 584
+}

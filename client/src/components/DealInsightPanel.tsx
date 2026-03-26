@@ -669,7 +669,7 @@ export default function DealInsightPanel({
       </div>
 
       {/* ── Scrollable Insight Content ── */}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0 overflow-hidden">
         <div className="px-4 py-3 space-y-4">
 
           {/* AI updated badge */}

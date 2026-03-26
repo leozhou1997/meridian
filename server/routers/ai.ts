@@ -306,7 +306,13 @@ ${input.transcript}`;
 Return ONLY a valid JSON object with this exact structure:
 {
   "whatsHappening": "2-3 sentence narrative of the current deal dynamics. Reference stakeholders by name. Focus on relationship dynamics, momentum shifts, and political signals — not deal metadata.",
-  "keyRisks": ["Risk 1", "Risk 2", "Risk 3"],
+  "keyRisks": [
+    {
+      "title": "Short risk title (max 8 words, imperative or noun phrase)",
+      "detail": "1-2 sentences explaining the risk — WHY it threatens the deal, which stakeholder is involved, and what the consequence is if unaddressed",
+      "stakeholders": ["Name of stakeholder involved (if any)"]
+    }
+  ],
   "whatsNext": [
     {
       "action": "Specific action the AE should take (1 sentence, imperative verb)",
@@ -323,7 +329,7 @@ Return ONLY a valid JSON object with this exact structure:
 }
 
 Critical rules:
-- keyRisks: each risk must be a single crisp sentence (max 12 words). Name the specific stakeholder or issue. NEVER repeat deal stage, value, or confidence score — those are already shown in the UI.
+- keyRisks: 2-4 items. Each item must have: title (max 8 words, a crisp noun phrase or imperative), detail (1-2 sentences explaining WHY this is a risk and what happens if unaddressed — name the specific stakeholder), stakeholders (array of stakeholder names involved, empty [] if none). NEVER repeat deal stage, value, or confidence score in title or detail.
 - whatsHappening: focus on what's changing in the buying committee dynamics, not static facts
 - whatsNext: 2-4 items. Each action must be specific and stakeholder-targeted (e.g. "Schedule a 1:1 with [Name] to address their procurement concern" not "Follow up with the team")
 - rationale: coach the AE on the WHY — e.g. "[Name] has gone quiet since the technical review, which signals unresolved concerns that could block the deal"
@@ -345,9 +351,10 @@ ${input.recentInteractions ? `Recent Interactions:\n${input.recentInteractions}`
 
       const { content, tokensUsed, latencyMs } = await callOpenAI(systemPrompt, userPrompt);
 
+      type KeyRiskItem = { title: string; detail: string; stakeholders: string[] };
       let insights: {
         whatsHappening: string;
-        keyRisks: string[];
+        keyRisks: KeyRiskItem[];
         whatsNext: Array<{ action: string; rationale: string; suggestedContacts?: Array<{ name: string; title: string; reason: string }> }>;
       } | null = null;
 

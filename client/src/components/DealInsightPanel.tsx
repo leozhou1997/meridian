@@ -16,13 +16,15 @@ type NextAction = {
   completed: boolean;
 };
 
+type KeyRiskItem = { title: string; detail: string; stakeholders: string[] };
+
 type Snapshot = {
   id: number;
   date: Date | string;
   confidenceScore: number;
   confidenceChange: number;
   whatsHappening: string | null;
-  keyRisks: unknown;
+  keyRisks: KeyRiskItem[] | string[] | null;
   whatsNext: Array<{ action: string; rationale: string; suggestedContacts?: Array<{ name: string; title: string; reason: string }> }> | null;
   interactionType: string | null;
 };
@@ -394,6 +396,103 @@ function StakeholderLinkedText({
   );
 }
 
+/** Expandable risk card for Key Risks items — mirrors WhatsNextCard structure */
+function KeyRiskCard({
+  risk,
+  stakeholders,
+  onStakeholderHover,
+  onStakeholderClick,
+}: {
+  risk: KeyRiskItem | string;
+  stakeholders: Stakeholder[];
+  onStakeholderHover?: (id: number | null) => void;
+  onStakeholderClick?: (id: number) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  const isStructured = typeof risk === 'object' && risk !== null;
+  const title = isStructured ? (risk as KeyRiskItem).title : (risk as string);
+  const detail = isStructured ? (risk as KeyRiskItem).detail : null;
+  const riskStakeholderNames: string[] = isStructured ? ((risk as KeyRiskItem).stakeholders ?? []) : [];
+
+  // Match risk stakeholder names to actual stakeholder objects
+  const mentioned = stakeholders.filter(s =>
+    riskStakeholderNames.some(name =>
+      name.toLowerCase().includes(s.name.split(' ')[0].toLowerCase()) ||
+      s.name.toLowerCase().includes(name.toLowerCase())
+    )
+  );
+
+  return (
+    <div className="rounded-lg border border-red-500/20 bg-red-500/5 overflow-hidden transition-all">
+      {/* Card header — always visible */}
+      <button
+        className="w-full flex items-start gap-2.5 px-3 py-2.5 text-left hover:bg-red-500/10 transition-colors group"
+        onClick={() => setExpanded(e => !e)}
+      >
+        <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
+        <span className="flex-1 text-[12px] text-foreground/85 leading-snug">
+          <StakeholderLinkedText
+            text={title}
+            stakeholders={stakeholders}
+            onHover={onStakeholderHover}
+            onClick={onStakeholderClick}
+          />
+        </span>
+        <div className="shrink-0 mt-0.5 text-muted-foreground/40 group-hover:text-muted-foreground/70 transition-colors">
+          {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+        </div>
+      </button>
+
+      {/* Expanded content */}
+      {expanded && (
+        <div className="px-3 pb-3 pt-1 border-t border-red-500/15 space-y-3">
+
+          {/* Detail / rationale */}
+          <div className="flex items-start gap-2">
+            <Sparkles className="w-3 h-3 text-red-400/60 shrink-0 mt-0.5" />
+            {detail
+              ? <p className="text-[11.5px] text-foreground/70 leading-relaxed italic">{detail}</p>
+              : <p className="text-[11.5px] text-muted-foreground/40 leading-relaxed italic">Re-run Analyse Deal to generate detailed risk analysis.</p>
+            }
+          </div>
+
+          {/* Relevant Stakeholders */}
+          {mentioned.length > 0 && (
+            <div>
+              <div className="text-[10px] text-muted-foreground/50 uppercase tracking-wider mb-1.5">Relevant Stakeholders</div>
+              <div className="space-y-1.5">
+                {mentioned.map(s => (
+                  <button
+                    key={s.id}
+                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg bg-card/60 border border-border/30 hover:border-red-400/30 hover:bg-card/80 transition-all text-left"
+                    onMouseEnter={() => onStakeholderHover?.(s.id)}
+                    onMouseLeave={() => onStakeholderHover?.(null)}
+                    onClick={() => onStakeholderClick?.(s.id)}
+                  >
+                    <div className="w-6 h-6 rounded-full bg-red-400/15 flex items-center justify-center text-[10px] font-bold text-red-400 shrink-0">
+                      {s.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[11px] font-medium text-foreground/80 truncate">{s.name}</div>
+                      <div className="text-[10px] text-muted-foreground/60 truncate">{s.title ?? s.role}</div>
+                    </div>
+                    <div className={`text-[9px] px-1.5 py-0.5 rounded-full border font-medium ${
+                      s.sentiment === 'Positive' ? 'text-emerald-400 border-emerald-400/30 bg-emerald-400/10' :
+                      s.sentiment === 'Negative' ? 'text-red-400 border-red-400/30 bg-red-400/10' :
+                      'text-amber-400 border-amber-400/30 bg-amber-400/10'
+                    }`}>{s.sentiment}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function DealInsightPanel({
   deal,
   latestSnapshot,
@@ -423,7 +522,7 @@ export default function DealInsightPanel({
   // Local overrides for AI insights (updated via chat only — not for whatsNext which is now DB-persisted)
   const [insightOverrides, setInsightOverrides] = useState<{
     whatsHappening?: string;
-    keyRisks?: string[];
+    keyRisks?: KeyRiskItem[] | string[];
     updatedAt?: Date;
   }>({});
 
@@ -498,8 +597,11 @@ export default function DealInsightPanel({
     setChatInput('');
     if (!chatOpen) setChatOpen(true);
 
-    const currentRisks = insightOverrides.keyRisks ??
-      (latestSnapshot?.keyRisks as string[] | null) ?? [];
+    // chatWithDeal expects string[] — serialize structured risks to their title text
+    const rawRisks = insightOverrides.keyRisks ?? latestSnapshot?.keyRisks ?? [];
+    const currentRisks: string[] = (rawRisks as (KeyRiskItem | string)[]).map(r =>
+      typeof r === 'string' ? r : r.title
+    );
 
     chatMutation.mutate({
       dealId: deal.id,
@@ -523,7 +625,7 @@ export default function DealInsightPanel({
   };
 
   const whatsHappening: string | null | undefined = insightOverrides.whatsHappening ?? latestSnapshot?.whatsHappening;
-  const keyRisks = insightOverrides.keyRisks ?? (latestSnapshot?.keyRisks as string[] | null) ?? [];
+  const keyRisks: (KeyRiskItem | string)[] = (insightOverrides.keyRisks ?? latestSnapshot?.keyRisks ?? []) as (KeyRiskItem | string)[];
   // whatsNext is always read from DB snapshot (persisted by AI generation)
   // Type is Array<{action, rationale, suggestedContacts}> | null
   const whatsNextRaw = latestSnapshot?.whatsNext ?? null;
@@ -705,19 +807,15 @@ export default function DealInsightPanel({
                 <div className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
                 <span className="text-[11px] font-semibold text-red-400 uppercase tracking-wider">Key Risks</span>
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 {keyRisks.map((risk, i) => (
-                  <div key={i} className="flex items-start gap-2 bg-red-500/5 border border-red-500/15 rounded-lg px-3 py-2">
-                    <AlertTriangle className="w-3 h-3 text-red-400 shrink-0 mt-0.5" />
-                    <span className="text-[12px] text-foreground/80 leading-snug">
-                      <StakeholderLinkedText
-                        text={risk}
-                        stakeholders={deal.stakeholders}
-                        onHover={onStakeholderHover}
-                        onClick={onStakeholderClick}
-                      />
-                    </span>
-                  </div>
+                  <KeyRiskCard
+                    key={i}
+                    risk={risk}
+                    stakeholders={deal.stakeholders}
+                    onStakeholderHover={onStakeholderHover}
+                    onStakeholderClick={onStakeholderClick}
+                  />
                 ))}
               </div>
             </div>

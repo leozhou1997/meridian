@@ -71,3 +71,7 @@
 - [x] Enrich demo data: AI-generated company logos for all 5 deals (Clearbit not applicable for fictional domains)
 - [x] Enrich demo data: AI-generated realistic headshots for all 8 stakeholders (LinkedIn-quality)
 - [x] Upload all enriched assets to CDN and update DB with real URLs (avatars + logos)
+- [x] Key Risks: redesign as expandable cards matching WhatsNextCard format (title, rationale, relevant stakeholders)
+- [x] Update AI prompt: Key Risks to return structured {title, detail, stakeholders[]} instead of plain text
+- [x] Settings page: language switch (EN/ZH), account management (display name), team invite
+- [x] Surface AI Prompt admin interface URL to user — /admin/playground

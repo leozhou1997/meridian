@@ -12,9 +12,11 @@ import Transcripts from "./pages/Transcripts";
 import AskMeridian from "./pages/AskMeridian";
 import KnowledgeBase from "./pages/KnowledgeBase";
 import AdminPlayground from "./pages/AdminPlayground";
+import Settings from "./pages/Settings";
 import AppLayout from "./components/AppLayout";
 import { useAuth } from "./_core/hooks/useAuth";
 import { getLoginUrl } from "./const";
+import { LanguageProvider } from "./contexts/LanguageContext";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, loading } = useAuth();
@@ -64,6 +66,9 @@ function Router() {
       <Route path="/admin/playground">
         <ProtectedRoute component={AdminPlayground} />
       </Route>
+      <Route path="/settings">
+        <ProtectedRoute component={Settings} />
+      </Route>
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
@@ -74,10 +79,12 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark" switchable>
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
+        <LanguageProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Router />
+          </TooltipProvider>
+        </LanguageProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

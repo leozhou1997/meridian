@@ -156,7 +156,7 @@ export const snapshots = mysqlTable("snapshots", {
   date: timestamp("date").notNull(),
   whatsHappening: text("whatsHappening"),
   whatsNext: json("whatsNext").$type<Array<{ action: string; rationale: string; suggestedContacts?: Array<{ name: string; title: string; reason: string }> }>>(),
-  keyRisks: json("keyRisks"),
+  keyRisks: json("keyRisks").$type<Array<{ title: string; detail: string; stakeholders: string[] }> | string[]>(),
   confidenceScore: int("confidenceScore").default(50).notNull(),
   confidenceChange: int("confidenceChange").default(0).notNull(),
   interactionType: varchar("interactionType", { length: 100 }),

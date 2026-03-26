@@ -152,12 +152,17 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
-              <button
-                onClick={() => toast('Settings coming soon')}
-                className="w-10 h-10 rounded-lg flex items-center justify-center text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all"
-              >
-                <Settings className="w-[18px] h-[18px]" />
-              </button>
+              <Link href="/settings">
+                <div
+                  className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-200 ${
+                    location === '/settings'
+                      ? 'bg-sidebar-accent text-sidebar-primary'
+                      : 'text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/50'
+                  }`}
+                >
+                  <Settings className="w-[18px] h-[18px]" />
+                </div>
+              </Link>
             </TooltipTrigger>
             <TooltipContent side="right" className="font-display text-xs">Settings</TooltipContent>
           </Tooltip>

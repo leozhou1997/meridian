@@ -100,8 +100,7 @@ function WhatsNextCard({
     return actionText.includes(s.name) || (firstName.length > 2 && actionText.includes(firstName));
   });
 
-  const hasOutreachKeyword = /reach out|contact|schedule|meet|connect|engage|introduce/i.test(actionText);
-  const hasExpandContent = mentioned.length > 0 || hasOutreachKeyword || rationale;
+  // Every card is always expandable — rationale, stakeholders, and feedback buttons are always shown
 
   const handleAccept = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -138,7 +137,7 @@ function WhatsNextCard({
       {/* Card header — always visible */}
       <button
         className="w-full flex items-start gap-2.5 px-3 py-2.5 text-left hover:bg-muted/20 transition-colors group"
-        onClick={() => hasExpandContent && setExpanded(e => !e)}
+        onClick={() => setExpanded(e => !e)}
       >
         <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 mt-0.5 ${
           feedback === 'accepted' ? 'border-emerald-400 bg-emerald-400/20' :
@@ -157,11 +156,9 @@ function WhatsNextCard({
             onClick={onStakeholderClick}
           />
         </span>
-        {hasExpandContent && (
-          <div className="shrink-0 mt-0.5 text-muted-foreground/40 group-hover:text-muted-foreground/70 transition-colors">
+        <div className="shrink-0 mt-0.5 text-muted-foreground/40 group-hover:text-muted-foreground/70 transition-colors">
             {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
           </div>
-        )}
       </button>
 
       {/* Expanded content */}
@@ -169,12 +166,13 @@ function WhatsNextCard({
         <div className="px-3 pb-3 pt-1 border-t border-border/20 space-y-3">
 
           {/* AI Rationale */}
-          {rationale && (
-            <div className="flex items-start gap-2">
-              <Sparkles className="w-3 h-3 text-primary/60 shrink-0 mt-0.5" />
-              <p className="text-[11.5px] text-foreground/70 leading-relaxed italic">{rationale}</p>
-            </div>
-          )}
+          <div className="flex items-start gap-2">
+            <Sparkles className="w-3 h-3 text-primary/60 shrink-0 mt-0.5" />
+            {rationale
+              ? <p className="text-[11.5px] text-foreground/70 leading-relaxed italic">{rationale}</p>
+              : <p className="text-[11.5px] text-muted-foreground/40 leading-relaxed italic">Hit “Refresh Insights” above to generate AI rationale for this action.</p>
+            }
+          </div>
 
           {/* Relevant Stakeholders */}
           {mentioned.length > 0 && (
@@ -208,7 +206,7 @@ function WhatsNextCard({
           )}
 
           {/* Suggested contacts placeholder (no map stakeholders found) */}
-          {mentioned.length === 0 && hasOutreachKeyword && (
+          {mentioned.length === 0 && (
             <div>
               <div className="text-[10px] text-muted-foreground/50 uppercase tracking-wider mb-1.5">Suggested Contacts</div>
               <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-muted/20 border border-border/20">
@@ -547,6 +545,7 @@ export default function DealInsightPanel({
               dealName: deal.name,
               dealStage: deal.stage,
               dealValue: deal.value,
+              confidenceScore: deal.confidenceScore,
               companyInfo: deal.companyInfo,
               stakeholders: deal.stakeholders.map(s => ({
                 name: s.name, title: s.title, role: s.role,

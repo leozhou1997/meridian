@@ -54,3 +54,5 @@
 - [x] WhatsNextCard: add AI rationale section between title and contacts when expanded
 - [x] WhatsNextCard: add Accept/Dismiss/Later feedback buttons (Accept → add to Next Actions)
 - [x] Stakeholder Profile: redesign as centered modal with backdrop blur (replace right-side panel)
+- [x] Fix WhatsNextCard: always expandable with rationale + Accept/Dismiss/Later, not gated on stakeholder presence
+- [x] Fix generateDealInsight API error: "expected number received undefined" (missing confidenceScore field)

@@ -1,0 +1,17 @@
+{
+  "query": "SELECT id, name, company, stage, value FROM deals WHERE name = '' OR company = '' ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute SELECT id, name, company, stage, value FROM deals WHERE name = '' OR company = '' ORDER BY id;",
+  "rows": [
+    {
+      "id": "30002",
+      "name": " - New Opportunity",
+      "company": "",
+      "stage": "Discovery",
+      "value": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tcompany\tstage\tvalue\n30002\t - New Opportunity\t\tDiscovery\t0\n",
+  "stderr": "",
+  "execution_time_ms": 356
+}

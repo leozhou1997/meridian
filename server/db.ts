@@ -2,6 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   aiLogs,
+  companyProfiles,
   deals,
   kbDocuments,
   meetings,
@@ -13,6 +14,7 @@ import {
   tenants,
   users,
   type InsertAiLog,
+  type InsertCompanyProfile,
   type InsertDeal,
   type InsertKbDocument,
   type InsertMeeting,
@@ -371,4 +373,28 @@ export async function setActivePrompt(id: number, feature: string) {
   if (!db) throw new Error("Database not available");
   await db.update(promptTemplates).set({ isActive: false }).where(eq(promptTemplates.feature, feature));
   await db.update(promptTemplates).set({ isActive: true }).where(eq(promptTemplates.id, id));
+}
+
+// ─── Company Profiles ────────────────────────────────────────────────────────
+
+export async function getCompanyProfile(tenantId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(companyProfiles)
+    .where(eq(companyProfiles.tenantId, tenantId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createCompanyProfile(data: InsertCompanyProfile) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [result] = await db.insert(companyProfiles).values(data);
+  return (result as any).insertId as number;
+}
+
+export async function updateCompanyProfile(id: number, tenantId: number, data: Partial<InsertCompanyProfile>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(companyProfiles).set(data)
+    .where(and(eq(companyProfiles.id, id), eq(companyProfiles.tenantId, tenantId)));
 }

@@ -1,0 +1,9 @@
+{
+  "query": "DELETE FROM stakeholders WHERE dealId = 30002; DELETE FROM snapshots WHERE dealId = 30002; DELETE FROM meetings WHERE dealId = 30002; DELETE FROM deals WHERE id = 30002;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute DELETE FROM stakeholders WHERE dealId = 30002; DELETE FROM snapshots WHERE dealId = 30002; DELETE FROM meetings WHERE dealId = 30002; DELETE FROM deals WHERE id = 30002;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 513
+}

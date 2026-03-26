@@ -85,3 +85,20 @@
 - [x] Chinese language translations for all demo-facing pages
 - [x] Doctor Scrap demo data (pre-seeded deals with their real customer types - auto-generated via onboarding)
 - [ ] Demo guide document for Leo
+
+## Onboarding Refactor + Deal Creation Flow
+
+- [x] DB: Add companyProfile table (name, website, description, products, targetMarket, salesProcess, icp) — persistent company knowledge base
+- [x] Refactor Onboarding page → "Company Setup" (CRM init: input YOUR company info, not target customer)
+- [x] Onboarding Step 1: Company website + product info → AI ingests and creates Knowledge Base entry
+- [x] Onboarding Step 2: Sales process definition (stages, deal size, cycle, team)
+- [x] Onboarding Step 3: ICP definition (industries, company size, titles, pain points)
+- [x] Persist all onboarding data to companyProfile table in DB
+- [x] New Deal Creation flow (separate from onboarding) — input target customer URL
+- [x] AI Agent animation: visual "robot working" window during deal creation (crawling website → analyzing → finding stakeholders → building map)
+- [x] Deal creation reads companyProfile from DB to contextualize AI analysis
+- [x] Auto-generate stakeholders and sync directly to Deal Map with positions
+- [x] Fix "deal not found" error on new deal pages
+- [x] Demo account: create a fresh account that shows empty state + onboarding prompt
+- [x] Empty state: Dashboard shows "Welcome! Set up your company profile to get started" when no deals exist
+- [x] Ensure Leo's existing account retains all current demo data

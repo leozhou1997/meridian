@@ -1,0 +1,8 @@
+{
+  "query": "DELETE FROM stakeholders WHERE dealId = 30002; DELETE FROM snapshots WHERE dealId = 30002; DELETE FROM meetings WHERE dealId = 30002; DELETE FROM ai_logs WHERE dealId = 30002; DELETE FROM deals WHERE id = 30002;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute DELETE FROM stakeholders WHERE dealId = 30002; DELETE FROM snapshots WHERE dealId = 30002; DELETE FROM meetings WHERE dealId = 30002; DELETE FROM ai_logs WHERE dealId = 30002; DELETE FROM deals WHERE id = 30002;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1146 (42S02) at line 1: Table 'phtfs288huf3yaw9ywmkjw.ai_logs' doesn't exist"
+  ]
+}

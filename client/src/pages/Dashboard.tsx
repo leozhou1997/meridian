@@ -3,10 +3,11 @@ import { trpc } from '@/lib/trpc';
 import { formatCurrency, getConfidenceColor, getConfidenceBg, getStageColor, formatDate } from '@/lib/data';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { motion } from 'framer-motion';
-import { AlertTriangle, TrendingUp, TrendingDown, ArrowRight, Clock, Target, BarChart3, Shield, Plus } from 'lucide-react';
+import { AlertTriangle, TrendingUp, TrendingDown, ArrowRight, Clock, Target, BarChart3, Shield, Plus, Sparkles, Search, Building2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 const container = {
@@ -21,9 +22,12 @@ const item = {
 export default function Dashboard() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const { data: deals = [], isLoading } = trpc.deals.list.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+  });
+  const { data: companyProfile } = trpc.onboarding.getCompanyProfile.useQuery(undefined, {
     refetchOnWindowFocus: false,
   });
 
@@ -55,6 +59,73 @@ export default function Dashboard() {
     );
   }
 
+  // If no company profile AND no deals, show onboarding prompt
+  const needsOnboarding = !isLoading && !companyProfile && deals.length === 0;
+
+  if (needsOnboarding) {
+    return (
+      <div className="p-6 max-w-[800px] mx-auto">
+        <motion.div variants={container} initial="hidden" animate="show">
+          <motion.div variants={item} className="text-center py-16">
+            <div className="w-20 h-20 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-6">
+              <Sparkles className="w-10 h-10 text-primary" />
+            </div>
+            <h1 className="font-display text-3xl font-bold mb-3">
+              {language === 'zh' ? `欢迎使用 Meridian, ${firstName}` : `Welcome to Meridian, ${firstName}`}
+            </h1>
+            <p className="text-muted-foreground text-base mb-8 max-w-md mx-auto">
+              {language === 'zh'
+                ? '让我们先设置你的公司档案，这样 AI 就能更好地理解你的业务和销售流程'
+                : 'Let\'s set up your company profile so AI can better understand your business and sales process'}
+            </p>
+            <Button onClick={() => navigate('/onboarding')} size="lg" className="px-8 h-12 text-base">
+              <Building2 className="w-5 h-5 mr-2" />
+              {language === 'zh' ? '开始设置' : 'Get Started'}
+            </Button>
+          </motion.div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Empty state: profile exists but no deals
+  const hasNoDeals = !isLoading && deals.length === 0 && companyProfile;
+
+  if (hasNoDeals) {
+    return (
+      <div className="p-6 max-w-[800px] mx-auto">
+        <motion.div variants={container} initial="hidden" animate="show">
+          <motion.div variants={item} className="mb-6">
+            <h1 className="font-display text-2xl font-bold mb-1">{t('dashboard.greeting')}, {firstName}</h1>
+            <p className="text-sm text-muted-foreground">
+              {language === 'zh'
+                ? `公司档案已设置完成（${companyProfile.companyName}）。现在创建你的第一个 Deal 吧！`
+                : `Company profile set up (${companyProfile.companyName}). Create your first Deal!`}
+            </p>
+          </motion.div>
+
+          <motion.div variants={item} className="text-center py-12">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-6">
+              <Search className="w-8 h-8 text-primary" />
+            </div>
+            <h2 className="font-display text-xl font-bold mb-2">
+              {language === 'zh' ? '创建你的第一个 Deal' : 'Create your first Deal'}
+            </h2>
+            <p className="text-muted-foreground text-sm mb-6 max-w-md mx-auto">
+              {language === 'zh'
+                ? '输入目标客户的网址，AI Agent 将自动爬取信息、分析公司、识别关键决策者，并生成完整的 Deal Map'
+                : 'Enter the target customer URL. AI Agent will crawl, analyze, identify stakeholders, and generate a complete Deal Map'}
+            </p>
+            <Button onClick={() => navigate('/new-deal')} size="lg" className="px-8 h-12 text-base">
+              <Plus className="w-5 h-5 mr-2" />
+              {language === 'zh' ? '新建 Deal' : 'New Deal'}
+            </Button>
+          </motion.div>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 max-w-[1200px]">
       <motion.div variants={container} initial="hidden" animate="show">
@@ -63,9 +134,13 @@ export default function Dashboard() {
           <div>
             <h1 className="font-display text-2xl font-bold mb-1">{t('dashboard.greeting')}, {firstName}</h1>
             <p className="text-muted-foreground text-sm">
-              {deals.length === 0 ? t('dashboard.welcome') : t('dashboard.attention')}
+              {t('dashboard.attention')}
             </p>
           </div>
+          <Button onClick={() => navigate('/new-deal')} size="sm" className="gap-1.5">
+            <Plus className="w-4 h-4" />
+            {language === 'zh' ? '新建 Deal' : 'New Deal'}
+          </Button>
         </motion.div>
 
         {/* KPI Cards */}

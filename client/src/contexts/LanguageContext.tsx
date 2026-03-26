@@ -18,6 +18,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.ask": "Ask Meridian",
     "nav.settings": "Settings",
     "nav.signout": "Sign out",
+    "nav.newDeal": "New Deal",
     // Settings page
     "settings.title": "Settings",
     "settings.account": "Account",
@@ -232,6 +233,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.ask": "问 Meridian",
     "nav.settings": "设置",
     "nav.signout": "退出登录",
+    "nav.newDeal": "新建 Deal",
     // Settings page
     "settings.title": "设置",
     "settings.account": "账号",

@@ -1,0 +1,17 @@
+{
+  "query": "SELECT id, tenantId, companyName, products, targetMarket FROM companyProfiles;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute SELECT id, tenantId, companyName, products, targetMarket FROM companyProfiles;",
+  "rows": [
+    {
+      "id": "1",
+      "tenantId": "1",
+      "companyName": "Doctor Scrap",
+      "products": "[\"Scrap Metal Trading Platform\", \"Buyer-Seller Matching Services\", \"Logistics Support (implied)\"]",
+      "targetMarket": "Businesses involved in the buying and selling of scrap metals and other recyclable materials, including scrap yards, industrial manufacturers, and recycling companies."
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttenantId\tcompanyName\tproducts\ttargetMarket\n1\t1\tDoctor Scrap\t[\"Scrap Metal Trading Platform\", \"Buyer-Seller Matching Services\", \"Logistics Support (implied)\"]\tBusinesses involved in the buying and selling of scrap metals and other recyclable materials, including scrap yards, industrial manufacturers, and recycling companies.\n",
+  "stderr": "",
+  "execution_time_ms": 401
+}

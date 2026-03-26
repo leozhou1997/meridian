@@ -1,0 +1,49 @@
+{
+  "query": "SHOW TABLES;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute SHOW TABLES;",
+  "rows": [
+    {
+      "Tables_in_PHTFs288hUf3yaW9yWMkJw": "__drizzle_migrations"
+    },
+    {
+      "Tables_in_PHTFs288hUf3yaW9yWMkJw": "aiLogs"
+    },
+    {
+      "Tables_in_PHTFs288hUf3yaW9yWMkJw": "companyProfiles"
+    },
+    {
+      "Tables_in_PHTFs288hUf3yaW9yWMkJw": "deals"
+    },
+    {
+      "Tables_in_PHTFs288hUf3yaW9yWMkJw": "kbDocuments"
+    },
+    {
+      "Tables_in_PHTFs288hUf3yaW9yWMkJw": "meetings"
+    },
+    {
+      "Tables_in_PHTFs288hUf3yaW9yWMkJw": "nextActions"
+    },
+    {
+      "Tables_in_PHTFs288hUf3yaW9yWMkJw": "promptTemplates"
+    },
+    {
+      "Tables_in_PHTFs288hUf3yaW9yWMkJw": "snapshots"
+    },
+    {
+      "Tables_in_PHTFs288hUf3yaW9yWMkJw": "stakeholders"
+    },
+    {
+      "Tables_in_PHTFs288hUf3yaW9yWMkJw": "tenantMembers"
+    },
+    {
+      "Tables_in_PHTFs288hUf3yaW9yWMkJw": "tenants"
+    },
+    {
+      "Tables_in_PHTFs288hUf3yaW9yWMkJw": "users"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_PHTFs288hUf3yaW9yWMkJw\n__drizzle_migrations\naiLogs\ncompanyProfiles\ndeals\nkbDocuments\nmeetings\nnextActions\npromptTemplates\nsnapshots\nstakeholders\ntenantMembers\ntenants\nusers\n",
+  "stderr": "",
+  "execution_time_ms": 374
+}

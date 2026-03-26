@@ -247,3 +247,40 @@ export const promptTemplates = mysqlTable("promptTemplates", {
 
 export type PromptTemplate = typeof promptTemplates.$inferSelect;
 export type InsertPromptTemplate = typeof promptTemplates.$inferInsert;
+
+// ─── Company Profiles (Onboarding / CRM Init) ───────────────────────────────
+
+export const companyProfiles = mysqlTable("companyProfiles", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  userId: int("userId").notNull(),
+  // Company info
+  companyName: varchar("companyName", { length: 255 }).notNull(),
+  companyWebsite: varchar("companyWebsite", { length: 500 }),
+  companyDescription: text("companyDescription"),
+  industry: varchar("industry", { length: 255 }),
+  products: json("products").$type<string[]>(),
+  targetMarket: text("targetMarket"),
+  headquarters: varchar("headquarters", { length: 255 }),
+  estimatedSize: varchar("estimatedSize", { length: 100 }),
+  keyDifferentiator: text("keyDifferentiator"),
+  // Sales process
+  salesStages: json("salesStages").$type<string[]>(),
+  avgDealSize: varchar("avgDealSize", { length: 100 }),
+  avgDealCycle: varchar("avgDealCycle", { length: 100 }),
+  salesTeamSize: varchar("salesTeamSize", { length: 100 }),
+  // ICP
+  icpIndustries: text("icpIndustries"),
+  icpCompanySize: varchar("icpCompanySize", { length: 255 }),
+  icpTitles: text("icpTitles"),
+  icpPainPoints: text("icpPainPoints"),
+  // Knowledge base text (raw pasted content)
+  knowledgeBaseText: text("knowledgeBaseText"),
+  // Metadata
+  onboardingCompleted: boolean("onboardingCompleted").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type CompanyProfile = typeof companyProfiles.$inferSelect;
+export type InsertCompanyProfile = typeof companyProfiles.$inferInsert;

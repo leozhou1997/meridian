@@ -8,16 +8,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 import {
-  Globe, Upload, ArrowRight, ArrowLeft, Check,
+  Globe, ArrowRight, ArrowLeft, Check,
   Loader2, Building2, Target, Users, Sparkles,
-  CheckCircle2
+  CheckCircle2, Upload
 } from 'lucide-react';
 
 // ─── Step indicator ──────────────────────────────────────────────────────────
 
 function StepIndicator({ current, total }: { current: number; total: number }) {
   const labels = [
-    { en: 'Product Info', zh: '产品信息' },
+    { en: 'Your Company', zh: '你的公司' },
     { en: 'Sales Process', zh: '销售流程' },
     { en: 'Define ICP', zh: '定义ICP' },
   ];
@@ -45,7 +45,7 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
               </div>
               <div className="mt-2 text-center">
                 <p className={`text-xs font-medium ${isActive || isDone ? 'text-foreground' : 'text-muted-foreground'}`}>
-                  Step {step}:
+                  Step {step}
                 </p>
                 <p className={`text-xs ${isActive || isDone ? 'text-foreground' : 'text-muted-foreground'}`}>
                   {language === 'zh' ? labels[i].zh : labels[i].en}
@@ -68,10 +68,10 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
 
 export default function Onboarding() {
   const [, navigate] = useLocation();
-  const { language, t } = useLanguage();
+  const { language } = useLanguage();
   const [step, setStep] = useState(1);
 
-  // Step 1: Product Info
+  // Step 1: Your Company Info
   const [companyUrl, setCompanyUrl] = useState('');
   const [knowledgeBase, setKnowledgeBase] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -81,6 +81,9 @@ export default function Onboarding() {
     industry: string;
     products: string[];
     targetMarket: string;
+    headquarters: string;
+    estimatedSize: string;
+    keyDifferentiator: string;
   } | null>(null);
 
   // Step 2: Sales Process
@@ -97,11 +100,11 @@ export default function Onboarding() {
   const [icpTitles, setIcpTitles] = useState('');
   const [icpPainPoints, setIcpPainPoints] = useState('');
 
-  // Creating state
-  const [isCreating, setIsCreating] = useState(false);
+  // Saving state
+  const [isSaving, setIsSaving] = useState(false);
 
   const analyzeCompany = trpc.onboarding.analyzeCompanyUrl.useMutation();
-  const createDealFromUrl = trpc.onboarding.createDealFromUrl.useMutation();
+  const saveProfile = trpc.onboarding.saveCompanyProfile.useMutation();
 
   // Step 1: Analyze company URL
   const handleAnalyzeUrl = useCallback(async () => {
@@ -121,39 +124,42 @@ export default function Onboarding() {
     }
   }, [companyUrl, knowledgeBase, analyzeCompany, language]);
 
-  // Final: Create workspace and first deal
+  // Final: Save company profile and go to dashboard
   const handleFinish = useCallback(async () => {
-    setIsCreating(true);
-    try {
-      const result = await createDealFromUrl.mutateAsync({
-        companyUrl: companyUrl.trim(),
-        companyName: companyAnalysis?.companyName || '',
-        companyDescription: companyAnalysis?.description || '',
-        industry: companyAnalysis?.industry || '',
-        products: companyAnalysis?.products || [],
-        targetMarket: companyAnalysis?.targetMarket || '',
-        salesProcess: {
-          stages: salesStages,
-          avgDealSize: avgDealSize || undefined,
-          avgDealCycle: avgDealCycle || undefined,
-          teamSize: salesTeamSize || undefined,
-        },
-        icp: {
-          industries: icpIndustries || undefined,
-          companySize: icpCompanySize || undefined,
-          titles: icpTitles || undefined,
-          painPoints: icpPainPoints || undefined,
-        },
-      });
-      toast.success(language === 'zh' ? '工作区创建成功！正在生成利益相关者地图...' : 'Workspace created! Generating stakeholder map...');
-      // Navigate to the new deal
-      navigate(`/deal/${result.dealId}`);
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to create workspace');
-    } finally {
-      setIsCreating(false);
+    if (!companyAnalysis?.companyName) {
+      toast.error(language === 'zh' ? '请先分析公司网站' : 'Please analyze your company website first');
+      return;
     }
-  }, [companyUrl, companyAnalysis, salesStages, avgDealSize, avgDealCycle, salesTeamSize, icpIndustries, icpCompanySize, icpTitles, icpPainPoints, createDealFromUrl, language, navigate]);
+    setIsSaving(true);
+    try {
+      await saveProfile.mutateAsync({
+        companyName: companyAnalysis.companyName,
+        companyWebsite: companyUrl.trim(),
+        companyDescription: companyAnalysis.description,
+        industry: companyAnalysis.industry,
+        products: companyAnalysis.products,
+        targetMarket: companyAnalysis.targetMarket,
+        headquarters: companyAnalysis.headquarters || undefined,
+        estimatedSize: companyAnalysis.estimatedSize || undefined,
+        keyDifferentiator: companyAnalysis.keyDifferentiator || undefined,
+        salesStages,
+        avgDealSize: avgDealSize || undefined,
+        avgDealCycle: avgDealCycle || undefined,
+        salesTeamSize: salesTeamSize || undefined,
+        icpIndustries: icpIndustries || undefined,
+        icpCompanySize: icpCompanySize || undefined,
+        icpTitles: icpTitles || undefined,
+        icpPainPoints: icpPainPoints || undefined,
+        knowledgeBaseText: knowledgeBase || undefined,
+      });
+      toast.success(language === 'zh' ? '公司档案已保存！欢迎使用 Meridian' : 'Company profile saved! Welcome to Meridian');
+      navigate('/');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save profile');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [companyAnalysis, companyUrl, salesStages, avgDealSize, avgDealCycle, salesTeamSize, icpIndustries, icpCompanySize, icpTitles, icpPainPoints, knowledgeBase, saveProfile, language, navigate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex">
@@ -168,6 +174,20 @@ export default function Onboarding() {
             ? 'AI驱动的销售智能平台\n帮助您的团队赢得更多复杂交易'
             : 'AI-powered Sales Intelligence\nHelping your team win more complex deals'}
         </p>
+        <div className="mt-8 space-y-3 text-xs text-muted-foreground/70">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-3.5 h-3.5 text-primary/50" />
+            <span>{language === 'zh' ? '告诉我们你的公司和产品' : 'Tell us about your company & product'}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-3.5 h-3.5 text-primary/50" />
+            <span>{language === 'zh' ? 'AI 将学习你的销售方法论' : 'AI learns your sales methodology'}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-3.5 h-3.5 text-primary/50" />
+            <span>{language === 'zh' ? '开始创建你的第一个 Deal' : 'Start creating your first Deal'}</span>
+          </div>
+        </div>
       </div>
 
       {/* Main content */}
@@ -175,24 +195,24 @@ export default function Onboarding() {
         <div className="w-full max-w-2xl">
           <StepIndicator current={step} total={3} />
 
-          {/* Step 1: Product Info */}
+          {/* Step 1: Your Company */}
           {step === 1 && (
             <div className="space-y-6">
               <div>
                 <h2 className="text-2xl font-display font-bold text-foreground mb-1">
-                  {language === 'zh' ? '输入您的产品信息' : 'Enter your product info'}
+                  {language === 'zh' ? '告诉我们关于你的公司' : 'Tell us about your company'}
                 </h2>
                 <p className="text-sm text-muted-foreground">
                   {language === 'zh'
-                    ? '我们将分析您的公司网站，自动提取关键信息'
-                    : "We'll analyze your company website and extract key information automatically"}
+                    ? '输入你的公司网址，AI 将自动分析并建立知识库'
+                    : 'Enter your company website, AI will analyze and build your knowledge base'}
                 </p>
               </div>
 
               <div className="space-y-4">
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">
-                    {language === 'zh' ? '输入公司网址' : 'Enter your company website'}
+                    {language === 'zh' ? '你的公司网址' : 'Your company website'}
                   </label>
                   <div className="flex gap-2">
                     <div className="relative flex-1">
@@ -218,7 +238,7 @@ export default function Onboarding() {
                   </div>
                 </div>
 
-                {/* Analysis result */}
+                {/* Analysis loading */}
                 {isAnalyzing && (
                   <Card className="border-primary/20 bg-primary/5">
                     <CardContent className="p-4">
@@ -237,11 +257,12 @@ export default function Onboarding() {
                   </Card>
                 )}
 
+                {/* Analysis result */}
                 {companyAnalysis && !isAnalyzing && (
-                  <Card className="border-status-success/30 bg-status-success/5">
+                  <Card className="border-green-500/30 bg-green-500/5">
                     <CardContent className="p-4 space-y-3">
                       <div className="flex items-center gap-2">
-                        <CheckCircle2 className="w-5 h-5 text-status-success" />
+                        <CheckCircle2 className="w-5 h-5 text-green-500" />
                         <span className="text-sm font-medium text-foreground">
                           {language === 'zh' ? '分析完成' : 'Analysis Complete'}
                         </span>
@@ -263,6 +284,12 @@ export default function Onboarding() {
                           <span className="text-muted-foreground">{language === 'zh' ? '产品/服务' : 'Products/Services'}:</span>
                           <p className="font-medium text-foreground">{companyAnalysis.products.join(', ')}</p>
                         </div>
+                        {companyAnalysis.keyDifferentiator && (
+                          <div className="col-span-2">
+                            <span className="text-muted-foreground">{language === 'zh' ? '核心优势' : 'Key Differentiator'}:</span>
+                            <p className="font-medium text-foreground">{companyAnalysis.keyDifferentiator}</p>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -270,20 +297,20 @@ export default function Onboarding() {
 
                 <div>
                   <label className="text-sm font-medium text-foreground mb-2 block">
-                    {language === 'zh' ? '上传产品知识库（可选）' : 'Upload your product Knowledge base (optional)'}
+                    {language === 'zh' ? '补充产品知识库（可选）' : 'Additional product knowledge (optional)'}
                   </label>
                   <Textarea
                     value={knowledgeBase}
                     onChange={(e) => setKnowledgeBase(e.target.value)}
                     placeholder={language === 'zh'
-                      ? '粘贴产品文档、销售资料或任何有助于AI理解您产品的内容...'
-                      : 'Paste product documentation, sales materials, or any content that helps AI understand your product...'}
+                      ? '粘贴产品文档、销售资料、公司介绍等任何有助于AI理解你产品的内容...'
+                      : 'Paste product documentation, sales materials, company intro, or any content that helps AI understand your product...'}
                     className="min-h-[120px] resize-none"
                   />
                   <div className="flex items-center gap-2 mt-2">
                     <Upload className="w-3.5 h-3.5 text-muted-foreground" />
                     <span className="text-xs text-muted-foreground">
-                      {language === 'zh' ? '支持粘贴文本或拖拽文件' : 'Paste text or drag & drop files'}
+                      {language === 'zh' ? '支持粘贴文本内容' : 'Paste text content'}
                     </span>
                   </div>
                 </div>
@@ -303,11 +330,11 @@ export default function Onboarding() {
             <div className="space-y-6">
               <div>
                 <h2 className="text-2xl font-display font-bold text-foreground mb-1">
-                  {language === 'zh' ? '输入您的销售流程' : 'Enter your sales process'}
+                  {language === 'zh' ? '定义你的销售流程' : 'Define your sales process'}
                 </h2>
                 <p className="text-sm text-muted-foreground">
                   {language === 'zh'
-                    ? '帮助Meridian理解您的销售阶段和团队结构'
+                    ? '帮助 Meridian 理解你的销售阶段和团队结构'
                     : 'Help Meridian understand your sales stages and team structure'}
                 </p>
               </div>
@@ -396,11 +423,11 @@ export default function Onboarding() {
             <div className="space-y-6">
               <div>
                 <h2 className="text-2xl font-display font-bold text-foreground mb-1">
-                  {language === 'zh' ? '定义您的理想客户画像 (ICP)' : 'Define your ICP'}
+                  {language === 'zh' ? '定义你的理想客户画像 (ICP)' : 'Define your Ideal Customer Profile'}
                 </h2>
                 <p className="text-sm text-muted-foreground">
                   {language === 'zh'
-                    ? '帮助Meridian更好地识别和分析您的目标客户'
+                    ? '帮助 Meridian 更精准地分析和匹配你的目标客户'
                     : 'Help Meridian better identify and analyze your target customers'}
                 </p>
               </div>
@@ -471,13 +498,13 @@ export default function Onboarding() {
                 </Button>
                 <Button
                   onClick={handleFinish}
-                  disabled={isCreating}
+                  disabled={isSaving}
                   className="px-8 bg-primary hover:bg-primary/90"
                 >
-                  {isCreating ? (
+                  {isSaving ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      {language === 'zh' ? '正在创建...' : 'Creating...'}
+                      {language === 'zh' ? '正在保存...' : 'Saving...'}
                     </>
                   ) : (
                     <>

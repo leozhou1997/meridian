@@ -14,6 +14,7 @@ import KnowledgeBase from "./pages/KnowledgeBase";
 import AdminPlayground from "./pages/AdminPlayground";
 import Settings from "./pages/Settings";
 import Onboarding from "./pages/Onboarding";
+import NewDeal from "./pages/NewDeal";
 import AppLayout from "./components/AppLayout";
 import { useAuth } from "./_core/hooks/useAuth";
 import { getLoginUrl } from "./const";
@@ -76,6 +77,9 @@ function Router() {
       </Route>
       <Route path="/onboarding">
         <ProtectedRoute component={Onboarding} fullScreen />
+      </Route>
+      <Route path="/new-deal">
+        <ProtectedRoute component={NewDeal} fullScreen />
       </Route>
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />

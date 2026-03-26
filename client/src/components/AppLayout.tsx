@@ -135,6 +135,21 @@ export default function AppLayout({ children }: AppLayoutProps) {
               </Tooltip>
             );
           })}
+
+          {/* New Deal button */}
+          <div className="my-2 w-10 h-px bg-sidebar-border" />
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <Link href="/new-deal">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-primary/20 text-primary hover:bg-primary/30 transition-all duration-200">
+                  <Plus className="w-[18px] h-[18px]" />
+                </div>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="font-display text-xs">
+              {t('nav.newDeal') || 'New Deal'}
+            </TooltipContent>
+          </Tooltip>
         </nav>
 
         <div className="flex flex-col items-center gap-2">

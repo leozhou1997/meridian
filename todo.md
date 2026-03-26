@@ -116,3 +116,35 @@
 - [x] New user empty state: register → onboarding → first deal creation
 - [x] Fix /deal/new routing (currently shows "Deal not found")
 - [x] Optimize onboarding AI prompt (company analysis too generic, needs specific product/value prop extraction)
+
+## Comprehensive Update (i18n + Sales Models + Stakeholder Map + AI Prompts)
+
+### 1. Full Chinese i18n (including AI dynamic content)
+- [x] AI-generated content respects user language preference (Deal Insight, What's Happening, Key Risks, What's Next, Pre-meeting Brief all output in Chinese when language=zh)
+- [x] Pass language preference to all AI prompt calls
+- [ ] Onboarding page full Chinese translation
+- [ ] All remaining hardcoded English strings translated
+
+### 2. Sales Model Switching (MEDDIC/BANT/Custom)
+- [x] DB: Add salesModel field to deals table + salesModels table for custom models
+- [x] Preset models: MEDDIC, BANT, SPICED, MEDDICC (4 built-in models with full dimension definitions)
+- [x] Custom model: user can define model name + dimensions (CRUD API + DB persistence)
+- [x] UI: Model selector dropdown on Deal Insight panel (badge + popover)
+- [x] AI generates insights structured by selected model dimensions (prompt references framework by name)
+- [x] Store custom models in DB per tenant (salesModels table with tenantId)
+
+### 3. Concentric Circle Stakeholder Map
+- [x] Replace current column layout with concentric circle layout
+- [x] Inner ring: Decision Makers/Champions, Middle ring: Influencers/Evaluators, Outer ring: Blockers
+- [x] Color coding: ring colors (blue inner, green middle, red outer) with role-based assignment
+- [x] Connection lines between stakeholders preserved from previous implementation
+- [x] AI-powered initial positioning based on role → ring assignment algorithm
+- [x] Maintain drag-and-drop capability for manual adjustment
+
+### 4. AI Prompt Optimization
+- [x] Optimize Deal Insight generation prompt (veteran strategist persona, framework-grounded, political dynamics focus)
+- [x] Optimize Stakeholder analysis prompt (realistic titles, cultural names, org-reality role assignment)
+- [x] Optimize Pre-meeting Brief prompt (30-sec summary, power map, conversation playbook, landmines, specific ask)
+- [x] Optimize Key Risks prompt (consequence-focused, stakeholder-named, framework-dimension-linked)
+- [x] Optimize What's Next prompt (person+action+outcome format, mentor-style rationale)
+- [x] Test all AI outputs end-to-end (40 tests passing, salesModels test suite added)

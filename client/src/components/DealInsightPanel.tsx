@@ -4,7 +4,7 @@ import { formatCurrency, getConfidenceColor } from '@/lib/data';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   AlertTriangle, Check, Plus, Trash2, Calendar, Send, Loader2,
-  ChevronDown, ChevronUp, Sparkles
+  ChevronDown, ChevronUp, Sparkles, Settings2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -46,6 +46,8 @@ type Deal = {
   value: number;
   confidenceScore: number;
   companyInfo?: string;
+  salesModel?: string;
+  customModelId?: number | null;
   snapshots: Snapshot[];
   stakeholders: Stakeholder[];
 };
@@ -511,9 +513,23 @@ export default function DealInsightPanel({
   onStakeholderHover,
   onStakeholderClick,
 }: Props) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   // Panel collapse state
   const [collapsed, setCollapsed] = useState(false);
+
+  // Sales model state
+  const [showModelSelector, setShowModelSelector] = useState(false);
+  const salesModelsQuery = trpc.salesModels.list.useQuery();
+  const setDealModelMutation = trpc.salesModels.setDealModel.useMutation({
+    onSuccess: () => {
+      utils.deals.get.invalidate({ id: deal.id });
+      toast.success(language === 'zh' ? '销售模型已更新' : 'Sales model updated');
+    },
+  });
+  const currentModelKey = deal.salesModel ?? 'meddic';
+  const currentModelName = salesModelsQuery.data?.find(
+    m => m.key === currentModelKey || (m.key === 'custom' && m.id === deal.customModelId)
+  )?.name ?? 'MEDDIC';
 
   // Inline chat state
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -623,6 +639,7 @@ export default function DealInsightPanel({
         engagement: s.engagement,
       })),
       userMessage: msg,
+      language,
     });
   };
 
@@ -723,18 +740,23 @@ export default function DealInsightPanel({
             <span className="text-[10px] text-muted-foreground/70 uppercase tracking-wider font-medium">{t('insight.winConfidence')}</span>
             {/* Analyse button — generates fresh AI insights and persists to DB */}
             <button
-              onClick={() => generateInsightsMutation.mutate({
-                dealId: deal.id,
-                dealName: deal.name,
-                dealStage: deal.stage,
-                dealValue: deal.value,
-                confidenceScore: deal.confidenceScore,
-                companyInfo: deal.companyInfo,
-                stakeholders: deal.stakeholders.map(s => ({
-                  name: s.name, title: s.title, role: s.role,
-                  sentiment: s.sentiment, engagement: s.engagement,
-                })),
-              })}
+              onClick={() => {
+                generateInsightsMutation.mutate({
+                  dealId: deal.id,
+                  dealName: deal.name,
+                  dealStage: deal.stage,
+                  dealValue: deal.value,
+                  confidenceScore: deal.confidenceScore,
+                  companyInfo: deal.companyInfo,
+                  salesModel: currentModelKey,
+                  customModelId: deal.customModelId,
+                  language,
+                  stakeholders: deal.stakeholders.map(s => ({
+                    name: s.name, title: s.title, role: s.role,
+                    sentiment: s.sentiment, engagement: s.engagement,
+                  })),
+                });
+              }}
               disabled={generateInsightsMutation.isPending}
               className="flex items-center gap-1 text-[9.5px] text-primary/60 hover:text-primary transition-colors disabled:opacity-40 w-fit"
               title="Ask Meridian to analyse this deal and generate fresh insights"
@@ -770,6 +792,51 @@ export default function DealInsightPanel({
 
         {/* Sparkline */}
         {sparklineEl}
+
+        {/* Sales Model Badge */}
+        <div className="relative mt-2">
+          <button
+            onClick={() => setShowModelSelector(v => !v)}
+            className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/30 border border-border/30 hover:border-primary/30 hover:bg-muted/50 transition-all text-[10px] text-muted-foreground/70 hover:text-foreground/80 w-fit"
+          >
+            <Settings2 className="w-3 h-3" />
+            <span className="font-medium">{currentModelName}</span>
+            <ChevronDown className={`w-2.5 h-2.5 transition-transform ${showModelSelector ? 'rotate-180' : ''}`} />
+          </button>
+
+          {/* Model dropdown */}
+          {showModelSelector && (
+            <div className="absolute left-0 top-full mt-1 z-50 w-56 bg-popover border border-border rounded-lg shadow-xl py-1 max-h-[200px] overflow-y-auto">
+              {salesModelsQuery.data?.map((model) => {
+                const isActive = model.key === currentModelKey || (model.key === 'custom' && model.id === deal.customModelId);
+                return (
+                  <button
+                    key={model.key + (model.id ?? '')}
+                    onClick={() => {
+                      setDealModelMutation.mutate({
+                        dealId: deal.id,
+                        salesModel: model.key === 'custom' ? 'custom' : model.key,
+                        customModelId: model.id,
+                      });
+                      setShowModelSelector(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 text-[11px] flex items-center justify-between hover:bg-muted/50 transition-colors ${
+                      isActive ? 'text-primary bg-primary/5' : 'text-foreground/80'
+                    }`}
+                  >
+                    <div>
+                      <div className="font-medium">{model.name}</div>
+                      <div className="text-[9px] text-muted-foreground/60 mt-0.5">
+                        {model.dimensions.length} {language === 'zh' ? '\u7ef4\u5ea6' : 'dimensions'}
+                      </div>
+                    </div>
+                    {isActive && <Check className="w-3 h-3 text-primary" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── Scrollable Insight Content ── */}

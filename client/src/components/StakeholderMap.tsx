@@ -237,27 +237,71 @@ function resolveCollisions(
   return result;
 }
 
+// ── Ring assignment ──────────────────────────────────────────────────────────
+// Inner ring (0): Decision Makers, Champions
+// Middle ring (1): Influencers, Evaluators, Users
+// Outer ring (2): Blockers, unknown roles
+function getRing(role: string): number {
+  const r = role.toLowerCase();
+  if (r.includes('decision') || r.includes('champion') || r.includes('economic')) return 0;
+  if (r.includes('influencer') || r.includes('evaluator') || r.includes('user')) return 1;
+  if (r.includes('blocker')) return 2;
+  return 1; // default to middle
+}
+
+const RING_LABELS = ['Decision Makers', 'Influencers', 'Blockers'];
+const RING_COLORS = [
+  'rgba(99,130,255,0.12)',  // inner — blue tint
+  'rgba(16,185,129,0.08)',  // middle — green tint
+  'rgba(239,68,68,0.06)',   // outer — red tint
+];
+
 // ── Auto-layout ───────────────────────────────────────────────────────────────
 function computeInitialPositions(
   stakeholders: Stakeholder[],
-  stages: string[],
+  _stages: string[],
   containerW: number,
 ): NodePosition[] {
-  const colW = containerW / Math.max(stages.length, 1);
-  const stageSlots: Record<string, number> = {};
-  const raw = stakeholders.map(s => {
-    const stageIdx = stages.indexOf(s.stage || '');
-    const col = stageIdx >= 0 ? stageIdx : 0;
-    const key = s.stage || '__none__';
-    stageSlots[key] = (stageSlots[key] ?? 0);
-    const row = stageSlots[key];
-    stageSlots[key] = row + 1;
-    return {
-      id: s.id,
-      x: col * colW + (colW - NODE_W) / 2,
-      y: 40 + row * (NODE_H + CARD_GAP),
-    };
+  // Concentric circle layout
+  const centerX = containerW / 2 - NODE_W / 2;
+  const centerY = 320; // vertical center of the map area
+
+  if (stakeholders.length === 0) return [];
+
+  // Group stakeholders by ring
+  const rings: Stakeholder[][] = [[], [], []];
+  stakeholders.forEach(s => {
+    const ring = getRing(s.role);
+    rings[ring].push(s);
   });
+
+  // Ring radii — scale based on container width
+  const baseRadius = Math.min(containerW * 0.18, 180);
+  const ringRadii = [
+    baseRadius,           // inner ring
+    baseRadius * 1.8,     // middle ring
+    baseRadius * 2.5,     // outer ring
+  ];
+
+  const raw: NodePosition[] = [];
+
+  rings.forEach((ringStakeholders, ringIdx) => {
+    if (ringStakeholders.length === 0) return;
+    const radius = ringRadii[ringIdx];
+    const angleStep = (2 * Math.PI) / ringStakeholders.length;
+    // Start from top (-PI/2) and distribute evenly
+    const startAngle = -Math.PI / 2;
+
+    ringStakeholders.forEach((s, i) => {
+      const angle = startAngle + i * angleStep;
+      raw.push({
+        id: s.id,
+        x: centerX + radius * Math.cos(angle),
+        y: centerY + radius * Math.sin(angle),
+      });
+    });
+  });
+
   // Run a full collision pass on initial layout too
   const maxX = containerW - NODE_W;
   return resolveCollisions(raw, null, 0, 0, maxX);
@@ -665,18 +709,12 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
 
   return (
     <div className="relative h-full w-full" ref={containerRef}>
-      {/* Stage column headers */}
-      <div className={`absolute top-0 left-0 right-0 flex border-b z-10 transition-colors duration-300 ${
-        mode === 'edit'
-          ? 'border-primary/30 bg-primary/5 backdrop-blur-sm'
-          : 'border-border/30 bg-card/80 backdrop-blur-sm'
-      }`}>
-        {stageOrder.map((stage, i) => (
-          <div key={stage} className={`flex-1 text-center py-2.5 border-r last:border-r-0 transition-colors ${
-            mode === 'edit' ? 'border-primary/20' : 'border-border/20'
-          }`}>
-            <div className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider">Stage {i + 1}</div>
-            <div className="text-xs font-display font-medium mt-0.5">{stage}</div>
+      {/* Concentric circle ring labels */}
+      <div className="absolute top-2 left-3 z-10 flex items-center gap-3 text-[10px] text-muted-foreground bg-card/80 backdrop-blur-sm rounded-md px-3 py-2 border border-border/30">
+        {RING_LABELS.map((label, i) => (
+          <div key={label} className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-full border-2" style={{ borderColor: RING_COLORS[i].replace(/[\d.]+\)$/, '0.6)'), backgroundColor: RING_COLORS[i] }} />
+            <span className="font-medium">{label}</span>
           </div>
         ))}
       </div>
@@ -902,49 +940,55 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
 
       {/* Canvas */}
       <div
-        className="absolute inset-0 top-[52px] overflow-auto"
+        className="absolute inset-0 top-0 overflow-auto"
         style={{ cursor: dragging ? 'grabbing' : (connectingFrom || reroutingConn) ? 'crosshair' : 'default' }}
         onClick={() => { setConnEditPopup(null); setHoveredId(null); }}
         onMouseDown={() => {
-          // In view mode, if user tries to drag, show a hint to switch to edit mode
           if (mode === 'view' && !dragging) {
-            // We'll detect actual drag intent in the card's onMouseDown
+            // Drag hint detected in card's onMouseDown
           }
         }}
       >
-        {/* Background dot grid — always use edit-mode style (primary color, dense) */}
-        <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ opacity: 0.15 }}>
+        {/* Background dot grid */}
+        <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ opacity: 0.1 }}>
           <defs>
-            <pattern id="dotgrid-unified" width="16" height="16" patternUnits="userSpaceOnUse">
-              <circle cx="8" cy="8" r="1.1" fill="hsl(var(--primary))" />
+            <pattern id="dotgrid-unified" width="20" height="20" patternUnits="userSpaceOnUse">
+              <circle cx="10" cy="10" r="0.8" fill="hsl(var(--primary))" />
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#dotgrid-unified)" />
         </svg>
 
-        {/* Column dividers — always use edit-mode style (2px primary gradient) */}
-        {stageOrder.map((_, i) => i === 0 ? null : (
-          <div key={i}
-            className="absolute top-0 bottom-0"
-            style={{
-              left: `${(i / stageOrder.length) * 100}%`,
-              width: '2px',
-              background: 'linear-gradient(to bottom, transparent 0%, hsl(var(--primary)/0.35) 20%, hsl(var(--primary)/0.35) 80%, transparent 100%)',
-            }}
-          />
-        ))}
-
-        {/* Stage zone backgrounds */}
-        {stageOrder.map((_, i) => (
-          <div key={i}
-            className="absolute top-0 bottom-0"
-            style={{
-              left: `${(i / stageOrder.length) * 100}%`,
-              width: `${(1 / stageOrder.length) * 100}%`,
-              background: i % 2 === 0 ? 'rgba(99,102,241,0.02)' : 'transparent',
-            }}
-          />
-        ))}
+        {/* Concentric circle rings */}
+        {(() => {
+          const cx = containerW / 2;
+          const cy = 320 + NODE_H / 2;
+          const baseR = Math.min(containerW * 0.18, 180);
+          const radii = [baseR, baseR * 1.8, baseR * 2.5];
+          return (
+            <svg className="absolute inset-0 w-full pointer-events-none" style={{ height: '100%', overflow: 'visible' }}>
+              {/* Rings from outer to inner */}
+              {[...radii].reverse().map((r, revIdx) => {
+                const idx = radii.length - 1 - revIdx;
+                return (
+                  <g key={idx}>
+                    <circle cx={cx} cy={cy} r={r + NODE_W / 2 + 30}
+                      fill={RING_COLORS[idx]}
+                      stroke={RING_COLORS[idx].replace(/[\d.]+\)$/, '0.3)')}
+                      strokeWidth="1"
+                      strokeDasharray="6 4"
+                    />
+                  </g>
+                );
+              })}
+              {/* Center deal node */}
+              <circle cx={cx} cy={cy} r={28} fill="hsl(var(--primary))" opacity="0.15" />
+              <circle cx={cx} cy={cy} r={20} fill="hsl(var(--primary))" opacity="0.25" />
+              <circle cx={cx} cy={cy} r={4} fill="hsl(var(--primary))" opacity="0.8" />
+              <text x={cx} y={cy + 42} textAnchor="middle" fontSize="10" fill="hsl(var(--muted-foreground))" fontWeight="600" opacity="0.6" style={{ fontFamily: 'var(--font-mono, monospace)' }}>DEAL</text>
+            </svg>
+          );
+        })()}
 
         <div style={{ transform: `scale(${zoom})`, transformOrigin: 'top left', width: '100%', minHeight: '100%', position: 'relative' }}>
           {/* SVG connections */}

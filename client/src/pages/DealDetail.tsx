@@ -122,7 +122,7 @@ const roleConfig: Record<RoleType, { bg: string; text: string; border: string }>
 export default function DealDetail() {
   const [, params] = useRoute('/deal/:id');
   const dealId = params?.id ? Number(params.id) : 0;
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   // ── Real API queries ──────────────────────────────────────────────────────
   const { data: dealData, isLoading: dealLoading } = trpc.deals.get.useQuery(
@@ -422,6 +422,7 @@ export default function DealDetail() {
         companyInfo: s.keyInsights ?? '',
         lastMeetingSummary: lastMeeting?.summary ?? undefined,
         openActions: pendingActions.map((a: any) => a.text),
+        language,
       });
       setAiBriefText(result.brief);
     } catch (err) {

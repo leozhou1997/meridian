@@ -11,6 +11,7 @@ import {
   snapshots,
   stakeholders,
   tenantMembers,
+  salesModels,
   tenants,
   users,
   type InsertAiLog,
@@ -22,6 +23,7 @@ import {
   type InsertPromptTemplate,
   type InsertSnapshot,
   type InsertStakeholder,
+  type InsertSalesModel,
   type InsertUser,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -423,4 +425,49 @@ export async function updateCompanyProfile(id: number, tenantId: number, data: P
   if (!db) throw new Error("Database not available");
   await db.update(companyProfiles).set(data)
     .where(and(eq(companyProfiles.id, id), eq(companyProfiles.tenantId, tenantId)));
+}
+
+
+// ─── Sales Models ──────────────────────────────────────────────────────────
+
+export async function getSalesModels(tenantId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(salesModels).where(eq(salesModels.tenantId, tenantId));
+}
+
+export async function getSalesModelById(id: number, tenantId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(salesModels)
+    .where(and(eq(salesModels.id, id), eq(salesModels.tenantId, tenantId))).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createSalesModel(data: InsertSalesModel) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [result] = await db.insert(salesModels).values(data);
+  return (result as any).insertId as number;
+}
+
+export async function updateSalesModel(id: number, tenantId: number, data: Partial<InsertSalesModel>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(salesModels).set(data)
+    .where(and(eq(salesModels.id, id), eq(salesModels.tenantId, tenantId)));
+}
+
+export async function deleteSalesModel(id: number, tenantId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(salesModels)
+    .where(and(eq(salesModels.id, id), eq(salesModels.tenantId, tenantId)));
+}
+
+export async function updateDealSalesModel(dealId: number, tenantId: number, salesModel: string, customModelId?: number | null) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(deals).set({ salesModel, customModelId: customModelId ?? null })
+    .where(and(eq(deals.id, dealId), eq(deals.tenantId, tenantId)));
 }

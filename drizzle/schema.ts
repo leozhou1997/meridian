@@ -79,6 +79,8 @@ export const deals = mysqlTable("deals", {
   riskOneLiner: text("riskOneLiner"),
   companyInfo: text("companyInfo"),
   buyingStages: json("buyingStages"),
+  salesModel: varchar("salesModel", { length: 50 }).default("meddic").notNull(),
+  customModelId: int("customModelId"),
   isArchived: boolean("isArchived").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -86,6 +88,22 @@ export const deals = mysqlTable("deals", {
 
 export type Deal = typeof deals.$inferSelect;
 export type InsertDeal = typeof deals.$inferInsert;
+
+// ─── Sales Models (Custom) ───────────────────────────────────────────────────
+
+export const salesModels = mysqlTable("salesModels", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  dimensions: json("dimensions").$type<Array<{ key: string; label: string; description: string }>>().notNull(),
+  isBuiltIn: boolean("isBuiltIn").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SalesModel = typeof salesModels.$inferSelect;
+export type InsertSalesModel = typeof salesModels.$inferInsert;
 
 // ─── Stakeholders ─────────────────────────────────────────────────────────────
 

@@ -1,0 +1,25 @@
+{
+  "query": "SELECT id, name, email FROM users LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute SELECT id, name, email FROM users LIMIT 10;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "Leo Zhou",
+      "email": "leo@meridianos.ai"
+    },
+    {
+      "id": "570001",
+      "name": "quwanxin",
+      "email": "quwanxin@qq.com"
+    },
+    {
+      "id": "750081",
+      "name": "Demo User",
+      "email": "demo@test.com"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\temail\n1\tLeo Zhou\tleo@meridianos.ai\n570001\tquwanxin\tquwanxin@qq.com\n750081\tDemo User\tdemo@test.com\n",
+  "stderr": "",
+  "execution_time_ms": 384
+}

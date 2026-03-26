@@ -1,0 +1,55 @@
+{
+  "query": "SELECT id, name, stage FROM deals LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute SELECT id, name, stage FROM deals LIMIT 10;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "Acme Corp Enterprise Platform",
+      "stage": "Technical Evaluation"
+    },
+    {
+      "id": "2",
+      "name": "GlobalTech AI Suite",
+      "stage": "Negotiation"
+    },
+    {
+      "id": "3",
+      "name": "Meridian Analytics POC",
+      "stage": "POC"
+    },
+    {
+      "id": "4",
+      "name": "Nexus Systems Platform",
+      "stage": "Demo"
+    },
+    {
+      "id": "5",
+      "name": "Velocity Commerce Suite",
+      "stage": "Discovery"
+    },
+    {
+      "id": "30001",
+      "name": "Doctor Scrap - New Opportunity",
+      "stage": "Discovery"
+    },
+    {
+      "id": "30003",
+      "name": "Budweiser",
+      "stage": "Discovery"
+    },
+    {
+      "id": "30004",
+      "name": "Stellantis N.V.",
+      "stage": "Discovery"
+    },
+    {
+      "id": "60001",
+      "name": "Nike, Inc.",
+      "stage": "Discovery"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tstage\n1\tAcme Corp Enterprise Platform\tTechnical Evaluation\n2\tGlobalTech AI Suite\tNegotiation\n3\tMeridian Analytics POC\tPOC\n4\tNexus Systems Platform\tDemo\n5\tVelocity Commerce Suite\tDiscovery\n30001\tDoctor Scrap - New Opportunity\tDiscovery\n30003\tBudweiser\tDiscovery\n30004\tStellantis N.V.\tDiscovery\n60001\tNike, Inc.\tDiscovery\n",
+  "stderr": "",
+  "execution_time_ms": 375
+}

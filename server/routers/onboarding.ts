@@ -207,31 +207,35 @@ ${companyProfile.knowledgeBaseText ? `- Knowledge Base: ${companyProfile.knowled
 ` : '';
 
       // 3. Use AI to generate stakeholders
-      const stakeholderPrompt = `You are an expert B2B sales strategist. Given a target company and the seller's context, generate a realistic buying committee / stakeholder map.
+      const stakeholderPrompt = `You are an expert B2B sales strategist who has mapped buying committees at Fortune 500 companies. Generate a realistic buying committee for a complex enterprise deal.
 
 ${sellerContext}
 
 Return ONLY a valid JSON array of 4-6 stakeholders with this structure:
 [
   {
-    "name": "Full Name (realistic for the company's region/culture)",
-    "title": "Job Title",
+    "name": "Full Name (culturally appropriate for the company's region)",
+    "title": "Exact Job Title (e.g., 'VP of Supply Chain Operations' not just 'VP')",
     "role": "Champion|Decision Maker|Influencer|Blocker|User|Evaluator",
     "sentiment": "Positive|Neutral|Negative",
     "engagement": "High|Medium|Low",
-    "keyInsights": "1-2 sentences about this person's likely priorities and concerns, specifically in relation to the seller's product/service",
+    "keyInsights": "1-2 sentences: What does this person care about MOST in their role? What metric are they measured on? How does the seller's product specifically help or threaten their agenda?",
     "linkedIn": "https://linkedin.com/in/placeholder"
   }
 ]
 
-Make the stakeholders realistic for the target company type and industry. Include a mix of:
-- A potential Champion (someone who would benefit most from the seller's solution)
-- A Decision Maker (C-level or VP who signs off)
-- An Influencer (technical evaluator or domain expert)
-- A potential Blocker (procurement, legal, or competing interest)
-- 1-2 additional relevant stakeholders
+CRITICAL RULES for realistic stakeholder generation:
+1. **Titles must be specific and realistic**: Use real enterprise titles like "Senior Director of IT Infrastructure", "VP of Procurement & Strategic Sourcing", "Chief Digital Officer", "Head of Enterprise Architecture". NEVER use generic titles like "Manager" or "Director" without a domain.
+2. **Role assignment must reflect organizational reality**:
+   - Champion: The person whose daily pain the product solves. Usually a director/VP-level operator, NOT the C-suite.
+   - Decision Maker: The person who controls budget. Usually CFO, CTO, or a SVP. Must have signing authority.
+   - Influencer: Technical evaluator or domain expert who shapes the decision. Often a senior engineer, architect, or analyst.
+   - Blocker: Someone with veto power or competing interests. Procurement, legal, or a rival internal project owner.
+   - Evaluator: Hands-on user who will test/validate the product.
+3. **Sentiment should vary realistically**: Not everyone starts Positive. Blockers are typically Neutral or Negative. Decision Makers are often Neutral until ROI is proven.
+4. **Names must be culturally appropriate**: Chinese companies → Chinese names, Japanese → Japanese, etc.
+5. **keyInsights must be specific**: Reference the seller's actual product and the stakeholder's specific concerns. Bad: "Cares about efficiency". Good: "Measured on reducing scrap processing turnaround from 72h to 24h; the seller's real-time pricing platform directly addresses this KPI."
 
-Use culturally appropriate names based on the company's headquarters location.
 Return ONLY the JSON array, no markdown, no explanation.`;
 
       const stakeholderUserPrompt = `Generate a buying committee for selling to:
@@ -239,7 +243,9 @@ Company: ${input.targetCompanyName}
 Industry: ${input.targetIndustry || 'Unknown'}
 Description: ${input.targetCompanyDescription || 'Unknown'}
 Headquarters: ${input.targetHeadquarters || 'Unknown'}
-Products: ${input.targetProducts?.join(', ') || 'Unknown'}`;
+Products/Services they offer: ${input.targetProducts?.join(', ') || 'Unknown'}
+
+Think about: Who in this company would be involved in evaluating and purchasing the seller's product? Consider the typical org structure for a company in this industry and of this size.`;
 
       let stakeholderData: any[] = [];
       try {
@@ -286,27 +292,34 @@ Products: ${input.targetProducts?.join(', ') || 'Unknown'}`;
 
       // 5. Generate initial AI insights
       try {
-        const insightPrompt = `You are Meridian, an expert B2B sales intelligence AI. Generate initial insights for a new deal.
+        const insightPrompt = `You are Meridian, a veteran B2B sales strategist. Generate initial deal intelligence for a brand-new opportunity. This is Day 1 — the rep just added this deal and needs a clear opening strategy.
 
 ${sellerContext}
 
 Return ONLY a valid JSON object:
 {
-  "whatsHappening": "2-3 sentences about the initial deal dynamics, how the seller's product connects to the target company's needs",
+  "whatsHappening": "2-3 sentences: What is the strategic opportunity here? How does the seller's product specifically address this company's likely pain points? What makes this deal worth pursuing? Be specific about the value connection.",
   "keyRisks": [
-    {"title": "Risk title", "detail": "Why this is a risk", "stakeholders": []}
+    {"title": "Crisp risk title (max 8 words)", "detail": "What could derail this deal early? Think: competitive incumbents, budget cycles, organizational resistance, missing champion. Be specific to this company and industry.", "stakeholders": ["Name if relevant"]}
   ],
   "whatsNext": [
-    {"action": "Specific first action", "rationale": "Why this matters", "suggestedContacts": []}
+    {"action": "Specific Day 1 action with a named person (e.g., 'Request a 30-min intro call with [Champion Name] to validate the pain hypothesis')", "rationale": "Why this is the right first move. What will the rep learn? What door does it open?", "suggestedContacts": [{"name": "Realistic name", "title": "Realistic title", "reason": "Why engage this person first"}]}
   ]
 }
 
-Return ONLY JSON, no markdown.`;
+Rules:
+- keyRisks: 2-3 items. Focus on EARLY-STAGE risks: no champion identified, unclear budget authority, competitive displacement, wrong entry point.
+- whatsNext: 2-3 items. These are OPENING MOVES, not mid-deal tactics. Focus on: validating the opportunity, finding the champion, understanding the buying process.
+- Reference stakeholder names from the buying committee when possible.
+- Return ONLY JSON, no markdown.`;
 
         const insightResponse = await invokeLLM({
           messages: [
             { role: "system", content: insightPrompt },
-            { role: "user", content: `New deal with ${input.targetCompanyName} (${input.targetIndustry || 'Unknown industry'}). ${input.targetCompanyDescription || ''}. Stakeholders: ${stakeholderData.map((s: any) => `${s.name} (${s.title})`).join(', ')}` },
+            { role: "user", content: `New deal with ${input.targetCompanyName} (${input.targetIndustry || 'Unknown industry'}). ${input.targetCompanyDescription || ''}.
+
+Buying committee identified so far:
+${stakeholderData.map((s: any) => `- ${s.name} (${s.title}) — Role: ${s.role}, Sentiment: ${s.sentiment}, Engagement: ${s.engagement}`).join('\n')}` },
           ],
         });
 

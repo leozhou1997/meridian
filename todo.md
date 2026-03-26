@@ -61,3 +61,8 @@
 - [x] Pre-meeting Brief moved to first screen of Stakeholder Profile Modal (Brief tab default, auto-generates on open; Profile tab for full details)
 - [x] Suggested Contacts in WhatsNextCard: AI-recommended people not yet on map, with Add to Map button and LinkedIn search link
 - [x] whatsNext schema migrated from text to JSON in database
+- [x] Fix What's Next: DB-persisted items still show "Hit Refresh" message instead of rationale
+- [x] Fix stakeholder hover highlight (underline + blue highlight) broken after recent changes
+- [x] Fix Key Risks AI prompt: generates verbose/redundant text after Analyze Deal (repeats stage/value/confidence already shown in header)
+- [x] Fix left DVC panel not scrollable (content cut off on smaller screens)
+- [x] Provide AI Prompt admin link for Key Risks prompt review (see /admin/ai route in app)

@@ -33,7 +33,7 @@ export const snapshotsRouter = router({
       const whatsNext = typeof input.whatsNext === 'string'
         ? [input.whatsNext]
         : input.whatsNext;
-      const id = await createSnapshot({ ...input, whatsNext, tenantId: tenant.id });
+      const id = await createSnapshot({ ...input, whatsNext: whatsNext as any, tenantId: tenant.id });
       return { id };
     }),
 });

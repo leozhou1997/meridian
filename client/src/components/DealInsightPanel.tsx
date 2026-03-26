@@ -23,7 +23,7 @@ type Snapshot = {
   confidenceChange: number;
   whatsHappening: string | null;
   keyRisks: unknown;
-  whatsNext: string[] | null;
+  whatsNext: Array<{ action: string; rationale: string; suggestedContacts?: Array<{ name: string; title: string; reason: string }> }> | null;
   interactionType: string | null;
 };
 
@@ -525,7 +525,8 @@ export default function DealInsightPanel({
   const whatsHappening: string | null | undefined = insightOverrides.whatsHappening ?? latestSnapshot?.whatsHappening;
   const keyRisks = insightOverrides.keyRisks ?? (latestSnapshot?.keyRisks as string[] | null) ?? [];
   // whatsNext is always read from DB snapshot (persisted by AI generation)
-  const whatsNextRaw = latestSnapshot?.whatsNext;
+  // Type is Array<{action, rationale, suggestedContacts}> | null
+  const whatsNextRaw = latestSnapshot?.whatsNext ?? null;
   const wasUpdatedByChat = !!insightOverrides.updatedAt;
 
   // Sparkline data
@@ -573,7 +574,7 @@ export default function DealInsightPanel({
 
   return (
     <div
-      className={`shrink-0 border-r border-border/30 bg-card/30 backdrop-blur-sm flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${
+      className={`shrink-0 border-r border-border/30 bg-card/30 backdrop-blur-sm flex flex-col overflow-hidden transition-all duration-300 ease-in-out h-full ${
         collapsed ? 'w-[48px]' : 'w-[340px]'
       }`}
     >
@@ -724,7 +725,7 @@ export default function DealInsightPanel({
 
           {/* ── What's Next ── */}
           {whatsNextRaw && whatsNextRaw.length > 0 && (() => {
-            // whatsNextRaw is string[] from DB (Drizzle json column typed as string[])
+            // whatsNextRaw is Array<{action, rationale, suggestedContacts}> from DB
             const actionItems: WhatsNextItem[] = whatsNextRaw;
 
             return (

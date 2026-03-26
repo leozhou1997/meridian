@@ -301,16 +301,16 @@ ${input.transcript}`;
     .mutation(async ({ ctx, input }) => {
       const tenant = await getOrCreateDefaultTenant(ctx.user.id, ctx.user.name ?? "User");
 
-      const systemPrompt = `You are Meridian, an expert B2B sales intelligence AI. Analyze the deal context and generate structured insights.
+      const systemPrompt = `You are Meridian, an expert B2B sales intelligence AI. Analyze the deal and generate sharp, concise insights for the Account Executive.
 
 Return ONLY a valid JSON object with this exact structure:
 {
-  "whatsHappening": "2-3 sentence narrative of the current deal situation, referencing specific stakeholders by name",
-  "keyRisks": ["Risk 1 description mentioning specific stakeholder or issue", "Risk 2", "Risk 3"],
+  "whatsHappening": "2-3 sentence narrative of the current deal dynamics. Reference stakeholders by name. Focus on relationship dynamics, momentum shifts, and political signals — not deal metadata.",
+  "keyRisks": ["Risk 1", "Risk 2", "Risk 3"],
   "whatsNext": [
     {
-      "action": "Specific action the AE should take (1 sentence, imperative)",
-      "rationale": "Why this action matters strategically — 1-2 sentences coaching the AE on the reasoning",
+      "action": "Specific action the AE should take (1 sentence, imperative verb)",
+      "rationale": "1-2 sentences explaining WHY this action matters — the strategic reasoning, not a restatement of the action",
       "suggestedContacts": [
         {
           "name": "Full name of person to engage (not already on the stakeholder map)",
@@ -322,12 +322,12 @@ Return ONLY a valid JSON object with this exact structure:
   ]
 }
 
-Guidelines:
-- Reference stakeholders by name and title in your analysis
-- whatsNext should have 2-4 specific, actionable items
-- rationale should coach the AE, not just repeat the action
-- suggestedContacts: include 0-2 people per action who are NOT already on the stakeholder map but should be engaged. Leave the array empty [] if no new contacts are needed.
-- Be specific to this deal, not generic sales advice
+Critical rules:
+- keyRisks: each risk must be a single crisp sentence (max 12 words). Name the specific stakeholder or issue. NEVER repeat deal stage, value, or confidence score — those are already shown in the UI.
+- whatsHappening: focus on what's changing in the buying committee dynamics, not static facts
+- whatsNext: 2-4 items. Each action must be specific and stakeholder-targeted (e.g. "Schedule a 1:1 with [Name] to address their procurement concern" not "Follow up with the team")
+- rationale: coach the AE on the WHY — e.g. "[Name] has gone quiet since the technical review, which signals unresolved concerns that could block the deal"
+- suggestedContacts: 0-2 per action. Only suggest people NOT already on the stakeholder map. Leave empty [] if no new contacts are needed.
 - Return ONLY the JSON, no markdown, no explanation`;
 
       const stakeholderSummary = input.stakeholders?.map(s =>

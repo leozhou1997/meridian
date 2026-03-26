@@ -675,7 +675,7 @@ export default function DealDetail() {
                         </div>
                         <div>
                           <span className="font-medium text-status-success">Next: </span>
-                          <span className="text-muted-foreground">{Array.isArray(snap.whatsNext) ? (snap.whatsNext as string[]).join('; ') : typeof snap.whatsNext === 'string' ? snap.whatsNext : ''}</span>
+                          <span className="text-muted-foreground">{Array.isArray(snap.whatsNext) ? snap.whatsNext.map((w: any) => typeof w === 'string' ? w : w.action).join('; ') : ''}</span>
                         </div>
                         {(snap.keyRisks as string[] | null)?.length ? (
                           <div>

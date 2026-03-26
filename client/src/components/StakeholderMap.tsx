@@ -1051,7 +1051,10 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
             const touchpoints = getTouchpointCount(stakeholder);
             const interactions = getStakeholderInteractions(stakeholder);
             const isExpanded = expandedCardId === stakeholder.id;
-            const isHighlighted = highlightedStakeholderId != null && String(highlightedStakeholderId) === stakeholder.id;
+            const isHighlighted = highlightedStakeholderId != null && (
+              String(highlightedStakeholderId) === String(stakeholder.id) ||
+              Number(stakeholder.id) === highlightedStakeholderId
+            );
 
             return (
               <motion.div

@@ -54,6 +54,9 @@ function Router() {
       <Route path="/">
         <ProtectedRoute component={Dashboard} />
       </Route>
+      <Route path="/deal/new">
+        <ProtectedRoute component={NewDeal} fullScreen />
+      </Route>
       <Route path="/deal/:id">
         <ProtectedRoute component={DealDetail} />
       </Route>
@@ -78,9 +81,7 @@ function Router() {
       <Route path="/onboarding">
         <ProtectedRoute component={Onboarding} fullScreen />
       </Route>
-      <Route path="/new-deal">
-        <ProtectedRoute component={NewDeal} fullScreen />
-      </Route>
+
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

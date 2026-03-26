@@ -102,3 +102,17 @@
 - [x] Demo account: create a fresh account that shows empty state + onboarding prompt
 - [x] Empty state: Dashboard shows "Welcome! Set up your company profile to get started" when no deals exist
 - [x] Ensure Leo's existing account retains all current demo data
+
+## Self-hosted Auth + Data Isolation + Fixes
+
+- [x] Self-hosted auth: email+password registration page
+- [x] Self-hosted auth: email+password login page
+- [x] Self-hosted auth: bcrypt password hashing, JWT session management
+- [x] Self-hosted auth: logout functionality (visible in UI)
+- [x] Remove Manus OAuth dependency from auth flow
+- [x] User data isolation: all queries filtered by tenantId (deals, stakeholders, meetings, snapshots, etc.)
+- [x] Auto-create tenant on user registration (1 user = 1 tenant initially)
+- [x] Create Leo demo account (leo@meridianos.ai / demo123) with existing demo data
+- [x] New user empty state: register → onboarding → first deal creation
+- [x] Fix /deal/new routing (currently shows "Deal not found")
+- [x] Optimize onboarding AI prompt (company analysis too generic, needs specific product/value prop extraction)

@@ -1,0 +1,28 @@
+{
+  "query": "SELECT u.id, u.openId, u.name, u.email, u.loginMethod, u.passwordHash IS NOT NULL as hasPassword, tm.tenantId FROM users u LEFT JOIN tenantMembers tm ON u.id = tm.userId ORDER BY u.id",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute SELECT u.id, u.openId, u.name, u.email, u.loginMethod, u.passwordHash IS NOT NULL as hasPassword, tm.tenantId FROM users u LEFT JOIN tenantMembers tm ON u.id = tm.userId ORDER BY u.id",
+  "rows": [
+    {
+      "id": "1",
+      "openId": "FBFiu4E8FAX78ZXKVoi2Jm",
+      "name": "Leo Zhou",
+      "email": "leozhou1997@gmail.com",
+      "loginMethod": "google",
+      "hasPassword": "0",
+      "tenantId": "1"
+    },
+    {
+      "id": "570001",
+      "openId": "LhvGECZPVwa7rRCoqvyeBV",
+      "name": "quwanxin",
+      "email": "quwanxin@qq.com",
+      "loginMethod": "email",
+      "hasPassword": "0",
+      "tenantId": "30001"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\topenId\tname\temail\tloginMethod\thasPassword\ttenantId\n1\tFBFiu4E8FAX78ZXKVoi2Jm\tLeo Zhou\tleozhou1997@gmail.com\tgoogle\t0\t1\n570001\tLhvGECZPVwa7rRCoqvyeBV\tquwanxin\tquwanxin@qq.com\temail\t0\t30001\n",
+  "stderr": "",
+  "execution_time_ms": 500
+}

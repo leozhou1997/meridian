@@ -31,26 +31,33 @@ export const onboardingRouter = router({
     .mutation(async ({ ctx, input }) => {
       const tenant = await getOrCreateDefaultTenant(ctx.user.id, ctx.user.name ?? "User");
 
-      const systemPrompt = `You are an expert business analyst. Given a company website URL, analyze the company and extract key information.
+      const systemPrompt = `You are an expert business analyst specializing in B2B company profiling. Given a company website URL, produce a detailed, specific analysis that a sales team can immediately use.
+
+CRITICAL RULES:
+- Be SPECIFIC, not generic. Instead of "provides solutions", say exactly WHAT they sell.
+- Use concrete numbers where possible (revenue, employee count, founding year).
+- Name actual products/services, not categories.
+- Describe the business model clearly: what they sell, to whom, how they make money.
+- If the company is in manufacturing/industrial, specify what materials/products they handle.
 
 Return ONLY a valid JSON object with this exact structure:
 {
-  "companyName": "Official company name",
-  "description": "2-3 sentence description of what the company does",
-  "industry": "Primary industry/sector",
-  "products": ["Product/Service 1", "Product/Service 2"],
-  "targetMarket": "Who their customers are",
+  "companyName": "Official company name (include legal entity if known, e.g. Inc., Ltd., GmbH)",
+  "description": "3-4 sentences: What does this company actually DO? What is their core business? How do they make money? Be concrete — e.g. 'Doctor Scrap operates an online B2B marketplace for industrial scrap metal trading, connecting sellers of ferrous and non-ferrous scrap with buyers across Asia. Their platform provides real-time pricing, logistics coordination, and quality verification for scrap materials including copper, aluminum, steel, and e-waste.' NOT 'Doctor Scrap is a company that provides solutions in the recycling space.'",
+  "industry": "Specific sub-industry (e.g. 'Industrial Scrap Metal Trading & Recycling' not just 'Recycling')",
+  "products": ["Name each specific product/service — e.g. 'Scrap Metal B2B Marketplace', 'Real-time Scrap Price Index', 'Logistics & Quality Inspection Service'"],
+  "targetMarket": "Be specific about customer types — e.g. 'Steel mills, smelters, auto parts manufacturers, and electronics recyclers in China and Southeast Asia' not just 'businesses'",
   "headquarters": "City, Country",
-  "estimatedSize": "Estimated company size (employees)",
-  "keyDifferentiator": "What makes them unique"
+  "estimatedSize": "Be specific if known — e.g. '50-200 employees, Series B funded' or '500+ employees, publicly traded'",
+  "keyDifferentiator": "What specifically makes them different from competitors? Name the competitive advantage."
 }
-
-Be specific and accurate based on the URL domain and any knowledge you have about the company. If the URL is for a well-known company, use your knowledge. For lesser-known companies, make reasonable inferences from the domain name and any context provided.
 
 Return ONLY the JSON, no markdown, no explanation.`;
 
-      const userPrompt = `Analyze this company: ${input.url}
-${input.knowledgeBase ? `\nAdditional context from knowledge base:\n${input.knowledgeBase}` : ''}`;
+      const userPrompt = `Analyze this company in detail: ${input.url}
+
+IMPORTANT: Be extremely specific about what this company does. A reader should understand their exact business after reading your analysis. Avoid vague phrases like "provides solutions" or "offers services" — instead describe the actual products, materials, or transactions involved.
+${input.knowledgeBase ? `\nAdditional context provided by the user:\n${input.knowledgeBase}` : ''}`;
 
       const response = await invokeLLM({
         messages: [
@@ -346,20 +353,25 @@ You are analyzing a potential customer for this seller:
 Identify how the target company connects to the seller's offerings.
 ` : '';
 
-      const systemPrompt = `You are an expert business analyst. Given a company website URL, analyze the company and extract key information.
+      const systemPrompt = `You are an expert B2B sales intelligence analyst. Given a target company URL, produce a detailed analysis that helps a sales team understand this prospect and plan their approach.
 ${sellerContext}
+
+CRITICAL RULES:
+- Be SPECIFIC, not generic. Describe exactly what this company does, sells, and how they operate.
+- Name actual products, services, and business activities.
+- For the sellerAngle: identify a CONCRETE pain point or opportunity, not a vague "could benefit from our solution".
 
 Return ONLY a valid JSON object with this exact structure:
 {
   "companyName": "Official company name",
-  "description": "2-3 sentence description of what the company does",
-  "industry": "Primary industry/sector",
-  "products": ["Product/Service 1", "Product/Service 2"],
-  "targetMarket": "Who their customers are",
+  "description": "3-4 sentences describing exactly what this company does, their core business model, and how they make money. Be concrete and specific.",
+  "industry": "Specific sub-industry (e.g. 'Automotive Manufacturing' not just 'Manufacturing')",
+  "products": ["Name each specific product/service the company offers"],
+  "targetMarket": "Specific customer types and geographies",
   "headquarters": "City, Country",
-  "estimatedSize": "Estimated company size (employees)",
-  "keyDifferentiator": "What makes them unique",
-  "sellerAngle": "How the seller's product/service could help this company (1-2 sentences)"
+  "estimatedSize": "Employee count and funding stage if known",
+  "keyDifferentiator": "Their specific competitive advantage",
+  "sellerAngle": "A specific, actionable insight about how the seller could help this company. Reference a concrete business need, not a generic benefit. E.g. 'Stellantis generates 2M+ tons of manufacturing scrap annually across 30 plants. Doctor Scrap could provide real-time scrap pricing and marketplace access to optimize their scrap metal revenue by 15-20%.' NOT 'Could benefit from improved recycling solutions.'"
 }
 
 Return ONLY the JSON, no markdown, no explanation.`;
@@ -367,7 +379,7 @@ Return ONLY the JSON, no markdown, no explanation.`;
       const response = await invokeLLM({
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Analyze this target company: ${input.url}` },
+          { role: "user", content: `Analyze this target company in detail: ${input.url}\n\nBe extremely specific about what this company does. A reader should understand their exact business, products, and market position after reading your analysis.` },
         ],
       });
 

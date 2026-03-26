@@ -140,7 +140,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           <div className="my-2 w-10 h-px bg-sidebar-border" />
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
-              <Link href="/new-deal">
+              <Link href="/deal/new">
                 <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-primary/20 text-primary hover:bg-primary/30 transition-all duration-200">
                   <Plus className="w-[18px] h-[18px]" />
                 </div>

@@ -55,7 +55,7 @@ import {
   ArrowLeft, Globe, Clock, TrendingUp, TrendingDown, AlertTriangle,
   ChevronRight, User, MessageSquare, FileText, Map, BarChart3, X, ExternalLink,
   Mic, Check, Edit2, Save, Camera, GripHorizontal, ChevronDown, ChevronUp,
-  Plus, Trash2, Pencil, Calendar, Lightbulb, Lock, Target, Sparkles, Heart, StickyNote
+  Plus, Trash2, Pencil, Calendar, Lightbulb, Lock, Target, Sparkles, Heart, StickyNote, UserCircle
 } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -370,6 +370,8 @@ export default function DealDetail() {
   const [briefStakeholderId, setBriefStakeholderId] = useState<number | null>(null);
   const [aiBriefText, setAiBriefText] = useState<string | null>(null);
   const [aiBriefLoading, setAiBriefLoading] = useState(false);
+  // Profile modal view: 'brief' (default) | 'profile'
+  const [profileModalView, setProfileModalView] = useState<'brief' | 'profile'>('brief');
 
   // Avatar upload ref — must be before early returns (Rules of Hooks)
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -380,6 +382,17 @@ export default function DealDetail() {
     setBriefStakeholderId(stakeholder.id);
     setShowBrief(true);
     setAiBriefText(null);
+  };
+
+  // When profile modal opens, default to 'brief' view and auto-generate if not already loaded
+  const handleOpenStakeholderProfile = (s: Stakeholder) => {
+    setSelectedStakeholder(s);
+    setProfileModalView('brief');
+    // Auto-generate brief when profile opens
+    setBriefStakeholderId(s.id);
+    setAiBriefText(null);
+    // Trigger generation after state settles
+    setTimeout(() => handleGenerateAIBrief(s), 50);
   };
 
   const handleGenerateAIBrief = async (s: any) => {
@@ -458,6 +471,11 @@ export default function DealDetail() {
       ? (latest as any).roles
       : [latest.role];
     setEditRoles(currentRoles as RoleType[]);
+    // Default to brief view and auto-generate
+    setProfileModalView('brief');
+    setBriefStakeholderId(latest.id);
+    setAiBriefText(null);
+    setTimeout(() => handleGenerateAIBrief(latest), 50);
   };
 
   // Save edits via real API
@@ -618,257 +636,6 @@ export default function DealDetail() {
                   />
                 </div>
 
-                {/* ── OLD Inspector removed — now using DealInsightPanel on the left ── */}
-                {false && latestSnapshot && (
-                  <div className="w-[300px] shrink-0 border-l border-border/30 bg-card/40 backdrop-blur-sm flex flex-col overflow-hidden">
-                    {/* Panel header */}
-                    <div className="px-4 py-3 border-b border-border/30 shrink-0">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-display font-semibold tracking-wide">Deal Intelligence</span>
-                        <div className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                          deal.confidenceScore >= 75 ? 'bg-status-success/15 text-status-success' :
-                          deal.confidenceScore >= 50 ? 'bg-status-warning/15 text-status-warning' :
-                          'bg-status-danger/15 text-status-danger'
-                        }`}>{statusLabel}</div>
-                      </div>
-                    </div>
-
-                    <ScrollArea className="flex-1">
-                      <div className="p-4 space-y-5">
-
-                        {/* ── Confidence block ── */}
-                        <div>
-                          <div className="flex items-end justify-between mb-2">
-                            <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Win Confidence</span>
-                            <div className="flex items-center gap-1.5">
-                              <span className={`text-2xl font-bold font-mono leading-none ${getConfidenceColor(deal.confidenceScore)}`}>
-                                {deal.confidenceScore}%
-                              </span>
-                              {latestSnapshot.confidenceChange !== 0 && (
-                                <span className={`text-xs font-mono font-medium ${
-                                  latestSnapshot.confidenceChange > 0 ? 'text-status-success' : 'text-status-danger'
-                                }`}>
-                                  {latestSnapshot.confidenceChange > 0 ? '↑' : '↓'}{Math.abs(latestSnapshot.confidenceChange)}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          {/* Confidence bar */}
-                          <div className="h-2 rounded-full bg-muted/50 overflow-hidden mb-3">
-                            <div
-                              className="h-full rounded-full transition-all duration-500"
-                              style={{
-                                width: `${deal.confidenceScore}%`,
-                                background: deal.confidenceScore >= 75 ? '#10b981' : deal.confidenceScore >= 50 ? '#f59e0b' : '#ef4444'
-                              }}
-                            />
-                          </div>
-                          {/* Sparkline */}
-                          {deal.snapshots.length >= 2 && (() => {
-                            const sorted = [...deal.snapshots].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-                            const scores = sorted.map(s => s.confidenceScore);
-                            const W = 260, H = 40, PAD = 4;
-                            const minS = Math.max(0, Math.min(...scores) - 10);
-                            const maxS = Math.min(100, Math.max(...scores) + 10);
-                            const toX = (i: number) => PAD + (i / (scores.length - 1)) * (W - PAD * 2);
-                            const toY = (v: number) => H - PAD - ((v - minS) / (maxS - minS)) * (H - PAD * 2);
-                            const points = scores.map((v, i) => `${toX(i)},${toY(v)}`).join(' ');
-                            const areaPoints = `${toX(0)},${H} ${points} ${toX(scores.length - 1)},${H}`;
-                            const lastScore = scores[scores.length - 1];
-                            const lineColor = lastScore >= 75 ? '#10b981' : lastScore >= 50 ? '#f59e0b' : '#ef4444';
-                            return (
-                              <div>
-                                <div className="flex items-center justify-between mb-1">
-                                  <span className="text-[9px] text-muted-foreground/60">Trend</span>
-                                  <span className="text-[9px] text-muted-foreground/60">
-                                    {new Date(sorted[0].date).toLocaleDateString('en-US', {month:'short',day:'numeric'})} → {new Date(sorted[sorted.length-1].date).toLocaleDateString('en-US', {month:'short',day:'numeric'})}
-                                  </span>
-                                </div>
-                                <svg width="100%" viewBox={`0 0 ${W} ${H}`} className="overflow-visible">
-                                  <defs>
-                                    <linearGradient id={`cg2-${deal.id}`} x1="0" y1="0" x2="0" y2="1">
-                                      <stop offset="0%" stopColor={lineColor} stopOpacity="0.3" />
-                                      <stop offset="100%" stopColor={lineColor} stopOpacity="0.02" />
-                                    </linearGradient>
-                                  </defs>
-                                  <polygon points={areaPoints} fill={`url(#cg2-${deal.id})`} />
-                                  <polyline points={points} fill="none" stroke={lineColor} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-                                  {scores.map((v, i) => (
-                                    <circle key={i} cx={toX(i)} cy={toY(v)} r="2.5" fill={lineColor} />
-                                  ))}
-                                </svg>
-                              </div>
-                            );
-                          })()}
-                        </div>
-
-                        {/* ── Deal metrics row ── */}
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="bg-muted/25 rounded-xl p-3 border border-border/20">
-                            <div className="text-[10px] text-muted-foreground mb-1">Stage</div>
-                            <div className="text-sm font-semibold leading-tight">{deal.stage}</div>
-                          </div>
-                          <div className="bg-muted/25 rounded-xl p-3 border border-border/20">
-                            <div className="text-[10px] text-muted-foreground mb-1">ACV</div>
-                            <div className="text-sm font-semibold font-mono leading-tight">{formatCurrency(deal.value)}</div>
-                          </div>
-                        </div>
-
-                        <div className="border-t border-border/20" />
-
-                        {/* ── What's Happening ── */}
-                        <div>
-                          <div className="flex items-center gap-1.5 mb-2">
-                            <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
-                            <span className="text-[11px] font-semibold text-blue-400 uppercase tracking-wider">What's Happening</span>
-                          </div>
-                          <p className="text-[12px] text-foreground/80 leading-relaxed">
-                            {latestSnapshot.whatsHappening}
-                          </p>
-                        </div>
-
-                        {/* ── Key Risks ── */}
-                        {(latestSnapshot.keyRisks as string[] | null)?.length ? (
-                          <div>
-                            <div className="flex items-center gap-1.5 mb-2">
-                              <div className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
-                              <span className="text-[11px] font-semibold text-red-400 uppercase tracking-wider">Key Risks</span>
-                            </div>
-                            <div className="space-y-2">
-                              {(latestSnapshot.keyRisks as string[]).map((risk, i) => (
-                                <div key={i} className="flex items-start gap-2 bg-red-500/5 border border-red-500/15 rounded-lg px-3 py-2">
-                                  <AlertTriangle className="w-3 h-3 text-red-400 shrink-0 mt-0.5" />
-                                  <span className="text-[12px] text-foreground/75 leading-snug">{risk}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ) : null}
-
-                        {/* ── What's Next ── */}
-                        <div>
-                          <div className="flex items-center gap-1.5 mb-2">
-                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-                            <span className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider">What's Next</span>
-                          </div>
-                          <p className="text-[12px] text-foreground/80 leading-relaxed">
-                            {latestSnapshot.whatsNext}
-                          </p>
-                        </div>
-
-                        <div className="border-t border-border/20" />
-
-                        {/* ── Next Actions ── */}
-                        <div>
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-1.5">
-                              <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
-                              <span className="text-[11px] font-semibold text-primary uppercase tracking-wider">Next Actions</span>
-                            </div>
-                            <button
-                              onClick={() => setAddingAction(v => !v)}
-                              className="w-5 h-5 rounded-md flex items-center justify-center hover:bg-muted/60 transition-colors text-muted-foreground hover:text-foreground border border-border/30"
-                            >
-                              <Plus className="w-3 h-3" />
-                            </button>
-                          </div>
-
-                          {/* Add new action form */}
-                          {addingAction && (
-                            <div className="mb-3 p-3 rounded-xl bg-muted/30 border border-border/30">
-                              <input
-                                autoFocus
-                                value={newActionText}
-                                onChange={e => setNewActionText(e.target.value)}
-                                onKeyDown={e => { if (e.key === 'Enter') addAction(); if (e.key === 'Escape') { setAddingAction(false); setNewActionText(''); } }}
-                                placeholder="Describe the action..."
-                                className="w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground/50 mb-2"
-                              />
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="date"
-                                  value={newActionDue}
-                                  onChange={e => setNewActionDue(e.target.value)}
-                                  className="flex-1 bg-transparent text-[11px] text-muted-foreground outline-none border border-border/30 rounded-md px-2 py-1"
-                                />
-                                <button onClick={addAction} className="text-[11px] px-2.5 py-1 rounded-md bg-primary text-primary-foreground font-medium">Add</button>
-                                <button onClick={() => { setAddingAction(false); setNewActionText(''); }} className="text-[11px] px-2 py-1 rounded-md hover:bg-muted/60 text-muted-foreground">✕</button>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Action list */}
-                          <div className="space-y-1.5">
-                            {nextActions.length === 0 && !addingAction && (
-                              <p className="text-xs text-muted-foreground/40 italic text-center py-3">No actions yet — click + to add</p>
-                            )}
-                            {nextActions.map(action => {
-                              const isOverdue = !action.completed && action.dueDate && new Date(action.dueDate) < new Date();
-                              return (
-                                <div key={action.id} className={`flex items-start gap-2.5 group rounded-xl px-3 py-2.5 transition-colors hover:bg-muted/20 border border-transparent hover:border-border/20 ${
-                                  action.completed ? 'opacity-50' : ''
-                                }`}>
-                                  <button
-                                    onClick={() => toggleAction(action.id)}
-                                    className={`mt-0.5 w-4 h-4 rounded-md border shrink-0 flex items-center justify-center transition-colors ${
-                                      action.completed
-                                        ? 'bg-primary border-primary'
-                                        : action.priority === 'high'
-                                          ? 'border-status-danger/60 hover:border-status-danger'
-                                          : 'border-border/60 hover:border-primary'
-                                    }`}
-                                  >
-                                    {action.completed && <Check className="w-2.5 h-2.5 text-primary-foreground" />}
-                                  </button>
-                                  <div className="flex-1 min-w-0">
-                                    <p className={`text-[12px] leading-snug ${
-                                      action.completed ? 'line-through text-muted-foreground/50' : 'text-foreground/90'
-                                    }`}>{action.text}</p>
-                                    {action.dueDate && (
-                                      <p className={`text-[10px] mt-0.5 flex items-center gap-1 ${
-                                        isOverdue ? 'text-status-danger' : 'text-muted-foreground/60'
-                                      }`}>
-                                        <Calendar className="w-2.5 h-2.5" />
-                                        {isOverdue ? 'Overdue · ' : ''}Due {new Date(action.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                      </p>
-                                    )}
-                                  </div>
-                                  <button
-                                    onClick={() => deleteAction(action.id)}
-                                    className="opacity-0 group-hover:opacity-100 w-4 h-4 flex items-center justify-center text-muted-foreground/40 hover:text-status-danger transition-all shrink-0 mt-0.5"
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                  </button>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-
-                        {/* ── Quick nav ── */}
-                        <div className="border-t border-border/20 pt-4 space-y-1.5">
-                          <Button
-                            size="sm"
-                            variant="default"
-                            className="w-full text-xs h-8 font-display"
-                            onClick={() => setActiveTab('signals')}
-                          >
-                            Account Signals
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="w-full text-xs h-8 font-display"
-                            onClick={() => setActiveTab('discussions')}
-                          >
-                            All Interactions
-                          </Button>
-                        </div>
-
-                      </div>
-                    </ScrollArea>
-                  </div>
-                )}
 
               </div>
             </TabsContent>
@@ -908,7 +675,7 @@ export default function DealDetail() {
                         </div>
                         <div>
                           <span className="font-medium text-status-success">Next: </span>
-                          <span className="text-muted-foreground">{snap.whatsNext}</span>
+                          <span className="text-muted-foreground">{Array.isArray(snap.whatsNext) ? (snap.whatsNext as string[]).join('; ') : typeof snap.whatsNext === 'string' ? snap.whatsNext : ''}</span>
                         </div>
                         {(snap.keyRisks as string[] | null)?.length ? (
                           <div>
@@ -1275,55 +1042,246 @@ export default function DealDetail() {
               onClick={e => e.stopPropagation()}
               className="w-[640px] max-h-[82vh] overflow-hidden rounded-2xl bg-card border border-border/60 shadow-2xl flex flex-col"
             >
+              {/* Modal sticky header with tabs */}
+              <div className="flex items-center justify-between px-5 py-3 border-b border-border/30 shrink-0">
+                <div className="flex items-center gap-1">
+                  {/* Avatar mini */}
+                  <img
+                    src={selectedStakeholder.avatar ?? undefined}
+                    alt={selectedStakeholder.name}
+                    className="w-6 h-6 rounded-full object-cover border border-border/30 mr-1"
+                    onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedStakeholder.name)}&background=1a1f36&color=fff&size=24`; }}
+                  />
+                  <span className="text-xs font-semibold text-foreground/90 mr-3">{selectedStakeholder.name}</span>
+                  {/* Tab switcher */}
+                  {!isEditingProfile && (
+                    <div className="flex items-center gap-0.5 bg-muted/40 rounded-lg p-0.5">
+                      <button
+                        onClick={() => setProfileModalView('brief')}
+                        className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-medium transition-colors ${
+                          profileModalView === 'brief'
+                            ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        <Sparkles className="w-2.5 h-2.5" />
+                        Brief
+                      </button>
+                      <button
+                        onClick={() => setProfileModalView('profile')}
+                        className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-medium transition-colors ${
+                          profileModalView === 'profile'
+                            ? 'bg-muted text-foreground'
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        <UserCircle className="w-2.5 h-2.5" />
+                        Profile
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                  {isEditingProfile ? (
+                    <>
+                      <button
+                        onClick={handleSaveProfile}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-primary text-primary-foreground text-[10px] font-medium hover:bg-primary/90 transition-colors"
+                      >
+                        <Save className="w-3 h-3" />
+                        Save
+                      </button>
+                      <button
+                        onClick={() => setIsEditingProfile(false)}
+                        className="w-6 h-6 rounded flex items-center justify-center hover:bg-muted transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {profileModalView === 'profile' && (
+                        <button
+                          onClick={() => setIsEditingProfile(true)}
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-muted text-muted-foreground text-[10px] font-medium hover:bg-muted/80 hover:text-foreground transition-colors"
+                        >
+                          <Edit2 className="w-3 h-3" />
+                          Edit
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setSelectedStakeholder(null)}
+                        className="w-6 h-6 rounded flex items-center justify-center hover:bg-muted transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
               <ScrollArea className="flex-1">
                 <div className="p-5">
-                  {/* Panel header */}
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-display text-sm font-semibold">Stakeholder Profile</h3>
-                    <div className="flex items-center gap-1">
-                      {isEditingProfile ? (
-                        <>
-                          <button
-                            onClick={handleSaveProfile}
-                            className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-primary text-primary-foreground text-[10px] font-medium hover:bg-primary/90 transition-colors"
-                          >
-                            <Save className="w-3 h-3" />
-                            Save
-                          </button>
-                          <button
-                            onClick={() => setIsEditingProfile(false)}
-                            className="w-6 h-6 rounded flex items-center justify-center hover:bg-muted transition-colors"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => generateBrief(selectedStakeholder)}
-                            className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-500/15 text-amber-400 border border-amber-500/30 text-[10px] font-medium hover:bg-amber-500/25 transition-colors"
-                            title="Generate pre-meeting brief"
-                          >
-                            <Sparkles className="w-3 h-3" />
-                            Brief
-                          </button>
-                          <button
-                            onClick={() => setIsEditingProfile(true)}
-                            className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-muted text-muted-foreground text-[10px] font-medium hover:bg-muted/80 hover:text-foreground transition-colors"
-                          >
-                            <Edit2 className="w-3 h-3" />
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => setSelectedStakeholder(null)}
-                            className="w-6 h-6 rounded flex items-center justify-center hover:bg-muted transition-colors"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
+                  {/* Brief View */}
+                  {profileModalView === 'brief' && !isEditingProfile && (() => {
+                    const s = selectedStakeholder;
+                    const signals = personalSignalsMap[s.id] ?? [];
+                    const notes = personalNotesMap[s.id] ?? '';
+                    const relatedMeetings = deal.meetings.filter(m => m.keyParticipant === s.name);
+                    const lastMeeting = relatedMeetings[0];
+                    const roles: string[] = Array.isArray((s as any).roles) ? (s as any).roles : [s.role];
+                    const pendingActions = nextActions.filter(a => !a.completed && (a as any).stakeholderId === s.id);
+                    return (
+                      <div className="space-y-4">
+                        {/* Who they are */}
+                        <div>
+                          <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Who They Are</div>
+                          <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/20 border border-border/20">
+                            <img src={s.avatar ?? undefined} alt={s.name} className="w-10 h-10 rounded-full object-cover border border-border/30"
+                              onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=1a1f36&color=fff&size=40`; }}
+                            />
+                            <div>
+                              <div className="text-sm font-semibold">{s.name}</div>
+                              <div className="text-xs text-muted-foreground">{s.title} · {deal.company}</div>
+                              <div className="flex gap-1 mt-1">
+                                {roles.map(r => <span key={r} className="text-[9px] px-1.5 py-0.5 rounded bg-muted/40 text-muted-foreground">{r}</span>)}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Business context */}
+                        {s.keyInsights && (
+                          <div>
+                            <div className="text-[9px] font-semibold text-status-info uppercase tracking-wider mb-1.5">Business Context</div>
+                            <p className="text-xs text-foreground/80 leading-relaxed bg-muted/15 rounded-lg p-3">{s.keyInsights}</p>
+                          </div>
+                        )}
+
+                        {/* Relationship status */}
+                        <div>
+                          <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Relationship Status</div>
+                          <div className="flex items-center gap-3 text-xs">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                              s.sentiment === 'Positive' ? 'bg-emerald-500/15 text-emerald-400' :
+                              s.sentiment === 'Negative' ? 'bg-red-500/15 text-red-400' :
+                              'bg-amber-500/15 text-amber-400'
+                            }`}>{s.sentiment}</span>
+                            <span className="text-muted-foreground">{s.engagement} Engagement</span>
+                            {lastMeeting && <span className="text-muted-foreground">Last met: {formatDate(typeof lastMeeting.date === 'string' ? lastMeeting.date : new Date(lastMeeting.date).toISOString())}</span>}
+                          </div>
+                          {lastMeeting && (
+                            <p className="text-[11px] text-muted-foreground/70 mt-2 leading-relaxed">
+                              <span className="font-medium text-muted-foreground">Last interaction:</span> {lastMeeting.summary}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Personal talking points */}
+                        {(signals.length > 0 || notes) && (
+                          <div>
+                            <div className="text-[9px] font-semibold text-rose-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                              <Heart className="w-2.5 h-2.5" />
+                              Personal Talking Points
+                            </div>
+                            {signals.length > 0 && (
+                              <div className="space-y-1.5 mb-2">
+                                {signals.map(sig => (
+                                  <div key={sig.id} className="flex items-start gap-2 text-[11px] text-foreground/80">
+                                    <span>{sig.emoji}</span>
+                                    <span className="leading-snug">{sig.text}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            {notes && (
+                              <p className="text-[11px] text-foreground/70 leading-relaxed bg-muted/15 rounded-lg p-2.5 border border-border/20 whitespace-pre-wrap">{notes}</p>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Pending actions */}
+                        {pendingActions.length > 0 && (
+                          <div>
+                            <div className="text-[9px] font-semibold text-primary uppercase tracking-wider mb-1.5">Open Actions</div>
+                            <div className="space-y-1">
+                              {pendingActions.map(a => (
+                                <div key={a.id} className="flex items-start gap-2 text-[11px] text-foreground/80">
+                                  <span className={`mt-0.5 w-3 h-3 rounded border shrink-0 ${
+                                    a.priority === 'high' ? 'border-status-danger/60' : 'border-border/60'
+                                  }`} />
+                                  <span className="leading-snug">{a.text}</span>
+                                  {a.dueDate && <span className="text-[9px] text-muted-foreground/60 shrink-0">Due {new Date(a.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Deal context */}
+                        <div className="border-t border-border/30 pt-3">
+                          <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Deal Context</div>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="bg-muted/20 rounded-lg p-2">
+                              <div className="text-[9px] text-muted-foreground mb-0.5">Stage</div>
+                              <div className="text-[11px] font-medium">{deal.stage}</div>
+                            </div>
+                            <div className="bg-muted/20 rounded-lg p-2">
+                              <div className="text-[9px] text-muted-foreground mb-0.5">Confidence</div>
+                              <div className={`text-[11px] font-semibold font-mono ${getConfidenceColor(deal.confidenceScore)}`}>{deal.confidenceScore}%</div>
+                            </div>
+                            <div className="bg-muted/20 rounded-lg p-2">
+                              <div className="text-[9px] text-muted-foreground mb-0.5">ACV</div>
+                              <div className="text-[11px] font-semibold font-mono">{formatCurrency(deal.value)}</div>
+                            </div>
+                          </div>
+                          {latestSnapshot && (
+                            <p className="text-[11px] text-muted-foreground/70 mt-2 leading-relaxed">
+                              <span className="font-medium text-muted-foreground">Situation:</span> {latestSnapshot.whatsHappening}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* AI Brief section */}
+                        <div className="border-t border-border/30 pt-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="text-[9px] font-semibold text-amber-400 uppercase tracking-wider flex items-center gap-1">
+                              <Sparkles className="w-2.5 h-2.5" />
+                              AI-Generated Brief
+                            </div>
+                            <button
+                              onClick={() => handleGenerateAIBrief(s)}
+                              disabled={aiBriefLoading}
+                              className="flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25 transition-colors disabled:opacity-50"
+                            >
+                              {aiBriefLoading ? (
+                                <><div className="w-2.5 h-2.5 border border-amber-400 border-t-transparent rounded-full animate-spin" />Generating...</>
+                              ) : (
+                                <><Sparkles className="w-2.5 h-2.5" />{aiBriefText ? 'Regenerate' : 'Generate Brief'}</>
+                              )}
+                            </button>
+                          </div>
+                          {aiBriefText ? (
+                            <div className="bg-amber-500/5 border border-amber-500/15 rounded-lg p-3">
+                              <pre className="text-[11px] text-foreground/85 leading-relaxed whitespace-pre-wrap font-body">{aiBriefText}</pre>
+                            </div>
+                          ) : aiBriefLoading ? (
+                            <div className="flex items-center gap-2 text-[11px] text-muted-foreground/60 py-3">
+                              <div className="w-3 h-3 border border-amber-400/50 border-t-transparent rounded-full animate-spin" />
+                              Generating brief for {s.name}...
+                            </div>
+                          ) : (
+                            <p className="text-[10px] text-muted-foreground/60 italic">
+                              Click "Generate Brief" to get an AI-crafted narrative brief based on all available context for {s.name}.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Profile View (or editing mode) */}
+                  {(profileModalView === 'profile' || isEditingProfile) && (
+                  <div className="space-y-0">
 
                   {/* Avatar + Name/Title */}
                   <div className="flex items-center gap-3 mb-5">
@@ -1624,6 +1582,8 @@ export default function DealDetail() {
                         <p className="text-[10px] text-muted-foreground/60 italic">No direct interactions recorded.</p>
                       )}
                     </div>
+                  )}
+                  </div>
                   )}
                 </div>
               </ScrollArea>

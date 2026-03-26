@@ -4,7 +4,7 @@ import { formatCurrency, getConfidenceColor } from '@/lib/data';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   AlertTriangle, Check, Plus, Trash2, Calendar, Send, Loader2,
-  ChevronDown, ChevronUp, RefreshCw, Sparkles
+  ChevronDown, ChevronUp, Sparkles
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -23,7 +23,7 @@ type Snapshot = {
   confidenceChange: number;
   whatsHappening: string | null;
   keyRisks: unknown;
-  whatsNext: string | null;
+  whatsNext: string[] | null;
   interactionType: string | null;
 };
 
@@ -72,7 +72,8 @@ type Props = {
   onStakeholderClick?: (id: number) => void;
 };
 
-type WhatsNextItem = string | { action: string; rationale: string };
+type SuggestedContact = { name: string; title: string; reason: string };
+type WhatsNextItem = string | { action: string; rationale: string; suggestedContacts?: SuggestedContact[] };
 
 /** Expandable action card for What's Next items */
 function WhatsNextCard({
@@ -81,18 +82,24 @@ function WhatsNextCard({
   onStakeholderHover,
   onStakeholderClick,
   onAccept,
+  onAddToMap,
+  dealCompany,
 }: {
   item: WhatsNextItem;
   stakeholders: Stakeholder[];
   onStakeholderHover?: (id: number | null) => void;
   onStakeholderClick?: (id: number) => void;
   onAccept?: (actionText: string) => void;
+  onAddToMap?: (contact: SuggestedContact) => void;
+  dealCompany?: string;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [feedback, setFeedback] = useState<'accepted' | 'dismissed' | 'later' | null>(null);
 
   const actionText = typeof item === 'string' ? item : item.action;
   const rationale = typeof item === 'string' ? null : item.rationale;
+  const suggestedContacts: SuggestedContact[] = typeof item === 'string' ? [] : (item.suggestedContacts ?? []);
+  const [addedContacts, setAddedContacts] = useState<Set<string>>(new Set());
 
   // Find stakeholders mentioned in this action item
   const mentioned = stakeholders.filter(s => {
@@ -205,13 +212,69 @@ function WhatsNextCard({
             </div>
           )}
 
-          {/* Suggested contacts placeholder (no map stakeholders found) */}
-          {mentioned.length === 0 && (
+          {/* Suggested Contacts — AI-recommended people not yet on the map */}
+          {suggestedContacts.length > 0 && (
             <div>
-              <div className="text-[10px] text-muted-foreground/50 uppercase tracking-wider mb-1.5">Suggested Contacts</div>
-              <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-muted/20 border border-border/20">
-                <Sparkles className="w-3 h-3 text-muted-foreground/50 shrink-0" />
-                <span className="text-[11px] text-muted-foreground/60 italic">AI contact suggestions coming soon</span>
+              <div className="text-[10px] text-muted-foreground/50 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                <Sparkles className="w-2.5 h-2.5 text-primary/50" />
+                Suggested Contacts
+              </div>
+              <div className="space-y-2">
+                {suggestedContacts.map(contact => {
+                  const isAdded = addedContacts.has(contact.name);
+                  const linkedInQuery = encodeURIComponent(`${contact.name} ${dealCompany ?? ''}`.trim());
+                  return (
+                    <div
+                      key={contact.name}
+                      className={`rounded-lg border p-2.5 transition-all ${
+                        isAdded
+                          ? 'border-emerald-400/30 bg-emerald-400/5'
+                          : 'border-border/30 bg-muted/10'
+                      }`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
+                          {contact.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[11px] font-semibold text-foreground/90">{contact.name}</div>
+                          <div className="text-[10px] text-muted-foreground/70">{contact.title}</div>
+                          <p className="text-[10px] text-muted-foreground/60 mt-0.5 leading-snug">{contact.reason}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-2 ml-9">
+                        {isAdded ? (
+                          <span className="flex items-center gap-1 text-[10px] text-emerald-400">
+                            <Check className="w-3 h-3" /> Added to map
+                          </span>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onAddToMap?.(contact);
+                              setAddedContacts(prev => new Set(Array.from(prev).concat(contact.name)));
+                            }}
+                            className="flex items-center gap-1 px-2 py-0.5 rounded bg-primary/15 text-primary text-[10px] font-medium hover:bg-primary/25 transition-colors"
+                          >
+                            <Plus className="w-2.5 h-2.5" /> Add to Map
+                          </button>
+                        )}
+                        <a
+                          href={`https://www.linkedin.com/search/results/people/?keywords=${linkedInQuery}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={e => e.stopPropagation()}
+                          className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#0077b5]/15 text-[#0077b5] text-[10px] font-medium hover:bg-[#0077b5]/25 transition-colors"
+                        >
+                          <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                          </svg>
+                          LinkedIn
+                        </a>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -357,23 +420,24 @@ export default function DealInsightPanel({
   const [chatOpen, setChatOpen] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Local overrides for AI insights (updated via chat)
+  // Local overrides for AI insights (updated via chat only — not for whatsNext which is now DB-persisted)
   const [insightOverrides, setInsightOverrides] = useState<{
     whatsHappening?: string;
     keyRisks?: string[];
-    whatsNext?: string;
     updatedAt?: Date;
   }>({});
 
+  const utils = trpc.useUtils();
   const generateInsightsMutation = trpc.ai.generateDealInsight.useMutation({
     onSuccess: (data) => {
       setInsightOverrides({
         whatsHappening: data.whatsHappening,
         keyRisks: data.keyRisks,
-        whatsNext: JSON.stringify(data.whatsNext),
         updatedAt: new Date(),
       });
-      toast.success('Deal insights refreshed by Meridian AI');
+      // Invalidate deal query so snapshots reload with the newly persisted insights
+      utils.deals.get.invalidate({ id: deal.id });
+      toast.success('Deal insights updated — Meridian has analysed the latest context');
     },
     onError: (err) => {
       toast.error('Failed to generate insights: ' + err.message);
@@ -392,7 +456,8 @@ export default function DealInsightPanel({
 
       if (data.updatedInsights) {
         setInsightOverrides({
-          ...data.updatedInsights,
+          whatsHappening: data.updatedInsights.whatsHappening,
+          keyRisks: data.updatedInsights.keyRisks,
           updatedAt: new Date(),
         });
         toast.success('Meridian updated the deal insights based on your input');
@@ -400,6 +465,16 @@ export default function DealInsightPanel({
     },
     onError: (err) => {
       toast.error('Failed to get AI response: ' + err.message);
+    },
+  });
+
+  const addSuggestedContactMutation = trpc.stakeholders.create.useMutation({
+    onSuccess: (newStakeholder) => {
+      utils.deals.get.invalidate({ id: deal.id });
+      toast.success(`${newStakeholder.name} added to the stakeholder map`);
+    },
+    onError: (err) => {
+      toast.error('Failed to add contact: ' + err.message);
     },
   });
 
@@ -435,7 +510,7 @@ export default function DealInsightPanel({
       companyInfo: deal.companyInfo,
       currentWhatsHappening: insightOverrides.whatsHappening ?? latestSnapshot?.whatsHappening ?? undefined,
       currentKeyRisks: currentRisks,
-      currentWhatsNext: insightOverrides.whatsNext ?? latestSnapshot?.whatsNext ?? undefined,
+      currentWhatsNext: JSON.stringify(latestSnapshot?.whatsNext) ?? undefined,
       stakeholders: deal.stakeholders.map(s => ({
         name: s.name,
         title: s.title,
@@ -447,9 +522,10 @@ export default function DealInsightPanel({
     });
   };
 
-  const whatsHappening = insightOverrides.whatsHappening ?? latestSnapshot?.whatsHappening;
+  const whatsHappening: string | null | undefined = insightOverrides.whatsHappening ?? latestSnapshot?.whatsHappening;
   const keyRisks = insightOverrides.keyRisks ?? (latestSnapshot?.keyRisks as string[] | null) ?? [];
-  const whatsNext = insightOverrides.whatsNext ?? latestSnapshot?.whatsNext;
+  // whatsNext is always read from DB snapshot (persisted by AI generation)
+  const whatsNextRaw = latestSnapshot?.whatsNext;
   const wasUpdatedByChat = !!insightOverrides.updatedAt;
 
   // Sparkline data
@@ -538,29 +614,31 @@ export default function DealInsightPanel({
       {/* ── Confidence Header ── */}
       <div className="px-4 pt-1 pb-3 border-b border-border/20 shrink-0">
         <div className="flex items-end justify-between mb-1">
-          <span className="text-[10px] text-muted-foreground/70 uppercase tracking-wider font-medium">Win Confidence</span>
-          <button
-            onClick={() => generateInsightsMutation.mutate({
-              dealId: deal.id,
-              dealName: deal.name,
-              dealStage: deal.stage,
-              dealValue: deal.value,
-              confidenceScore: deal.confidenceScore,
-              companyInfo: deal.companyInfo,
-              stakeholders: deal.stakeholders.map(s => ({
-                name: s.name, title: s.title, role: s.role,
-                sentiment: s.sentiment, engagement: s.engagement,
-              })),
-            })}
-            disabled={generateInsightsMutation.isPending}
-            className="flex items-center gap-1 text-[9.5px] text-muted-foreground/50 hover:text-primary/70 transition-colors disabled:opacity-40"
-            title="Regenerate AI insights"
-          >
-            {generateInsightsMutation.isPending
-              ? <Loader2 className="w-3 h-3 animate-spin" />
-              : <RefreshCw className="w-3 h-3" />}
-            <span>Refresh</span>
-          </button>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[10px] text-muted-foreground/70 uppercase tracking-wider font-medium">Win Confidence</span>
+            {/* Analyse button — generates fresh AI insights and persists to DB */}
+            <button
+              onClick={() => generateInsightsMutation.mutate({
+                dealId: deal.id,
+                dealName: deal.name,
+                dealStage: deal.stage,
+                dealValue: deal.value,
+                confidenceScore: deal.confidenceScore,
+                companyInfo: deal.companyInfo,
+                stakeholders: deal.stakeholders.map(s => ({
+                  name: s.name, title: s.title, role: s.role,
+                  sentiment: s.sentiment, engagement: s.engagement,
+                })),
+              })}
+              disabled={generateInsightsMutation.isPending}
+              className="flex items-center gap-1 text-[9.5px] text-primary/60 hover:text-primary transition-colors disabled:opacity-40 w-fit"
+              title="Ask Meridian to analyse this deal and generate fresh insights"
+            >
+              {generateInsightsMutation.isPending
+                ? <><Loader2 className="w-2.5 h-2.5 animate-spin" /><span>Analysing…</span></>
+                : <><Sparkles className="w-2.5 h-2.5" /><span>Analyse deal</span></>}
+            </button>
+          </div>
           <div className="flex items-center gap-1.5">
             <span className={`text-3xl font-bold font-mono leading-none ${getConfidenceColor(deal.confidenceScore)}`}>
               {deal.confidenceScore}%
@@ -645,24 +723,9 @@ export default function DealInsightPanel({
           )}
 
           {/* ── What's Next ── */}
-          {whatsNext && (() => {
-            // Try to parse as structured JSON array first
-            let actionItems: WhatsNextItem[] = [];
-            try {
-              const parsed = JSON.parse(whatsNext);
-              if (Array.isArray(parsed)) {
-                actionItems = parsed;
-              } else {
-                actionItems = [whatsNext];
-              }
-            } catch {
-              // Fallback: split plain text into sentences
-              const rawItems = whatsNext
-                .split(/(?<=[.!?])\s+(?=[A-Z0-9])|\n+/)
-                .map(s => s.replace(/^\d+\.\s*/, '').trim())
-                .filter(s => s.length > 10);
-              actionItems = rawItems.length > 0 ? rawItems : [whatsNext];
-            }
+          {whatsNextRaw && whatsNextRaw.length > 0 && (() => {
+            // whatsNextRaw is string[] from DB (Drizzle json column typed as string[])
+            const actionItems: WhatsNextItem[] = whatsNextRaw;
 
             return (
               <div>
@@ -670,7 +733,7 @@ export default function DealInsightPanel({
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
                   <span className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider">What's Next</span>
                 </div>
-                <div className="space-y-2">
+<div className="space-y-2">
                   {actionItems.map((item, idx) => (
                     <WhatsNextCard
                       key={idx}
@@ -678,6 +741,18 @@ export default function DealInsightPanel({
                       stakeholders={deal.stakeholders}
                       onStakeholderHover={onStakeholderHover}
                       onStakeholderClick={onStakeholderClick}
+                      dealCompany={deal.name}
+                      onAddToMap={(contact) => {
+                        addSuggestedContactMutation.mutate({
+                          dealId: deal.id,
+                          name: contact.name,
+                          title: contact.title,
+                          role: 'User',
+                          sentiment: 'Neutral',
+                          engagement: 'Medium',
+                          keyInsights: contact.reason,
+                        });
+                      }}
                       onAccept={(actionText) => {
                         // Add accepted action to Next Actions list
                         setNewActionText(actionText);

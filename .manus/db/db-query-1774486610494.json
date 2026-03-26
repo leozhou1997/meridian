@@ -1,0 +1,9 @@
+{
+  "query": "\nUPDATE snapshots SET whatsNext = JSON_ARRAY(whatsNext) WHERE whatsNext IS NOT NULL AND JSON_VALID(whatsNext) = 0;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute \nUPDATE snapshots SET whatsNext = JSON_ARRAY(whatsNext) WHERE whatsNext IS NOT NULL AND JSON_VALID(whatsNext) = 0;\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 380
+}

@@ -56,3 +56,8 @@
 - [x] Stakeholder Profile: redesign as centered modal with backdrop blur (replace right-side panel)
 - [x] Fix WhatsNextCard: always expandable with rationale + Accept/Dismiss/Later, not gated on stakeholder presence
 - [x] Fix generateDealInsight API error: "expected number received undefined" (missing confidenceScore field)
+- [x] Persist AI insights to DB snapshot (whatsNext as JSON array) — insights survive page refresh, no re-generation needed
+- [x] Remove Refresh button from Deal Insight panel header; replace with subtle Analyse button in confidence section
+- [x] Pre-meeting Brief moved to first screen of Stakeholder Profile Modal (Brief tab default, auto-generates on open; Profile tab for full details)
+- [x] Suggested Contacts in WhatsNextCard: AI-recommended people not yet on map, with Add to Map button and LinkedIn search link
+- [x] whatsNext schema migrated from text to JSON in database

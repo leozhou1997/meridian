@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE `snapshots` MODIFY COLUMN `whatsNext` json;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute ALTER TABLE `snapshots` MODIFY COLUMN `whatsNext` json;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 775
+}

@@ -1,0 +1,1 @@
+ALTER TABLE `snapshots` MODIFY COLUMN `whatsNext` json;

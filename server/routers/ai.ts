@@ -2,6 +2,7 @@ import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import {
   createAiLog,
+  createSnapshot,
   getActivePrompt,
   getAiLogs,
   getAllPrompts,
@@ -309,7 +310,14 @@ Return ONLY a valid JSON object with this exact structure:
   "whatsNext": [
     {
       "action": "Specific action the AE should take (1 sentence, imperative)",
-      "rationale": "Why this action matters strategically — 1-2 sentences coaching the AE on the reasoning"
+      "rationale": "Why this action matters strategically — 1-2 sentences coaching the AE on the reasoning",
+      "suggestedContacts": [
+        {
+          "name": "Full name of person to engage (not already on the stakeholder map)",
+          "title": "Their likely job title",
+          "reason": "Why engaging this person would help advance the deal"
+        }
+      ]
     }
   ]
 }
@@ -318,6 +326,7 @@ Guidelines:
 - Reference stakeholders by name and title in your analysis
 - whatsNext should have 2-4 specific, actionable items
 - rationale should coach the AE, not just repeat the action
+- suggestedContacts: include 0-2 people per action who are NOT already on the stakeholder map but should be engaged. Leave the array empty [] if no new contacts are needed.
 - Be specific to this deal, not generic sales advice
 - Return ONLY the JSON, no markdown, no explanation`;
 
@@ -339,7 +348,7 @@ ${input.recentInteractions ? `Recent Interactions:\n${input.recentInteractions}`
       let insights: {
         whatsHappening: string;
         keyRisks: string[];
-        whatsNext: Array<{ action: string; rationale: string }>;
+        whatsNext: Array<{ action: string; rationale: string; suggestedContacts?: Array<{ name: string; title: string; reason: string }> }>;
       } | null = null;
 
       try {
@@ -369,7 +378,32 @@ ${input.recentInteractions ? `Recent Interactions:\n${input.recentInteractions}`
         latencyMs,
       });
 
-      return { insights, tokensUsed, latencyMs };
+      // Persist insights as a new snapshot so they survive page refresh
+      if (insights) {
+        try {
+          await createSnapshot({
+            dealId: input.dealId,
+            tenantId: tenant.id,
+            date: new Date(),
+            whatsHappening: insights.whatsHappening,
+            keyRisks: insights.keyRisks as any,
+            whatsNext: insights.whatsNext as any,
+            confidenceScore: input.confidenceScore,
+            confidenceChange: 0,
+            aiGenerated: true,
+          });
+        } catch (snapshotErr) {
+          console.warn('[AI] Failed to persist snapshot:', snapshotErr);
+        }
+      }
+
+      return {
+        whatsHappening: insights?.whatsHappening ?? '',
+        keyRisks: insights?.keyRisks ?? [],
+        whatsNext: insights?.whatsNext ?? [],
+        tokensUsed,
+        latencyMs,
+      };
     }),
 
   // Inline contextual chat — user corrects or asks about deal insights

@@ -155,7 +155,7 @@ export const snapshots = mysqlTable("snapshots", {
   tenantId: int("tenantId").notNull(),
   date: timestamp("date").notNull(),
   whatsHappening: text("whatsHappening"),
-  whatsNext: text("whatsNext"),
+  whatsNext: json("whatsNext").$type<string[]>(),
   keyRisks: json("keyRisks"),
   confidenceScore: int("confidenceScore").default(50).notNull(),
   confidenceChange: int("confidenceChange").default(0).notNull(),

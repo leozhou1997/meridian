@@ -1,0 +1,50 @@
+{
+  "query": "SELECT id, dealId, whatsNext FROM snapshots LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute SELECT id, dealId, whatsNext FROM snapshots LIMIT 10;",
+  "rows": [
+    {
+      "id": "1",
+      "dealId": "1",
+      "whatsNext": "Send benchmark comparison vs competitor. Schedule security review with engineering team."
+    },
+    {
+      "id": "2",
+      "dealId": "1",
+      "whatsNext": "Follow up with cost analysis. Get intro to CFO through Sarah."
+    },
+    {
+      "id": "3",
+      "dealId": "1",
+      "whatsNext": "Send product overview deck. Schedule technical demo."
+    },
+    {
+      "id": "4",
+      "dealId": "2",
+      "whatsNext": "Expedite legal review. Prepare final contract draft."
+    },
+    {
+      "id": "5",
+      "dealId": "2",
+      "whatsNext": "Prepare pricing proposal. Get legal team involved."
+    },
+    {
+      "id": "6",
+      "dealId": "3",
+      "whatsNext": "Identify new champion. Request intro to David replacement."
+    },
+    {
+      "id": "7",
+      "dealId": "4",
+      "whatsNext": "Reassess deal viability. Consider reaching out to different stakeholder."
+    },
+    {
+      "id": "8",
+      "dealId": "5",
+      "whatsNext": "Schedule follow-up with CTO. Send ROI calculator."
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tdealId\twhatsNext\n1\t1\tSend benchmark comparison vs competitor. Schedule security review with engineering team.\n2\t1\tFollow up with cost analysis. Get intro to CFO through Sarah.\n3\t1\tSend product overview deck. Schedule technical demo.\n4\t2\tExpedite legal review. Prepare final contract draft.\n5\t2\tPrepare pricing proposal. Get legal team involved.\n6\t3\tIdentify new champion. Request intro to David replacement.\n7\t4\tReassess deal viability. Consider reaching out to different stakeholder.\n8\t5\tSchedule follow-up with CTO. Send ROI calculator.\n",
+  "stderr": "",
+  "execution_time_ms": 421
+}

@@ -19,7 +19,7 @@ export const snapshotsRouter = router({
       dealId: z.number(),
       date: z.date(),
       whatsHappening: z.string().optional(),
-      whatsNext: z.string().optional(),
+      whatsNext: z.union([z.string(), z.array(z.string())]).optional(),
       keyRisks: z.array(z.string()).optional(),
       confidenceScore: z.number().min(0).max(100),
       confidenceChange: z.number().default(0),
@@ -29,7 +29,11 @@ export const snapshotsRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       const tenant = await getOrCreateDefaultTenant(ctx.user.id, ctx.user.name ?? "User");
-      const id = await createSnapshot({ ...input, tenantId: tenant.id });
+      // Normalize whatsNext to string[] for DB storage
+      const whatsNext = typeof input.whatsNext === 'string'
+        ? [input.whatsNext]
+        : input.whatsNext;
+      const id = await createSnapshot({ ...input, whatsNext, tenantId: tenant.id });
       return { id };
     }),
 });

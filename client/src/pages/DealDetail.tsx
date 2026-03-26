@@ -66,6 +66,7 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 type SentimentType = 'Positive' | 'Neutral' | 'Negative';
 type RoleType = 'Champion' | 'Decision Maker' | 'Influencer' | 'Blocker' | 'User' | 'Evaluator';
@@ -121,6 +122,7 @@ const roleConfig: Record<RoleType, { bg: string; text: string; border: string }>
 export default function DealDetail() {
   const [, params] = useRoute('/deal/:id');
   const dealId = params?.id ? Number(params.id) : 0;
+  const { t } = useLanguage();
 
   // ── Real API queries ──────────────────────────────────────────────────────
   const { data: dealData, isLoading: dealLoading } = trpc.deals.get.useQuery(
@@ -569,7 +571,7 @@ export default function DealDetail() {
             onClick={() => toast('Update Account History coming soon')}
             className="font-display text-xs shrink-0"
           >
-            Update Account History
+            {t('deal.updateHistory')}
           </Button>
         </div>
       </div>
@@ -583,19 +585,19 @@ export default function DealDetail() {
               <TabsList className="bg-transparent h-10 gap-1 p-0">
                 <TabsTrigger value="map" className="data-[state=active]:bg-muted/50 data-[state=active]:shadow-none rounded-lg text-xs font-display gap-1.5 px-3 h-8">
                   <Map className="w-3.5 h-3.5" />
-                  Buying Committee
+                  {t('deal.buyingCommittee')}
                 </TabsTrigger>
                 <TabsTrigger value="signals" className="data-[state=active]:bg-muted/50 data-[state=active]:shadow-none rounded-lg text-xs font-display gap-1.5 px-3 h-8">
                   <BarChart3 className="w-3.5 h-3.5" />
-                  Account Signals
+                  {t('deal.accountSignals')}
                 </TabsTrigger>
                 <TabsTrigger value="discussions" className="data-[state=active]:bg-muted/50 data-[state=active]:shadow-none rounded-lg text-xs font-display gap-1.5 px-3 h-8">
                   <MessageSquare className="w-3.5 h-3.5" />
-                  All Interactions
+                  {t('deal.allInteractions')}
                 </TabsTrigger>
                 <TabsTrigger value="strategy" className="data-[state=active]:bg-muted/50 data-[state=active]:shadow-none rounded-lg text-xs font-display gap-1.5 px-3 h-8">
                   <Target className="w-3.5 h-3.5" />
-                  Deal Strategy
+                  {t('deal.dealStrategy')}
                 </TabsTrigger>
               </TabsList>
             </div>

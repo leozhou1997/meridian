@@ -7,6 +7,7 @@ import { AlertTriangle, TrendingUp, TrendingDown, ArrowRight, Clock, Target, Bar
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const container = {
   hidden: { opacity: 0 },
@@ -20,6 +21,7 @@ const item = {
 export default function Dashboard() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
+  const { t } = useLanguage();
 
   const { data: deals = [], isLoading } = trpc.deals.list.useQuery(undefined, {
     refetchOnWindowFocus: false,
@@ -59,9 +61,9 @@ export default function Dashboard() {
         {/* Header */}
         <motion.div variants={item} className="mb-8 flex items-start justify-between">
           <div>
-            <h1 className="font-display text-2xl font-bold mb-1">Good morning, {firstName}</h1>
+            <h1 className="font-display text-2xl font-bold mb-1">{t('dashboard.greeting')}, {firstName}</h1>
             <p className="text-muted-foreground text-sm">
-              {deals.length === 0 ? 'Welcome to Meridian. Create your first deal to get started.' : "Here's what needs your attention today."}
+              {deals.length === 0 ? t('dashboard.welcome') : t('dashboard.attention')}
             </p>
           </div>
         </motion.div>
@@ -69,10 +71,10 @@ export default function Dashboard() {
         {/* KPI Cards */}
         <motion.div variants={item} className="grid grid-cols-4 gap-4 mb-8">
           {[
-            { label: 'Total Pipeline', value: formatCurrency(totalPipeline), icon: BarChart3, color: 'text-primary' },
-            { label: 'Predictable Revenue', value: formatCurrency(predictableRevenue), icon: Target, color: 'text-status-success' },
-            { label: 'Avg Confidence', value: `${avgConfidence}%`, icon: Shield, color: 'text-status-warning' },
-            { label: 'At Risk Deals', value: `${atRiskDeals.length}`, icon: AlertTriangle, color: 'text-status-danger' },
+            { label: t('dashboard.totalPipeline'), value: formatCurrency(totalPipeline), icon: BarChart3, color: 'text-primary' },
+            { label: t('dashboard.predictableRevenue'), value: formatCurrency(predictableRevenue), icon: Target, color: 'text-status-success' },
+            { label: t('dashboard.avgConfidence'), value: `${avgConfidence}%`, icon: Shield, color: 'text-status-warning' },
+            { label: t('dashboard.atRiskDeals'), value: `${atRiskDeals.length}`, icon: AlertTriangle, color: 'text-status-danger' },
           ].map((kpi) => (
             <Card key={kpi.label} className="bg-card border-border/50">
               <CardContent className="p-4">
@@ -95,7 +97,7 @@ export default function Dashboard() {
                 <CardHeader className="pb-3">
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4 text-status-danger" />
-                    <CardTitle className="text-sm font-display">Deals Needing Action</CardTitle>
+                    <CardTitle className="text-sm font-display">{t('dashboard.dealsNeedingAction')}</CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-2">
@@ -146,7 +148,7 @@ export default function Dashboard() {
                 <CardHeader className="pb-3">
                   <div className="flex items-center gap-2">
                     <BarChart3 className="w-4 h-4 text-primary" />
-                    <CardTitle className="text-sm font-display">Pipeline by Stage</CardTitle>
+                    <CardTitle className="text-sm font-display">{t('dashboard.pipelineByStage')}</CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -181,8 +183,8 @@ export default function Dashboard() {
               <Card className="bg-card border-border/50">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm font-display">All Deals</CardTitle>
-                    <span className="text-xs text-muted-foreground">{deals.length} total</span>
+                    <CardTitle className="text-sm font-display">{t('dashboard.allDeals')}</CardTitle>
+                    <span className="text-xs text-muted-foreground">{deals.length} {t('dashboard.total')}</span>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-1 p-3">

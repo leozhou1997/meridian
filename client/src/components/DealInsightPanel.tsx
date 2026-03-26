@@ -7,6 +7,7 @@ import {
   ChevronDown, ChevronUp, Sparkles
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 type NextAction = {
   id: number;
@@ -510,6 +511,7 @@ export default function DealInsightPanel({
   onStakeholderHover,
   onStakeholderClick,
 }: Props) {
+  const { t } = useLanguage();
   // Panel collapse state
   const [collapsed, setCollapsed] = useState(false);
 
@@ -650,7 +652,7 @@ export default function DealInsightPanel({
     return (
       <div className="mt-2">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-[9px] text-muted-foreground/60 uppercase tracking-wider">Confidence Trend</span>
+          <span className="text-[9px] text-muted-foreground/60 uppercase tracking-wider">{t('insight.confidenceTrend')}</span>
           <span className="text-[9px] text-muted-foreground/60">
             {new Date(sorted[0].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             {' → '}
@@ -683,7 +685,7 @@ export default function DealInsightPanel({
       {/* ── Collapse toggle button (always visible) ── */}
       <div className="flex items-center justify-between px-3 pt-3 pb-2 shrink-0">
         {!collapsed && (
-          <span className="text-[10px] text-muted-foreground/50 uppercase tracking-wider font-medium">Deal Insight</span>
+          <span className="text-[10px] text-muted-foreground/50 uppercase tracking-wider font-medium">{t('insight.dealInsight')}</span>
         )}
         <button
           onClick={() => setCollapsed(c => !c)}
@@ -703,7 +705,7 @@ export default function DealInsightPanel({
           <div className="writing-mode-vertical text-[10px] text-muted-foreground/40 uppercase tracking-widest font-medium select-none"
             style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
           >
-            Deal Insight
+            {t('insight.dealInsight')}
           </div>
           <div className={`text-[11px] font-bold font-mono ${
             deal.confidenceScore >= 75 ? 'text-emerald-400' : deal.confidenceScore >= 50 ? 'text-amber-400' : 'text-red-400'
@@ -718,7 +720,7 @@ export default function DealInsightPanel({
       <div className="px-4 pt-1 pb-3 border-b border-border/20 shrink-0">
         <div className="flex items-end justify-between mb-1">
           <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] text-muted-foreground/70 uppercase tracking-wider font-medium">Win Confidence</span>
+            <span className="text-[10px] text-muted-foreground/70 uppercase tracking-wider font-medium">{t('insight.winConfidence')}</span>
             {/* Analyse button — generates fresh AI insights and persists to DB */}
             <button
               onClick={() => generateInsightsMutation.mutate({
@@ -738,8 +740,8 @@ export default function DealInsightPanel({
               title="Ask Meridian to analyse this deal and generate fresh insights"
             >
               {generateInsightsMutation.isPending
-                ? <><Loader2 className="w-2.5 h-2.5 animate-spin" /><span>Analysing…</span></>
-                : <><Sparkles className="w-2.5 h-2.5" /><span>Analyse deal</span></>}
+                ? <><Loader2 className="w-2.5 h-2.5 animate-spin" /><span>{t('insight.analysing')}</span></>
+                : <><Sparkles className="w-2.5 h-2.5" /><span>{t('insight.analyseDeal')}</span></>}
             </button>
           </div>
           <div className="flex items-center gap-1.5">
@@ -778,7 +780,7 @@ export default function DealInsightPanel({
           {wasUpdatedByChat && (
             <div className="flex items-center gap-1.5 text-[10px] text-primary/70 bg-primary/5 border border-primary/15 rounded-lg px-2.5 py-1.5">
               <Sparkles className="w-3 h-3" />
-              <span>Insights updated from your conversation</span>
+              <span>{t('insight.insightsUpdated')}</span>
             </div>
           )}
 
@@ -787,7 +789,7 @@ export default function DealInsightPanel({
             <div>
               <div className="flex items-center gap-1.5 mb-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
-                <span className="text-[11px] font-semibold text-blue-400 uppercase tracking-wider">What's Happening</span>
+                <span className="text-[11px] font-semibold text-blue-400 uppercase tracking-wider">{t('insight.whatsHappening')}</span>
               </div>
               <p className="text-[12.5px] text-foreground/85 leading-relaxed">
                 <StakeholderLinkedText
@@ -805,7 +807,7 @@ export default function DealInsightPanel({
             <div>
               <div className="flex items-center gap-1.5 mb-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
-                <span className="text-[11px] font-semibold text-red-400 uppercase tracking-wider">Key Risks</span>
+                <span className="text-[11px] font-semibold text-red-400 uppercase tracking-wider">{t('insight.keyRisks')}</span>
               </div>
               <div className="space-y-2">
                 {keyRisks.map((risk, i) => (
@@ -830,7 +832,7 @@ export default function DealInsightPanel({
               <div>
                 <div className="flex items-center gap-1.5 mb-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-                  <span className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider">What's Next</span>
+                  <span className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider">{t('insight.whatsNext')}</span>
                 </div>
 <div className="space-y-2">
                   {actionItems.map((item, idx) => (
@@ -872,7 +874,7 @@ export default function DealInsightPanel({
             <div className="flex items-center justify-between mb-2.5">
               <div className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
-                <span className="text-[11px] font-semibold text-primary uppercase tracking-wider">Next Actions</span>
+                <span className="text-[11px] font-semibold text-primary uppercase tracking-wider">{t('insight.nextActions')}</span>
               </div>
               <button
                 onClick={() => setAddingAction(v => !v)}
@@ -912,7 +914,7 @@ export default function DealInsightPanel({
             {/* Action list */}
             <div className="space-y-1">
               {nextActions.length === 0 && !addingAction && (
-                <p className="text-xs text-muted-foreground/40 italic text-center py-3">No actions yet — click + to add</p>
+                <p className="text-xs text-muted-foreground/40 italic text-center py-3">{t('insight.noActions')}</p>
               )}
               {nextActions.map((action) => {
                 const isOverdue = !action.completed && action.dueDate && new Date(action.dueDate) < new Date();
@@ -1013,7 +1015,7 @@ export default function DealInsightPanel({
               value={chatInput}
               onChange={e => setChatInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } }}
-              placeholder="Tell Meridian what changed, or ask why..."
+              placeholder={t('insight.chatPlaceholder')}
               className="flex-1 bg-transparent text-[12px] outline-none placeholder:text-muted-foreground/40 text-foreground/90"
             />
           </div>

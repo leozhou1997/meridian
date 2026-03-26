@@ -14,6 +14,7 @@ import { nextActionsRouter } from "./routers/nextActions";
 import { snapshotsRouter } from "./routers/snapshots";
 import { stakeholdersRouter } from "./routers/stakeholders";
 import { teamRouter } from "./routers/team";
+import { onboardingRouter } from "./routers/onboarding";
 
 export const appRouter = router({
   system: systemRouter,
@@ -41,6 +42,7 @@ export const appRouter = router({
   knowledge: knowledgeRouter,
   ai: aiRouter,
   team: teamRouter,
+  onboarding: onboardingRouter,
 });
 
 export type AppRouter = typeof appRouter;

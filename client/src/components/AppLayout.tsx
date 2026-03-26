@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const stages = ['Discovery', 'Demo', 'Technical Evaluation', 'POC', 'Negotiation', 'Closed Won', 'Closed Lost'] as const;
 
@@ -26,6 +27,7 @@ interface AppLayoutProps {
 export default function AppLayout({ children }: AppLayoutProps) {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { t } = useLanguage();
   const [location, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedStages, setExpandedStages] = useState<Set<string>>(
@@ -90,11 +92,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
     .reduce((s, d) => s + (d.value ?? 0), 0);
 
   const navItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-    { icon: Users, label: 'Stakeholders', path: '/stakeholders' },
-    { icon: FileText, label: 'Transcripts', path: '/transcripts' },
-    { icon: BookOpen, label: 'Knowledge Base', path: '/knowledge' },
-    { icon: MessageSquare, label: 'Ask Meridian', path: '/ask' },
+    { icon: LayoutDashboard, label: t('nav.dashboard'), path: '/' },
+    { icon: Users, label: t('nav.stakeholders'), path: '/stakeholders' },
+    { icon: FileText, label: t('nav.transcripts'), path: '/transcripts' },
+    { icon: BookOpen, label: t('nav.knowledge'), path: '/knowledge' },
+    { icon: MessageSquare, label: t('nav.ask'), path: '/ask' },
   ];
 
   const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name ?? 'U')}&background=4f46e5&color=fff&size=64`;
@@ -146,7 +148,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
               </button>
             </TooltipTrigger>
             <TooltipContent side="right" className="font-display text-xs">
-              {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+              {theme === 'dark' ? t('common.lightMode') : t('common.darkMode')}
             </TooltipContent>
           </Tooltip>
 
@@ -164,7 +166,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 </div>
               </Link>
             </TooltipTrigger>
-            <TooltipContent side="right" className="font-display text-xs">Settings</TooltipContent>
+            <TooltipContent side="right" className="font-display text-xs">{t('nav.settings')}</TooltipContent>
           </Tooltip>
 
           <Tooltip delayDuration={0}>
@@ -176,7 +178,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 <LogOut className="w-[18px] h-[18px]" />
               </button>
             </TooltipTrigger>
-            <TooltipContent side="right" className="font-display text-xs">Sign out</TooltipContent>
+            <TooltipContent side="right" className="font-display text-xs">{t('nav.signout')}</TooltipContent>
           </Tooltip>
 
           <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-sidebar-border mt-1">
@@ -196,7 +198,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         <div className="w-[260px] flex flex-col h-full">
           <div className="p-4 border-b border-sidebar-border">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-display text-sm font-semibold text-sidebar-foreground">Pipeline Overview</h2>
+              <h2 className="font-display text-sm font-semibold text-sidebar-foreground">{t('pipeline.overview')}</h2>
               <div className="flex items-center gap-1">
                 <Tooltip delayDuration={0}>
                   <TooltipTrigger asChild>
@@ -207,7 +209,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                       <Plus className="w-3.5 h-3.5" />
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent side="right" className="font-display text-xs">New Deal</TooltipContent>
+                  <TooltipContent side="right" className="font-display text-xs">{t('pipeline.newDeal')}</TooltipContent>
                 </Tooltip>
               </div>
             </div>
@@ -216,7 +218,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <Input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search deals..."
+                placeholder={t('pipeline.searchDeals')}
                 className="h-8 pl-8 text-xs bg-sidebar-accent/50 border-sidebar-border"
               />
             </div>
@@ -226,12 +228,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
             <div className="p-2">
               {deals.length === 0 ? (
                 <div className="px-3 py-8 text-center">
-                  <p className="text-xs text-muted-foreground">No deals yet.</p>
+                  <p className="text-xs text-muted-foreground">{t('pipeline.noDeals')}</p>
                   <button
                     onClick={() => navigate('/deal/new')}
                     className="text-xs text-primary hover:underline mt-1"
                   >
-                    Create your first deal
+                    {t('pipeline.createFirst')}
                   </button>
                 </div>
               ) : (
@@ -302,11 +304,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
           {/* Pipeline stats footer */}
           <div className="p-4 border-t border-sidebar-border space-y-2">
             <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">Total Pipeline</span>
+              <span className="text-muted-foreground">{t('pipeline.totalPipeline')}</span>
               <span className="font-mono font-medium text-foreground">{formatCurrency(totalPipeline)}</span>
             </div>
             <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">Predictable Revenue</span>
+              <span className="text-muted-foreground">{t('pipeline.predictableRevenue')}</span>
               <span className="font-mono font-medium text-status-success">{formatCurrency(predictableRevenue)}</span>
             </div>
           </div>
@@ -338,7 +340,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             </button>
           </TooltipTrigger>
           <TooltipContent side="right" className="font-display text-xs">
-            {isCollapsed ? 'Show Pipeline' : 'Hide Pipeline'}
+            {isCollapsed ? t('pipeline.show') : t('pipeline.hide')}
           </TooltipContent>
         </Tooltip>
       </div>

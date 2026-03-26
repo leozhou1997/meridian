@@ -75,3 +75,13 @@
 - [x] Update AI prompt: Key Risks to return structured {title, detail, stakeholders[]} instead of plain text
 - [x] Settings page: language switch (EN/ZH), account management (display name), team invite
 - [x] Surface AI Prompt admin interface URL to user — /admin/playground
+
+## Demo Prep (Doctor Scrap - March 27)
+
+- [x] Onboarding wizard page (3-step: company website → sales process → ICP)
+- [x] URL auto-crawl: AI scrapes company website and generates company profile
+- [x] Auto-generate stakeholder map from company URL (AI-powered)
+- [x] New Deal creation flow from onboarding wizard
+- [x] Chinese language translations for all demo-facing pages
+- [x] Doctor Scrap demo data (pre-seeded deals with their real customer types - auto-generated via onboarding)
+- [ ] Demo guide document for Leo

@@ -18,7 +18,8 @@ import { Input } from '@/components/ui/input';
 import {
   ZoomIn, ZoomOut, Maximize2, Edit2, Eye, Plus, Trash2,
   Link2, Link2Off, Save, X, Check, Camera, Mail, Flame,
-  GripVertical, ChevronDown, ChevronUp, Pencil, Clock, Calendar
+  GripVertical, ChevronDown, ChevronUp, Pencil, Clock, Calendar,
+  Layers, LayoutGrid, Minimize2, RotateCcw
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { nanoid } from 'nanoid';
@@ -55,6 +56,14 @@ const NODE_W = 200;
 // Used ONLY for collision math — must be >= actual rendered height
 const NODE_H = 230;
 const CARD_GAP = 24; // minimum gap between card edges
+
+// Compact mode dimensions
+const COMPACT_NODE_W = 80;
+const COMPACT_NODE_H = 80;
+const COMPACT_CARD_GAP = 12;
+
+type ViewLayout = 'concentric' | 'stages';
+
 
 const AVATAR_POOL = [
   'https://api.dicebear.com/7.x/avataaars/svg?seed=Mx&backgroundColor=b6e3f4',
@@ -169,6 +178,8 @@ function resolveCollisions(
   rawY: number,
   maxX: number,
   cardH: number = NODE_H,
+  cardW: number = NODE_W,
+  gap: number = CARD_GAP,
 ): NodePosition[] {
   // Pin the dragged card; copy all others
   let result = positions.map(p =>
@@ -176,8 +187,8 @@ function resolveCollisions(
   );
 
   // Separation needed to have no overlap
-  const needSepX = NODE_W + CARD_GAP;
-  const needSepY = cardH + CARD_GAP;
+  const needSepX = cardW + gap;
+  const needSepY = cardH + gap;
 
   // Run up to 40 full sweeps — each sweep resolves every overlapping pair once.
   // After each individual push we immediately re-read the updated positions so
@@ -256,31 +267,32 @@ const RING_COLORS = [
   'rgba(239,68,68,0.06)',   // outer — red tint
 ];
 
-// ── Auto-layout ───────────────────────────────────────────────────────────────
-function computeInitialPositions(
+// ── Auto-layout ─────────────────────────────────────────────────────────────────────────
+function computeConcentricPositions(
   stakeholders: Stakeholder[],
-  _stages: string[],
   containerW: number,
+  compact: boolean,
 ): NodePosition[] {
-  // Concentric circle layout
-  const centerX = containerW / 2 - NODE_W / 2;
-  const centerY = 320; // vertical center of the map area
+  const nodeW = compact ? COMPACT_NODE_W : NODE_W;
+  const nodeH = compact ? COMPACT_NODE_H : NODE_H;
+  const centerX = containerW / 2 - nodeW / 2;
+  const centerY = compact ? 250 : 320;
 
   if (stakeholders.length === 0) return [];
 
-  // Group stakeholders by ring
   const rings: Stakeholder[][] = [[], [], []];
   stakeholders.forEach(s => {
     const ring = getRing(s.role);
     rings[ring].push(s);
   });
 
-  // Ring radii — scale based on container width
-  const baseRadius = Math.min(containerW * 0.18, 180);
+  const baseRadius = compact
+    ? Math.min(containerW * 0.14, 120)
+    : Math.min(containerW * 0.18, 180);
   const ringRadii = [
-    baseRadius,           // inner ring
-    baseRadius * 1.8,     // middle ring
-    baseRadius * 2.5,     // outer ring
+    baseRadius,
+    baseRadius * 1.8,
+    baseRadius * 2.5,
   ];
 
   const raw: NodePosition[] = [];
@@ -289,7 +301,6 @@ function computeInitialPositions(
     if (ringStakeholders.length === 0) return;
     const radius = ringRadii[ringIdx];
     const angleStep = (2 * Math.PI) / ringStakeholders.length;
-    // Start from top (-PI/2) and distribute evenly
     const startAngle = -Math.PI / 2;
 
     ringStakeholders.forEach((s, i) => {
@@ -302,9 +313,84 @@ function computeInitialPositions(
     });
   });
 
-  // Run a full collision pass on initial layout too
-  const maxX = containerW - NODE_W;
-  return resolveCollisions(raw, null, 0, 0, maxX);
+  const maxX = containerW - nodeW;
+  const gap = compact ? COMPACT_CARD_GAP : CARD_GAP;
+  return resolveCollisions(raw, null, 0, 0, maxX, nodeH);
+}
+
+// Map stakeholder roles to approximate buying journey stages
+function inferStageForRole(role: string, stages: string[]): number {
+  const r = role.toLowerCase();
+  const n = stages.length;
+  // Champions and Users are typically engaged early
+  if (r.includes('champion') || r.includes('user')) return Math.min(1, n - 1);
+  // Evaluators are mid-process
+  if (r.includes('evaluator') || r.includes('influencer')) return Math.min(Math.floor(n * 0.4), n - 1);
+  // Decision Makers engage later
+  if (r.includes('decision')) return Math.min(Math.floor(n * 0.6), n - 1);
+  // Blockers can appear at any stage, place mid-late
+  if (r.includes('blocker')) return Math.min(Math.floor(n * 0.5), n - 1);
+  return 0;
+}
+
+function computeStagePositions(
+  stakeholders: Stakeholder[],
+  stages: string[],
+  containerW: number,
+  compact: boolean,
+): NodePosition[] {
+  const nodeW = compact ? COMPACT_NODE_W : NODE_W;
+  const nodeH = compact ? COMPACT_NODE_H : NODE_H;
+  const gap = compact ? COMPACT_CARD_GAP : CARD_GAP;
+
+  if (stakeholders.length === 0 || stages.length === 0) return [];
+
+  const colWidth = containerW / stages.length;
+  const raw: NodePosition[] = [];
+
+  // Group stakeholders by stage column
+  const columnBuckets: Stakeholder[][] = stages.map(() => []);
+  stakeholders.forEach(s => {
+    // First try exact stage match
+    const exactIdx = stages.findIndex(st => st === s.stage);
+    if (exactIdx >= 0) {
+      columnBuckets[exactIdx].push(s);
+    } else {
+      // Infer stage from role
+      const inferredIdx = inferStageForRole(
+        (s.roles && s.roles.length > 0 ? s.roles[0] : s.role) || 'User',
+        stages
+      );
+      columnBuckets[inferredIdx].push(s);
+    }
+  });
+
+  columnBuckets.forEach((bucket, colIdx) => {
+    const colCenterX = colIdx * colWidth + colWidth / 2 - nodeW / 2;
+    bucket.forEach((s, rowIdx) => {
+      raw.push({
+        id: s.id,
+        x: colCenterX,
+        y: 80 + rowIdx * (nodeH + gap),
+      });
+    });
+  });
+
+  const maxX = containerW - nodeW;
+  return resolveCollisions(raw, null, 0, 0, maxX, nodeH);
+}
+
+function computeInitialPositions(
+  stakeholders: Stakeholder[],
+  stages: string[],
+  containerW: number,
+  layout: ViewLayout = 'concentric',
+  compact: boolean = false,
+): NodePosition[] {
+  if (layout === 'stages' && stages.length > 0) {
+    return computeStagePositions(stakeholders, stages, containerW, compact);
+  }
+  return computeConcentricPositions(stakeholders, containerW, compact);
 }
 
 // ── Sentiment helpers ─────────────────────────────────────────────────────────
@@ -320,6 +406,8 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
   const [containerW, setContainerW] = useState(800);
   const [mode, setMode] = useState<'view' | 'edit'>('view');
   const [heatWindow, setHeatWindow] = useState<HeatWindow>('L14D');
+  const [viewLayout, setViewLayout] = useState<ViewLayout>('concentric');
+  const [compactMode, setCompactMode] = useState(false);
 
   // ── Per-deal state ────────────────────────────────────────────────────────
   const [currentDealId, setCurrentDealId] = useState(deal.id);
@@ -379,7 +467,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
         return;
       }
     }
-    setPositions(computeInitialPositions(stks, deal.buyingStages ?? [], actualW));
+    setPositions(computeInitialPositions(stks, deal.buyingStages ?? [], actualW, viewLayout, compactMode));
     setConnections(buildDefaultConnections(stks, deal.buyingStages ?? []));
     setLocalInteractions([...(deal.meetings ?? [])]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -478,7 +566,24 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
   };
 
   const handleReset = () => {
-    setPositions(computeInitialPositions(localStakeholders, Array.isArray(deal.buyingStages) ? deal.buyingStages : [], containerW));
+    setPositions(computeInitialPositions(localStakeholders, Array.isArray(deal.buyingStages) ? deal.buyingStages : [], containerW, viewLayout, compactMode));
+    setZoom(1);
+  };
+
+  // Switch between concentric and stage layouts
+  const handleLayoutSwitch = (newLayout: ViewLayout) => {
+    setViewLayout(newLayout);
+    const actualW = containerRef.current?.getBoundingClientRect().width || containerW;
+    setPositions(computeInitialPositions(localStakeholders, Array.isArray(deal.buyingStages) ? deal.buyingStages : [], actualW, newLayout, compactMode));
+    setZoom(1);
+  };
+
+  // Toggle compact/expanded mode
+  const handleCompactToggle = () => {
+    const newCompact = !compactMode;
+    setCompactMode(newCompact);
+    const actualW = containerRef.current?.getBoundingClientRect().width || containerW;
+    setPositions(computeInitialPositions(localStakeholders, Array.isArray(deal.buyingStages) ? deal.buyingStages : [], actualW, viewLayout, newCompact));
     setZoom(1);
   };
 
@@ -734,6 +839,41 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
           ))}
         </div>
 
+        {/* Layout switch: Concentric vs Stages */}
+        <div className="flex rounded-lg overflow-hidden border border-border/50 bg-muted/80">
+          <button
+            onClick={() => handleLayoutSwitch('concentric')}
+            className={`flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-medium transition-colors ${
+              viewLayout === 'concentric' ? 'bg-card text-foreground' : 'text-muted-foreground hover:text-foreground'
+            }`}
+            title="Concentric circle layout"
+          >
+            <Layers className="w-3 h-3" /> Circles
+          </button>
+          <button
+            onClick={() => handleLayoutSwitch('stages')}
+            className={`flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-medium transition-colors ${
+              viewLayout === 'stages' ? 'bg-card text-foreground' : 'text-muted-foreground hover:text-foreground'
+            }`}
+            title="Stage-based column layout"
+          >
+            <LayoutGrid className="w-3 h-3" /> Stages
+          </button>
+        </div>
+
+        {/* Compact / Expand toggle */}
+        <button
+          onClick={handleCompactToggle}
+          className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-medium transition-colors border border-border/50 ${
+            compactMode ? 'bg-primary text-primary-foreground' : 'bg-muted/80 text-muted-foreground hover:text-foreground'
+          }`}
+          title={compactMode ? 'Expand cards' : 'Compact view'}
+        >
+          {compactMode ? <Maximize2 className="w-3 h-3" /> : <Minimize2 className="w-3 h-3" />}
+          {compactMode ? 'Expand' : 'Compact'}
+        </button>
+
+        {/* View / Edit mode */}
         <div className="flex rounded-lg overflow-hidden border border-border/50 bg-muted/80">
           <button
             onClick={() => { setMode('view'); setConnectingFrom(null); setConnEditPopup(null); setReroutingConn(null); }}
@@ -753,17 +893,27 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
           </button>
         </div>
 
-        {[
-          { icon: ZoomIn,    action: () => setZoom(z => Math.min(z + 0.15, 1.8)) },
-          { icon: ZoomOut,   action: () => setZoom(z => Math.max(z - 0.15, 0.4)) },
-          { icon: Maximize2, action: handleReset },
-        ].map((btn, i) => (
-          <button key={i} onClick={btn.action}
+        {/* Zoom controls + Reset */}
+        <div className="flex gap-1">
+          <button onClick={() => setZoom(z => Math.min(z + 0.15, 1.8))}
             className="w-7 h-7 rounded bg-muted/80 border border-border/50 flex items-center justify-center hover:bg-muted transition-colors"
+            title="Zoom in"
           >
-            <btn.icon className="w-3.5 h-3.5" />
+            <ZoomIn className="w-3.5 h-3.5" />
           </button>
-        ))}
+          <button onClick={() => setZoom(z => Math.max(z - 0.15, 0.4))}
+            className="w-7 h-7 rounded bg-muted/80 border border-border/50 flex items-center justify-center hover:bg-muted transition-colors"
+            title="Zoom out"
+          >
+            <ZoomOut className="w-3.5 h-3.5" />
+          </button>
+          <button onClick={handleReset}
+            className="w-7 h-7 rounded bg-muted/80 border border-border/50 flex items-center justify-center hover:bg-muted transition-colors"
+            title="Reset layout & zoom"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
 
       {/* Edit mode toolbar */}
@@ -959,38 +1109,63 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
           <rect width="100%" height="100%" fill="url(#dotgrid-unified)" />
         </svg>
 
-        {/* Concentric circle rings */}
-        {(() => {
-          const cx = containerW / 2;
-          const cy = 320 + NODE_H / 2;
-          const baseR = Math.min(containerW * 0.18, 180);
-          const radii = [baseR, baseR * 1.8, baseR * 2.5];
-          return (
-            <svg className="absolute inset-0 w-full pointer-events-none" style={{ height: '100%', overflow: 'visible' }}>
-              {/* Rings from outer to inner */}
-              {[...radii].reverse().map((r, revIdx) => {
-                const idx = radii.length - 1 - revIdx;
-                return (
-                  <g key={idx}>
-                    <circle cx={cx} cy={cy} r={r + NODE_W / 2 + 30}
-                      fill={RING_COLORS[idx]}
-                      stroke={RING_COLORS[idx].replace(/[\d.]+\)$/, '0.3)')}
-                      strokeWidth="1"
-                      strokeDasharray="6 4"
-                    />
-                  </g>
-                );
-              })}
-              {/* Center deal node */}
-              <circle cx={cx} cy={cy} r={28} fill="hsl(var(--primary))" opacity="0.15" />
-              <circle cx={cx} cy={cy} r={20} fill="hsl(var(--primary))" opacity="0.25" />
-              <circle cx={cx} cy={cy} r={4} fill="hsl(var(--primary))" opacity="0.8" />
-              <text x={cx} y={cy + 42} textAnchor="middle" fontSize="10" fill="hsl(var(--muted-foreground))" fontWeight="600" opacity="0.6" style={{ fontFamily: 'var(--font-mono, monospace)' }}>DEAL</text>
-            </svg>
-          );
-        })()}
-
         <div style={{ transform: `scale(${zoom})`, transformOrigin: 'top left', width: '100%', minHeight: '100%', position: 'relative' }}>
+          {/* Layout background: Concentric rings OR Stage columns */}
+          {viewLayout === 'concentric' ? (() => {
+            const nodeW = compactMode ? COMPACT_NODE_W : NODE_W;
+            const nodeH = compactMode ? COMPACT_NODE_H : NODE_H;
+            const cx = containerW / 2;
+            const cy = (compactMode ? 250 : 320) + nodeH / 2;
+            const baseR = compactMode
+              ? Math.min(containerW * 0.14, 120)
+              : Math.min(containerW * 0.18, 180);
+            const radii = [baseR, baseR * 1.8, baseR * 2.5];
+            return (
+              <svg className="absolute inset-0 w-full pointer-events-none" style={{ height: '100%', overflow: 'visible' }}>
+                {[...radii].reverse().map((r, revIdx) => {
+                  const idx = radii.length - 1 - revIdx;
+                  return (
+                    <g key={idx}>
+                      <circle cx={cx} cy={cy} r={r + nodeW / 2 + 30}
+                        fill={RING_COLORS[idx]}
+                        stroke={RING_COLORS[idx].replace(/[\d.]+\)$/, '0.3)')}
+                        strokeWidth="1"
+                        strokeDasharray="6 4"
+                      />
+                    </g>
+                  );
+                })}
+                <circle cx={cx} cy={cy} r={28} fill="hsl(var(--primary))" opacity="0.15" />
+                <circle cx={cx} cy={cy} r={20} fill="hsl(var(--primary))" opacity="0.25" />
+                <circle cx={cx} cy={cy} r={4} fill="hsl(var(--primary))" opacity="0.8" />
+                <text x={cx} y={cy + 42} textAnchor="middle" fontSize="10" fill="hsl(var(--muted-foreground))" fontWeight="600" opacity="0.6" style={{ fontFamily: 'var(--font-mono, monospace)' }}>DEAL</text>
+              </svg>
+            );
+          })() : (
+            /* Stage column headers */
+            <div className="absolute inset-0 w-full h-full pointer-events-none">
+              {/* Column dividers */}
+              <div className="flex w-full h-full">
+                {stageOrder.map((stage, i) => (
+                  <div key={stage} className="flex-1 relative" style={{ borderRight: i < stageOrder.length - 1 ? '1px dashed hsla(var(--border), 0.15)' : 'none' }}>
+                    {/* Stage header */}
+                    <div className="text-center py-3 border-b border-border/20 bg-background/30 backdrop-blur-sm">
+                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                        Stage {i + 1}
+                      </div>
+                      <div className="text-[11px] font-medium text-foreground/80 mt-0.5">
+                        {stage}
+                      </div>
+                    </div>
+                    {/* Subtle column background alternation */}
+                    {i % 2 === 1 && (
+                      <div className="absolute inset-0 bg-foreground/[0.02]" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {/* SVG connections */}
           <svg className="absolute inset-0 w-full h-full" style={{ overflow: 'visible', pointerEvents: mode === 'edit' ? 'all' : 'none' }}>
             <defs>
@@ -1100,6 +1275,51 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
               Number(stakeholder.id) === highlightedStakeholderId
             );
 
+            // ── Compact mode: small avatar dot + name ──
+            if (compactMode) {
+              return (
+                <motion.div
+                  key={stakeholder.id}
+                  className={`absolute select-none z-20 flex flex-col items-center cursor-pointer`}
+                  style={{ left: pos.x, top: pos.y, width: COMPACT_NODE_W }}
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: isHighlighted ? 1.2 : 1 }}
+                  transition={{ duration: 0.25, delay: idx * 0.03 }}
+                  onMouseDown={(e) => handleMouseDown(e, stakeholder.id)}
+                  onMouseEnter={(e) => { setHoveredId(stakeholder.id); setHoverPos({ x: e.clientX, y: e.clientY }); }}
+                  onMouseLeave={() => setHoveredId(null)}
+                  onClick={(e) => {
+                    if (reroutingConn) { handleRerouteTarget(e, stakeholder.id); return; }
+                    if (connectingFrom === '__pending__') { setConnectingFrom(stakeholder.id); return; }
+                    handleNodeClick(e, stakeholder);
+                  }}
+                >
+                  <div className={`relative w-10 h-10 rounded-full border-2 overflow-hidden transition-all ${
+                    isHighlighted ? 'border-primary shadow-lg shadow-primary/30 ring-2 ring-primary/40'
+                    : isConnSrc ? 'border-amber-400 shadow-lg'
+                    : 'border-border/60 hover:border-primary/50 hover:shadow-md'
+                  }`}>
+                    <img
+                      src={stakeholder.avatar}
+                      alt={stakeholder.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(stakeholder.name)}&background=1a1f36&color=fff&size=40`; }}
+                    />
+                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-card"
+                      style={{ backgroundColor: sentimentDot(stakeholder.sentiment) }}
+                    />
+                  </div>
+                  <div className="text-[9px] font-medium text-foreground/80 mt-1 text-center leading-tight max-w-[80px] truncate">
+                    {stakeholder.name.split(' ')[0]}
+                  </div>
+                  <div className="text-[8px] text-muted-foreground/60 truncate max-w-[80px]">
+                    {(stakeholder.roles ?? [stakeholder.role])[0]}
+                  </div>
+                </motion.div>
+              );
+            }
+
+            // ── Full card mode ──
             return (
               <motion.div
                 key={stakeholder.id}

@@ -116,6 +116,12 @@ export const aiRouter = router({
       companyInfo: z.string().optional(),
       lastMeetingSummary: z.string().optional(),
       openActions: z.array(z.string()).optional(),
+      meetings: z.array(z.object({
+        date: z.string().or(z.date()),
+        type: z.string(),
+        keyParticipant: z.string().nullable().optional(),
+        summary: z.string().nullable().optional(),
+      })).optional(),
       language: z.enum(["en", "zh"]).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
@@ -124,7 +130,34 @@ export const aiRouter = router({
       // Get active prompt or use default
       const activePrompt = await getActivePrompt("brief_generation");
       const langSuffix = input.language === "zh" ? "\n\nIMPORTANT: You MUST respond entirely in Simplified Chinese (中文)." : "";
-      const systemPrompt = (activePrompt?.systemPrompt ?? DEFAULT_BRIEF_SYSTEM_PROMPT) + langSuffix;
+
+      // Filter meetings relevant to this stakeholder
+      const allMeetingsWithContent = (input.meetings ?? []).filter(m => m.summary && m.summary.trim().length > 20);
+      const relevantMeetings = allMeetingsWithContent.filter(m =>
+        m.keyParticipant?.toLowerCase().includes(input.stakeholderName.toLowerCase())
+      );
+      const hasMeetingEvidence = relevantMeetings.length > 0 || allMeetingsWithContent.length > 0;
+
+      // Add evidence grounding instruction to system prompt
+      const evidenceInstruction = hasMeetingEvidence
+        ? `\n\nIMPORTANT: Meeting transcripts/notes are provided below. Ground your brief in this evidence. Reference specific conversations and what was said. Do NOT fabricate quotes or meeting outcomes.`
+        : `\n\nNOTE: No meeting transcripts are available for this stakeholder. Base your brief on the stakeholder profile, company info, and role context. Be transparent about what is assumption vs. fact. Suggest key questions to ask in the upcoming meeting to fill information gaps.`;
+
+      const systemPrompt = (activePrompt?.systemPrompt ?? DEFAULT_BRIEF_SYSTEM_PROMPT) + evidenceInstruction + langSuffix;
+
+      // Build meeting evidence for user prompt
+      let meetingEvidenceBlock = '';
+      if (relevantMeetings.length > 0) {
+        meetingEvidenceBlock = `\n\n**Meeting History with ${input.stakeholderName}:**\n${relevantMeetings.map((m, i) => {
+          const dateStr = typeof m.date === 'string' ? m.date : new Date(m.date).toISOString().split('T')[0];
+          return `${i + 1}. ${m.type} (${dateStr}): ${m.summary}`;
+        }).join('\n')}`;
+      } else if (allMeetingsWithContent.length > 0) {
+        meetingEvidenceBlock = `\n\n**Other Deal Meetings (not directly with ${input.stakeholderName}):**\n${allMeetingsWithContent.slice(0, 5).map((m, i) => {
+          const dateStr = typeof m.date === 'string' ? m.date : new Date(m.date).toISOString().split('T')[0];
+          return `${i + 1}. ${m.type} (${dateStr}${m.keyParticipant ? `, ${m.keyParticipant}` : ''}): ${m.summary}`;
+        }).join('\n')}`;
+      }
 
       const userPrompt = `Generate a pre-meeting brief for this stakeholder:
 
@@ -142,9 +175,9 @@ export const aiRouter = router({
 ${input.companyInfo ? `- Company Info: ${input.companyInfo}` : ""}
 
 **What We Know About Them:**
-${input.keyInsights ? `Key Insights: ${input.keyInsights}` : ""}
+${input.keyInsights ? `Key Insights: ${input.keyInsights}` : "No key insights recorded yet."}
 ${input.personalNotes ? `Personal Notes: ${input.personalNotes}` : ""}
-${input.personalSignals?.length ? `Signals: ${input.personalSignals.map(s => `${s.emoji} ${s.text}`).join(", ")}` : ""}
+${input.personalSignals?.length ? `Signals: ${input.personalSignals.map(s => `${s.emoji} ${s.text}`).join(", ")}` : ""}${meetingEvidenceBlock}
 
 **Last Meeting:** ${input.lastMeetingSummary ?? "No recent meeting on record"}
 
@@ -319,7 +352,13 @@ ${input.transcript}`;
         sentiment: z.string(),
         engagement: z.string(),
       })).optional(),
-      recentInteractions: z.string().optional(),
+      meetings: z.array(z.object({
+        date: z.string().or(z.date()),
+        type: z.string(),
+        keyParticipant: z.string().nullable().optional(),
+        summary: z.string().nullable().optional(),
+        duration: z.number().nullable().optional(),
+      })).optional(),
       salesModel: z.string().optional(),
       customModelId: z.number().optional().nullable(),
       language: z.enum(["en", "zh"]).optional(),
@@ -345,60 +384,118 @@ ${input.transcript}`;
       const lang = input.language ?? "en";
       const langInstruction = lang === "zh" ? "\n\nIMPORTANT: You MUST respond entirely in Simplified Chinese (中文). All text in the JSON must be in Chinese." : "";
 
-      const systemPrompt = `You are Meridian, a veteran B2B enterprise sales strategist with 20+ years closing complex multi-stakeholder deals. You think like a top-performing AE who reads political dynamics, not just pipeline metrics.
+      // Determine data richness: do we have actual meeting transcripts/summaries?
+      const meetingsWithContent = (input.meetings ?? []).filter(m => m.summary && m.summary.trim().length > 20);
+      const hasTranscripts = meetingsWithContent.length > 0;
+      const dataLevel = hasTranscripts ? 'evidence-based' : 'early-stage';
+
+      // Build transcript evidence block
+      const transcriptEvidence = hasTranscripts
+        ? meetingsWithContent.map((m, i) => {
+            const dateStr = typeof m.date === 'string' ? m.date : new Date(m.date).toISOString().split('T')[0];
+            return `Meeting ${i + 1} (${m.type}, ${dateStr}${m.keyParticipant ? `, with ${m.keyParticipant}` : ''}):\n${m.summary}`;
+          }).join('\n\n')
+        : '';
+
+      let systemPrompt: string;
+
+      if (dataLevel === 'evidence-based') {
+        // ── EVIDENCE-BASED MODE: Ground everything in transcript data ──
+        systemPrompt = `You are Meridian, a veteran B2B enterprise sales strategist. You analyze deals STRICTLY based on evidence from meeting transcripts and recorded interactions.
 
 You are analyzing this deal through the **${modelName}** sales framework.
-
-The ${modelName} framework evaluates deals across these dimensions:
+The ${modelName} framework dimensions:
 ${dimensionPrompt}
 
-Your analysis MUST explicitly reference ${modelName} dimensions by name. For each risk or action, tie it back to a specific dimension gap.${langInstruction}
+CRITICAL RULE: Every claim you make MUST be traceable to a specific meeting or interaction provided below. Do NOT fabricate information. Do NOT infer dynamics that aren't supported by the evidence. If a ${modelName} dimension has no evidence, explicitly say "No data yet" for that dimension.
 
-Return ONLY a valid JSON object with this exact structure:
+Your analysis MUST reference ${modelName} dimensions by name and cite which meeting/interaction supports each insight.${langInstruction}
+
+Return ONLY a valid JSON object:
 {
-  "whatsHappening": "2-3 sentence narrative. Read between the lines: What do the engagement patterns TELL you about where this deal really stands? Who is gaining or losing influence? What political shift is underway? Reference stakeholders by name. NEVER restate deal stage, value, or confidence — the rep already sees those.",
+  "whatsHappening": "2-3 sentences grounded in the meeting evidence. What did the conversations ACTUALLY reveal? Reference specific meetings, quotes, or behaviors observed. Name stakeholders. Do NOT speculate beyond what the data shows.",
   "keyRisks": [
     {
-      "title": "Crisp risk title (max 8 words, noun phrase)",
-      "detail": "1-2 sentences: What SPECIFICALLY will go wrong if this isn't addressed? Name the stakeholder. Name the ${modelName} dimension gap. Give a timeline if relevant (e.g., 'If unresolved before the QBR on...')",
+      "title": "Crisp risk title (max 8 words)",
+      "detail": "Based on [Meeting X with Person Y], we observed [specific evidence]. This creates a gap in ${modelName}'s [Dimension] because [consequence]. If unaddressed, [specific outcome].",
       "stakeholders": ["Name of stakeholder involved"]
     }
   ],
   "whatsNext": [
     {
-      "action": "Imperative verb + specific person + specific outcome (e.g., 'Get Marcus Rodriguez to confirm budget allocation in a 1:1 before the March QBR')",
-      "rationale": "WHY this matters strategically. Connect to ${modelName} dimension. Coach the rep: what signal should they watch for? What does success look like?",
-      "suggestedContacts": [
-        {
-          "name": "Realistic full name of a person the rep should find and engage",
-          "title": "Realistic job title at the target company",
-          "reason": "Why this person specifically — what gap do they fill in the buying committee?"
-        }
-      ]
+      "action": "Imperative verb + specific person + specific outcome",
+      "rationale": "Based on what [Person] said in [Meeting], the logical next move is... This addresses the ${modelName} [Dimension] gap.",
+      "suggestedContacts": []
     }
   ]
 }
 
-Critical rules:
-- keyRisks: 2-4 items. Title must be a crisp noun phrase (e.g., "CFO's Procurement Veto Power", "Missing Technical Validation"). Detail must explain the CONSEQUENCE, not just describe the situation. NEVER repeat deal metadata (stage, value, confidence).
-- whatsHappening: Analyze DYNAMICS — momentum shifts, political signals, engagement pattern changes. Think: "What would a seasoned AE notice that a junior rep would miss?"
-- whatsNext: 2-4 items. Every action must name a specific person and a specific measurable outcome. Bad: "Follow up with the team". Good: "Book a 30-min technical deep-dive with Jamie Park to validate the integration architecture before the POC deadline."
-- rationale: Coach the rep like a mentor. Explain the strategic logic, not just restate the action. Reference ${modelName} dimensions.
-- suggestedContacts: 0-2 per action. Only suggest people NOT already on the stakeholder map. Generate realistic names and titles for the target company's industry. Empty [] if no new contacts needed.
-- Return ONLY the JSON, no markdown, no explanation`;
+Rules:
+- keyRisks: 2-4 items. Each MUST cite evidence from a specific meeting. No fabricated risks.
+- whatsHappening: Summarize what the meetings ACTUALLY revealed, not what you imagine is happening.
+- whatsNext: 2-4 items. Actions must follow logically from the meeting evidence.
+- suggestedContacts: Only suggest if a meeting participant mentioned someone not yet on the map. Otherwise empty [].
+- If there's not enough data for a section, say so honestly rather than fabricating.
+- Return ONLY JSON, no markdown.`;
+      } else {
+        // ── EARLY-STAGE MODE: Only company + stakeholder info, no transcripts ──
+        systemPrompt = `You are Meridian, a B2B sales strategist. This is an EARLY-STAGE deal with NO meeting transcripts yet. You can only work with the company profile and identified stakeholders.
+
+You are evaluating this deal through the **${modelName}** framework.
+The ${modelName} dimensions:
+${dimensionPrompt}
+
+CRITICAL CONSTRAINTS:
+- You have NO meeting data, NO conversation transcripts, NO direct evidence of stakeholder behavior.
+- You MUST NOT fabricate meeting outcomes, stakeholder quotes, or engagement dynamics.
+- You CAN provide: initial hypothesis based on company profile, industry patterns, and stakeholder roles.
+- You MUST clearly label everything as "hypothesis" or "assumption" — not fact.
+- For each ${modelName} dimension, indicate what information is MISSING and needs to be gathered.${langInstruction}
+
+Return ONLY a valid JSON object:
+{
+  "whatsHappening": "2-3 sentences: Based on the company profile and identified stakeholders, here is the initial opportunity hypothesis. Be explicit about what we DON'T know yet. Flag that this is pre-engagement analysis.",
+  "keyRisks": [
+    {
+      "title": "Risk title (max 8 words)",
+      "detail": "HYPOTHESIS: Based on [company profile / industry pattern], [risk]. We need [specific meeting/data] to validate. ${modelName} dimension gap: [Dimension] — no evidence gathered yet.",
+      "stakeholders": ["Name if relevant"]
+    }
+  ],
+  "whatsNext": [
+    {
+      "action": "First engagement action — who to meet and what to learn",
+      "rationale": "We need to gather evidence for ${modelName}'s [Dimension]. This meeting will help us validate [hypothesis]. Key questions to ask: [specific questions].",
+      "suggestedContacts": []
+    }
+  ]
+}
+
+Rules:
+- This is a PLANNING phase, not an analysis phase. Focus on what to LEARN, not what you already know.
+- whatsHappening: State the opportunity hypothesis + explicitly list what's unknown.
+- keyRisks: 2-3 items. Frame as hypothetical risks that need validation through meetings.
+- whatsNext: 2-3 items. Focus on first meetings to schedule and key questions to ask. Every action should aim to fill a ${modelName} dimension gap.
+- Do NOT suggest contacts unless the company profile gives clear hints about who to find.
+- Return ONLY JSON, no markdown.`;
+      }
 
       const stakeholderSummary = input.stakeholders?.map(s =>
         `- ${s.name} (${s.title ?? s.role}): ${s.sentiment} sentiment, ${s.engagement} engagement`
       ).join("\n") ?? "No stakeholders on record";
 
-      const userPrompt = `Deal: ${input.dealName}
+      let userPrompt = `Deal: ${input.dealName}
 Stage: ${input.dealStage} | Value: $${input.dealValue.toLocaleString()} | Confidence: ${input.confidenceScore}%
 ${input.companyInfo ? `Company Context: ${input.companyInfo}` : ""}
 
 Stakeholders:
-${stakeholderSummary}
+${stakeholderSummary}`;
 
-${input.recentInteractions ? `Recent Interactions:\n${input.recentInteractions}` : ""}`;
+      if (hasTranscripts) {
+        userPrompt += `\n\n=== MEETING EVIDENCE (${meetingsWithContent.length} meetings with notes) ===\n${transcriptEvidence}`;
+      } else {
+        userPrompt += `\n\n⚠️ NO MEETING TRANSCRIPTS AVAILABLE. This deal has ${(input.meetings ?? []).length} meetings recorded but none with substantive notes/summaries. Analysis must be limited to company profile and stakeholder list.`;
+      }
 
       const { content, tokensUsed, latencyMs } = await callOpenAI(systemPrompt, userPrompt);
 
@@ -459,6 +556,7 @@ ${input.recentInteractions ? `Recent Interactions:\n${input.recentInteractions}`
         whatsHappening: insights?.whatsHappening ?? '',
         keyRisks: insights?.keyRisks ?? [],
         whatsNext: insights?.whatsNext ?? [],
+        dataLevel,
         tokensUsed,
         latencyMs,
       };
@@ -483,6 +581,12 @@ ${input.recentInteractions ? `Recent Interactions:\n${input.recentInteractions}`
         sentiment: z.string(),
         engagement: z.string(),
       })).optional(),
+      meetings: z.array(z.object({
+        date: z.string().or(z.date()),
+        type: z.string(),
+        keyParticipant: z.string().nullable().optional(),
+        summary: z.string().nullable().optional(),
+      })).optional(),
       userMessage: z.string(),
       language: z.enum(["en", "zh"]).optional(),
     }))
@@ -490,13 +594,22 @@ ${input.recentInteractions ? `Recent Interactions:\n${input.recentInteractions}`
       const tenant = await getOrCreateDefaultTenant(ctx.user.id, ctx.user.name ?? "User");
       const chatLangInstruction = input.language === "zh" ? "\n\nIMPORTANT: You MUST respond entirely in Simplified Chinese (中文)." : "";
 
+      // Build meeting evidence for chat context
+      const meetingsWithContent = (input.meetings ?? []).filter(m => m.summary && m.summary.trim().length > 20);
+      const hasEvidence = meetingsWithContent.length > 0;
+      const evidenceNote = hasEvidence
+        ? `\n\nIMPORTANT: You have access to meeting transcripts/notes below. Ground your advice in this evidence. If the rep asks about something not covered in the meetings, say so.`
+        : `\n\nNOTE: No meeting transcripts are available for this deal yet. Be transparent about this limitation. If the rep shares new information verbally, that becomes the first real evidence — treat it accordingly.`;
+
       const systemPrompt = `You are Meridian, a veteran sales strategist acting as the rep's trusted advisor. You've seen hundreds of complex B2B deals and you pattern-match instantly.
 
 Your role:
 - When the rep shares NEW information ("Met with CFO yesterday", "Budget approved"): Immediately assess how this changes the deal dynamics. What doors does it open? What risks does it create? Update insights if the change is material.
-- When the rep asks WHY: Explain your reasoning like a mentor. Reference specific stakeholder behaviors, engagement patterns, and political dynamics. Never give vague answers.
-- When the rep asks WHAT TO DO: Give a specific play with a named person, a concrete action, and an expected outcome. Think like a coach drawing up a play, not a consultant writing a report.
+- When the rep asks WHY: Explain your reasoning like a mentor. Reference specific meeting evidence and stakeholder behaviors. Never give vague answers.
+- When the rep asks WHAT TO DO: Give a specific play with a named person, a concrete action, and an expected outcome. Ground your recommendation in what the meetings revealed.
 - When the rep CORRECTS you: Acknowledge the correction, explain what you got wrong and why, then revise your assessment.
+
+CRITICAL: Only reference information that comes from the meeting evidence, stakeholder data, or what the rep tells you directly. Do NOT fabricate meeting outcomes or stakeholder quotes.${evidenceNote}
 
 Tone: Direct, confident, peer-to-peer. Like a senior AE giving advice over coffee. 2-4 sentences max for analysis. Use bullet points sparingly.
 
@@ -514,12 +627,20 @@ Only include JSON if insights actually need updating. Most conversational exchan
         `- ${s.name} (${s.title ?? s.role}): ${s.sentiment} sentiment, ${s.engagement} engagement`
       ).join("\n") ?? "No stakeholders on record";
 
+      // Build meeting evidence for user prompt
+      const meetingEvidence = hasEvidence
+        ? `\n\nMeeting Evidence:\n${meetingsWithContent.map((m, i) => {
+            const dateStr = typeof m.date === 'string' ? m.date : new Date(m.date).toISOString().split('T')[0];
+            return `${i + 1}. ${m.type} (${dateStr}${m.keyParticipant ? `, ${m.keyParticipant}` : ''}): ${m.summary}`;
+          }).join('\n')}`
+        : '';
+
       const userPrompt = `Deal: ${input.dealName}
 Stage: ${input.dealStage} | Value: $${input.dealValue.toLocaleString()} | Confidence: ${input.confidenceScore}%
 ${input.companyInfo ? `Company: ${input.companyInfo}` : ""}
 
 Stakeholders:
-${stakeholderSummary}
+${stakeholderSummary}${meetingEvidence}
 
 Current AI Insights:
 What's Happening: ${input.currentWhatsHappening ?? "Not set"}

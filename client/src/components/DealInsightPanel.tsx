@@ -39,6 +39,15 @@ type Stakeholder = {
   engagement: string;
 };
 
+type Meeting = {
+  id: number;
+  date: Date | string;
+  type: string;
+  keyParticipant: string | null;
+  summary: string | null;
+  duration: number | null;
+};
+
 type Deal = {
   id: number;
   name: string;
@@ -50,6 +59,7 @@ type Deal = {
   customModelId?: number | null;
   snapshots: Snapshot[];
   stakeholders: Stakeholder[];
+  meetings?: Meeting[];
 };
 
 type ChatMessage = {
@@ -543,6 +553,7 @@ export default function DealInsightPanel({
     keyRisks?: KeyRiskItem[] | string[];
     updatedAt?: Date;
   }>({});
+  const [insightDataLevel, setInsightDataLevel] = useState<'early-stage' | 'evidence-based' | null>(null);
 
   const utils = trpc.useUtils();
   const generateInsightsMutation = trpc.ai.generateDealInsight.useMutation({
@@ -552,9 +563,12 @@ export default function DealInsightPanel({
         keyRisks: data.keyRisks,
         updatedAt: new Date(),
       });
+      setInsightDataLevel(data.dataLevel as 'early-stage' | 'evidence-based');
       // Invalidate deal query so snapshots reload with the newly persisted insights
       utils.deals.get.invalidate({ id: deal.id });
-      toast.success('Deal insights updated — Meridian has analysed the latest context');
+      toast.success(data.dataLevel === 'early-stage'
+        ? 'Initial assessment generated — upload meeting transcripts for deeper insights'
+        : 'Deal insights updated — Meridian has analysed the latest context');
     },
     onError: (err) => {
       toast.error('Failed to generate insights: ' + err.message);
@@ -637,6 +651,12 @@ export default function DealInsightPanel({
         role: s.role,
         sentiment: s.sentiment,
         engagement: s.engagement,
+      })),
+      meetings: (deal.meetings ?? []).map(m => ({
+        date: typeof m.date === 'string' ? m.date : new Date(m.date).toISOString(),
+        type: m.type,
+        keyParticipant: m.keyParticipant,
+        summary: m.summary,
       })),
       userMessage: msg,
       language,
@@ -755,6 +775,13 @@ export default function DealInsightPanel({
                     name: s.name, title: s.title, role: s.role,
                     sentiment: s.sentiment, engagement: s.engagement,
                   })),
+                  meetings: (deal.meetings ?? []).map(m => ({
+                    date: typeof m.date === 'string' ? m.date : new Date(m.date).toISOString(),
+                    type: m.type,
+                    keyParticipant: m.keyParticipant,
+                    summary: m.summary,
+                    duration: m.duration,
+                  })),
                 });
               }}
               disabled={generateInsightsMutation.isPending}
@@ -848,6 +875,18 @@ export default function DealInsightPanel({
             <div className="flex items-center gap-1.5 text-[10px] text-primary/70 bg-primary/5 border border-primary/15 rounded-lg px-2.5 py-1.5">
               <Sparkles className="w-3 h-3" />
               <span>{t('insight.insightsUpdated')}</span>
+            </div>
+          )}
+
+          {/* ── Early-stage data warning ── */}
+          {insightDataLevel === 'early-stage' && (
+            <div className="flex items-start gap-2 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <div className="w-4 h-4 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                <span className="text-[10px]">⚠️</span>
+              </div>
+              <div className="text-[11px] text-amber-300/90 leading-relaxed">
+                <span className="font-semibold">Pre-engagement analysis.</span> This assessment is based on company profile and stakeholder roles only — no meeting transcripts available yet. Upload meeting notes or call recordings to unlock evidence-based insights.
+              </div>
             </div>
           )}
 

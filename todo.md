@@ -148,3 +148,24 @@
 - [x] Optimize Key Risks prompt (consequence-focused, stakeholder-named, framework-dimension-linked)
 - [x] Optimize What's Next prompt (person+action+outcome format, mentor-style rationale)
 - [x] Test all AI outputs end-to-end (40 tests passing, salesModels test suite added)
+
+## AI Grounding & Stakeholder Map Overhaul (March 27)
+
+### 1. AI Insight Grounding (eliminate hallucination)
+- [x] Rewrite generateDealInsight: two-mode system (early-stage vs evidence-based) grounded in transcripts
+- [x] No-transcript state: early-stage warning banner + hypothesis-labeled output (no fabrication)
+- [x] Early-stage (no transcripts): company profile + stakeholder roles only, all labeled as hypotheses
+- [x] With transcripts: evidence-based mode grounds all insights in specific meeting content
+- [x] AI must cite/reference specific meeting evidence when generating insights
+- [x] chatWithDeal: also ground responses in available transcript data
+
+### 2. Stakeholder Map Visual Overhaul
+- [x] Concentric circles scale dynamically with zoom (SVG rings inside zoom transform div)
+- [x] Expand/Collapse toggle button in toolbar: compact = small avatar dots, expanded = full detail cards
+- [x] Cards positioned within ring radii by concentric layout algorithm
+- [x] View switching: Concentric / Stages toggle buttons in toolbar
+- [x] Stage-based view: columns for each buying stage with role-based inference + column dividers
+- [x] Fix reset button (was Maximize2 icon, now RotateCcw icon, resets layout + zoom)
+
+### 3. English-first focus
+- [x] Pause Chinese i18n work, focus on English demo quality

@@ -419,9 +419,15 @@ export default function DealDetail() {
         dealName: deal.company,
         dealStage: deal.stage,
         dealValue: deal.value,
-        companyInfo: s.keyInsights ?? '',
+        companyInfo: deal.companyInfo ?? '',
         lastMeetingSummary: lastMeeting?.summary ?? undefined,
         openActions: pendingActions.map((a: any) => a.text),
+        meetings: deal.meetings.map((m: any) => ({
+          date: typeof m.date === 'string' ? m.date : new Date(m.date).toISOString(),
+          type: m.type,
+          keyParticipant: m.keyParticipant,
+          summary: m.summary,
+        })),
         language,
       });
       setAiBriefText(result.brief);

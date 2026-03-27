@@ -1,0 +1,162 @@
+{
+  "query": "DESCRIBE stakeholders;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute DESCRIBE stakeholders;",
+  "rows": [
+    {
+      "Field": "id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": "NULL",
+      "Extra": "auto_increment"
+    },
+    {
+      "Field": "dealId",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "tenantId",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "name",
+      "Type": "varchar(255)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "title",
+      "Type": "varchar(255)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "role",
+      "Type": "enum('Champion','Decision Maker','Influencer','Blocker','User','Evaluator')",
+      "Null": "NO",
+      "Key": "",
+      "Default": "User",
+      "Extra": ""
+    },
+    {
+      "Field": "roles",
+      "Type": "json",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "sentiment",
+      "Type": "enum('Positive','Neutral','Negative')",
+      "Null": "NO",
+      "Key": "",
+      "Default": "Neutral",
+      "Extra": ""
+    },
+    {
+      "Field": "engagement",
+      "Type": "enum('High','Medium','Low')",
+      "Null": "NO",
+      "Key": "",
+      "Default": "Medium",
+      "Extra": ""
+    },
+    {
+      "Field": "avatar",
+      "Type": "varchar(500)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "email",
+      "Type": "varchar(320)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "linkedIn",
+      "Type": "varchar(500)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "keyInsights",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "personalNotes",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "personalSignals",
+      "Type": "json",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "mapX",
+      "Type": "float",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "mapY",
+      "Type": "float",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "createdAt",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": ""
+    },
+    {
+      "Field": "updatedAt",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": "DEFAULT_GENERATED on update CURRENT_TIMESTAMP"
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\nid\tint\tNO\tPRI\tNULL\tauto_increment\ndealId\tint\tNO\t\tNULL\t\ntenantId\tint\tNO\t\tNULL\t\nname\tvarchar(255)\tNO\t\tNULL\t\ntitle\tvarchar(255)\tYES\t\tNULL\t\nrole\tenum('Champion','Decision Maker','Influencer','Blocker','User','Evaluator')\tNO\t\tUser\t\nroles\tjson\tYES\t\tNULL\t\nsentiment\tenum('Positive','Neutral','Negative')\tNO\t\tNeutral\t\nengagement\tenum('High','Medium','Low')\tNO\t\tMedium\t\navatar\tvarchar(500)\tYES\t\tNULL\t\nemail\tvarchar(320)\tYES\t\tNULL\t\nlinkedIn\tvarchar(500)\tYES\t\tNULL\t\nkeyInsights\ttext\tYES\t\tNULL\t\npersonalNotes\ttext\tYES\t\tNULL\t\npersonalSignals\tjson\tYES\t\tNULL\t\nmapX\tfloat\tYES\t\tNULL\t\nmapY\tfloat\tYES\t\tNULL\t\ncreatedAt\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\t\nupdatedAt\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\tDEFAULT_GENERATED on update CURRENT_TIMESTAMP\n",
+  "stderr": "",
+  "execution_time_ms": 349
+}

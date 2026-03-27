@@ -228,3 +228,7 @@
 - [x] Transcripts show realistic sales progression (discovery → demo → technical eval → negotiation)
 - [x] Generate AI snapshots for each deal based on transcripts (via seed-snapshots.mjs)
 - [x] Verify Deal Insight correctly references Meridian as the product being sold
+
+## Bug Fixes (March 27)
+
+- [x] Fix WhatsNextCard: TypeError "Cannot read properties of undefined (reading 'split')" on /deal/4

@@ -1,0 +1,15 @@
+{
+  "query": "SELECT id, dealId, whatsNext FROM snapshots WHERE dealId = 4 ORDER BY createdAt DESC LIMIT 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute SELECT id, dealId, whatsNext FROM snapshots WHERE dealId = 4 ORDER BY createdAt DESC LIMIT 1;",
+  "rows": [
+    {
+      "id": "180008",
+      "dealId": "4",
+      "whatsNext": "[{\"action\": \"Schedule a detailed pilot proposal meeting with Robert Kim and Amanda Foster.\", \"rationale\": \"Based on Meeting 5, this addresses the Economic Buyer MEDDIC gap by aligning on the proposed pilot and addressing adoption concerns.\", \"suggestedContacts\": [\"Robert Kim\", \"Amanda Foster\"]}, {\"action\": \"Provide detailed technical documentation to James Whitfield.\", \"rationale\": \"Based on Meeting 4, this addresses the Decision Process MEDDIC gap by expediting the security and legal review process.\", \"suggestedContacts\": [\"James Whitfield\"]}, {\"action\": \"Ensure Leo is prepared for a CRO call on short notice.\", \"rationale\": \"Based on Meeting 3, this supports the Decision Process by being ready to address any last-minute concerns or questions from the CRO.\", \"suggestedContacts\": [\"Robert Kim\", \"Amanda Foster\"]}]"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tdealId\twhatsNext\n180008\t4\t[{\"action\": \"Schedule a detailed pilot proposal meeting with Robert Kim and Amanda Foster.\", \"rationale\": \"Based on Meeting 5, this addresses the Economic Buyer MEDDIC gap by aligning on the proposed pilot and addressing adoption concerns.\", \"suggestedContacts\": [\"Robert Kim\", \"Amanda Foster\"]}, {\"action\": \"Provide detailed technical documentation to James Whitfield.\", \"rationale\": \"Based on Meeting 4, this addresses the Decision Process MEDDIC gap by expediting the security and legal review process.\", \"suggestedContacts\": [\"James Whitfield\"]}, {\"action\": \"Ensure Leo is prepared for a CRO call on short notice.\", \"rationale\": \"Based on Meeting 3, this supports the Decision Process by being ready to address any last-minute concerns or questions from the CRO.\", \"suggestedContacts\": [\"Robert Kim\", \"Amanda Foster\"]}]\n",
+  "stderr": "",
+  "execution_time_ms": 349
+}

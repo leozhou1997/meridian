@@ -1,0 +1,46 @@
+{
+  "query": "SELECT id, name, title, role FROM stakeholders WHERE dealId = 4 LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute SELECT id, name, title, role FROM stakeholders WHERE dealId = 4 LIMIT 10;",
+  "rows": [
+    {
+      "id": "90010",
+      "name": "Amanda Foster",
+      "title": "Director of Revenue Operations",
+      "role": "Champion"
+    },
+    {
+      "id": "90011",
+      "name": "Robert Kim",
+      "title": "Chief Revenue Officer",
+      "role": "Decision Maker"
+    },
+    {
+      "id": "90012",
+      "name": "Lisa Nguyen",
+      "title": "VP of Sales",
+      "role": "Influencer"
+    },
+    {
+      "id": "90013",
+      "name": "James Whitfield",
+      "title": "IT Security Director",
+      "role": "Evaluator"
+    },
+    {
+      "id": "90014",
+      "name": "Carol Barnes",
+      "title": "Procurement Lead",
+      "role": "Evaluator"
+    },
+    {
+      "id": "90015",
+      "name": "Derek Santos",
+      "title": "Senior Account Executive",
+      "role": "User"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\ttitle\trole\n90010\tAmanda Foster\tDirector of Revenue Operations\tChampion\n90011\tRobert Kim\tChief Revenue Officer\tDecision Maker\n90012\tLisa Nguyen\tVP of Sales\tInfluencer\n90013\tJames Whitfield\tIT Security Director\tEvaluator\n90014\tCarol Barnes\tProcurement Lead\tEvaluator\n90015\tDerek Santos\tSenior Account Executive\tUser\n",
+  "stderr": "",
+  "execution_time_ms": 362
+}

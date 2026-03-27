@@ -113,7 +113,11 @@ function WhatsNextCard({
 
   const actionText = typeof item === 'string' ? item : item.action;
   const rationale = typeof item === 'string' ? null : item.rationale;
-  const suggestedContacts: SuggestedContact[] = typeof item === 'string' ? [] : (item.suggestedContacts ?? []);
+  // Normalize suggestedContacts: DB may store string[] (names only) or SuggestedContact[] (full objects)
+  const rawContacts = typeof item === 'string' ? [] : (item.suggestedContacts ?? []);
+  const suggestedContacts: SuggestedContact[] = rawContacts.map((c: string | SuggestedContact) =>
+    typeof c === 'string' ? { name: c, title: '', reason: '' } : c
+  );
   const [addedContacts, setAddedContacts] = useState<Set<string>>(new Set());
 
   // Find stakeholders mentioned in this action item

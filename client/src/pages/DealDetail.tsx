@@ -67,6 +67,7 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { CompanyLogo, StakeholderAvatar } from '@/components/Avatars';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 type SentimentType = 'Positive' | 'Neutral' | 'Negative';
@@ -537,12 +538,7 @@ export default function DealDetail() {
               <ArrowLeft className="w-4 h-4" />
             </button>
           </Link>
-          <img
-            src={deal.logo ?? undefined}
-            alt={deal.company}
-            className="w-9 h-9 rounded-lg bg-white/10 object-contain p-1.5 border border-border/30"
-            onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${deal.company}&background=1a1f36&color=fff&size=64`; }}
-          />
+          <CompanyLogo name={deal.company} logoUrl={deal.logo} size="md" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3">
               <h1 className="font-display text-lg font-bold">{deal.company}</h1>
@@ -808,12 +804,7 @@ export default function DealDetail() {
               <div className="flex items-center justify-between px-5 py-3 border-b border-border/30 shrink-0">
                 <div className="flex items-center gap-1">
                   {/* Avatar mini */}
-                  <img
-                    src={selectedStakeholder.avatar ?? undefined}
-                    alt={selectedStakeholder.name}
-                    className="w-6 h-6 rounded-full object-cover border border-border/30 mr-1"
-                    onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedStakeholder.name)}&background=1a1f36&color=fff&size=24`; }}
-                  />
+                  <StakeholderAvatar name={selectedStakeholder.name} avatarUrl={selectedStakeholder.avatar} size="xs" className="mr-1" />
                   <span className="text-xs font-semibold text-foreground/90 mr-3">{selectedStakeholder.name}</span>
                   {/* Tab switcher */}
                   {!isEditingProfile && (
@@ -898,9 +889,7 @@ export default function DealDetail() {
                         <div>
                           <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Who They Are</div>
                           <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/20 border border-border/20">
-                            <img src={s.avatar ?? undefined} alt={s.name} className="w-10 h-10 rounded-full object-cover border border-border/30"
-                              onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=1a1f36&color=fff&size=40`; }}
-                            />
+                            <StakeholderAvatar name={s.name} avatarUrl={s.avatar} size="md" />
                             <div>
                               <div className="text-sm font-semibold">{s.name}</div>
                               <div className="text-xs text-muted-foreground">{s.title} · {deal.company}</div>
@@ -1048,14 +1037,7 @@ export default function DealDetail() {
                   {/* Avatar + Name/Title */}
                   <div className="flex items-center gap-3 mb-5">
                     <div className="relative shrink-0 group">
-                      <img
-                        src={selectedStakeholder.avatar}
-                        alt={selectedStakeholder.name}
-                        className="w-14 h-14 rounded-full object-cover border-2 border-border"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedStakeholder.name)}&background=1a1f36&color=fff&size=56`;
-                        }}
-                      />
+                      <StakeholderAvatar name={selectedStakeholder.name} avatarUrl={selectedStakeholder.avatar} size="lg" className="border-2 border-border" />
                       {/* Upload overlay — always visible on hover */}
                       <button
                         onClick={() => avatarInputRef.current?.click()}
@@ -1399,9 +1381,7 @@ export default function DealDetail() {
                   <div>
                     <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Who They Are</div>
                     <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/20 border border-border/20">
-                      <img src={s.avatar ?? undefined} alt={s.name} className="w-10 h-10 rounded-full object-cover border border-border/30"
-                        onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=1a1f36&color=fff&size=40`; }}
-                      />
+                      <StakeholderAvatar name={s.name} avatarUrl={s.avatar} size="md" />
                       <div>
                         <div className="text-sm font-semibold">{s.name}</div>
                         <div className="text-xs text-muted-foreground">{s.title} · {deal.company}</div>

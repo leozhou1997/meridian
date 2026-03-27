@@ -184,3 +184,25 @@
 - [ ] Editable metadata on timeline nodes (date, source, etc.)
 - [x] Clear source labeling: "AI Analysis" vs "Initial Assessment" badges on snapshot nodes
 - [x] Company Overview card at the top of timeline as anchor
+
+## Logo/Avatar Placeholders + Knowledge Base Rebuild (March 27)
+
+### 1. Smart Placeholders for Missing Logos & Avatars
+- [x] Company logo: if no real logo URL, show colored initial letter circle (e.g., Nike → "N" in orange)
+- [x] Stakeholder avatar: if no real avatar URL, show cartoon/icon placeholder (consistent style)
+- [x] Apply across all views: Pipeline sidebar, Deal Detail, Stakeholder Map, Timeline, Dashboard
+
+### 2. Knowledge Base — Sales Framework Section
+- [x] New dedicated "Sales Frameworks" section in Knowledge Base page
+- [x] Display all built-in models (MEDDIC, BANT, SPICED, MEDDICC) as expandable cards
+- [x] Each model card: name, description, dimensions with explanations, expand/collapse
+- [x] Fork/customize: user can create variant of built-in model (copy + modify dimensions)
+- [x] Create fully custom model from scratch
+- [x] Custom Prompt field: let user inject additional AI analysis instructions per model
+- [x] Edit/delete custom models
+
+### 3. Knowledge Base — Document Cards Redesign
+- [x] Redesign KB documents as expandable file-style cards (look like real PDF/Doc files)
+- [x] File icon + title + date + type badge (PDF, Doc, etc.)
+- [x] Click to expand and see full content
+- [x] Visual distinction from Sales Framework section

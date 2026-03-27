@@ -1,0 +1,14 @@
+{
+  "query": "SELECT id, company FROM deals WHERE company LIKE '%Nike%' LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute SELECT id, company FROM deals WHERE company LIKE '%Nike%' LIMIT 5;",
+  "rows": [
+    {
+      "id": "60001",
+      "company": "Nike, Inc."
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tcompany\n60001\tNike, Inc.\n",
+  "stderr": "",
+  "execution_time_ms": 357
+}

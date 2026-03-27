@@ -1,0 +1,170 @@
+{
+  "query": "DESCRIBE deals;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute DESCRIBE deals;",
+  "rows": [
+    {
+      "Field": "id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": "NULL",
+      "Extra": "auto_increment"
+    },
+    {
+      "Field": "tenantId",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "ownerId",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "name",
+      "Type": "varchar(255)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "company",
+      "Type": "varchar(255)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "website",
+      "Type": "varchar(500)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "logo",
+      "Type": "varchar(500)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "stage",
+      "Type": "enum('Discovery','Demo','Technical Evaluation','POC','Negotiation','Closed Won','Closed Lost')",
+      "Null": "NO",
+      "Key": "",
+      "Default": "Discovery",
+      "Extra": ""
+    },
+    {
+      "Field": "value",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "confidenceScore",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "50",
+      "Extra": ""
+    },
+    {
+      "Field": "daysInStage",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "lastActivity",
+      "Type": "varchar(100)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "riskOneLiner",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "companyInfo",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "buyingStages",
+      "Type": "json",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "isArchived",
+      "Type": "tinyint(1)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "createdAt",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": ""
+    },
+    {
+      "Field": "updatedAt",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": "DEFAULT_GENERATED on update CURRENT_TIMESTAMP"
+    },
+    {
+      "Field": "salesModel",
+      "Type": "varchar(50)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "meddic",
+      "Extra": ""
+    },
+    {
+      "Field": "customModelId",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\nid\tint\tNO\tPRI\tNULL\tauto_increment\ntenantId\tint\tNO\t\tNULL\t\nownerId\tint\tNO\t\tNULL\t\nname\tvarchar(255)\tNO\t\tNULL\t\ncompany\tvarchar(255)\tNO\t\tNULL\t\nwebsite\tvarchar(500)\tYES\t\tNULL\t\nlogo\tvarchar(500)\tYES\t\tNULL\t\nstage\tenum('Discovery','Demo','Technical Evaluation','POC','Negotiation','Closed Won','Closed Lost')\tNO\t\tDiscovery\t\nvalue\tint\tNO\t\t0\t\nconfidenceScore\tint\tNO\t\t50\t\ndaysInStage\tint\tNO\t\t0\t\nlastActivity\tvarchar(100)\tYES\t\tNULL\t\nriskOneLiner\ttext\tYES\t\tNULL\t\ncompanyInfo\ttext\tYES\t\tNULL\t\nbuyingStages\tjson\tYES\t\tNULL\t\nisArchived\ttinyint(1)\tNO\t\t0\t\ncreatedAt\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\t\nupdatedAt\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\tDEFAULT_GENERATED on update CURRENT_TIMESTAMP\nsalesModel\tvarchar(50)\tNO\t\tmeddic\t\ncustomModelId\tint\tYES\t\tNULL\t\n",
+  "stderr": "",
+  "execution_time_ms": 376
+}

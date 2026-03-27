@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
+import { CompanyLogo } from '@/components/Avatars';
 
 const TYPE_COLORS: Record<string, string> = {
   'Discovery Call':      'bg-blue-500/10 text-blue-400 border-blue-500/20',
@@ -230,12 +231,7 @@ export default function Transcripts() {
                     onClick={() => toggleDeal(deal.id)}
                     className="w-full flex items-center gap-3 px-4 py-3 hover:bg-accent/30 transition-colors text-left"
                   >
-                    <img
-                      src={deal.logo ?? `https://ui-avatars.com/api/?name=${deal.company}&background=1a1f36&color=fff&size=28`}
-                      alt=""
-                      className="w-7 h-7 rounded bg-white/10 object-contain p-0.5 shrink-0"
-                      onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${deal.company}&background=1a1f36&color=fff&size=28`; }}
-                    />
+                    <CompanyLogo name={deal.company} logoUrl={deal.logo} size="sm" />
                     <div className="flex-1 min-w-0">
                       <span className="font-display text-sm font-semibold">{deal.company}</span>
                       <span className="text-xs text-muted-foreground ml-2">{deal.stage}</span>
@@ -331,12 +327,7 @@ export default function Transcripts() {
           <DialogContent className="sm:max-w-2xl">
             <DialogHeader>
               <DialogTitle className="font-display flex items-center gap-2">
-                <img
-                  src={selectedInteraction?.dealLogo ?? `https://ui-avatars.com/api/?name=${selectedInteraction?.dealName}&background=1a1f36&color=fff&size=28`}
-                  alt=""
-                  className="w-6 h-6 rounded object-contain"
-                  onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${selectedInteraction?.dealName}&background=1a1f36&color=fff&size=28`; }}
-                />
+                <CompanyLogo name={selectedInteraction?.dealName ?? ''} logoUrl={selectedInteraction?.dealLogo} size="xs" />
                 {selectedInteraction?.dealName} — {selectedInteraction?.type}
               </DialogTitle>
             </DialogHeader>

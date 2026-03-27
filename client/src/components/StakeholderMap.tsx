@@ -12,6 +12,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Stakeholder, Deal, Interaction, Meeting } from '@/lib/data';
 import { getRoleColor } from '@/lib/data';
+import { StakeholderAvatar } from '@/components/Avatars';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -1299,12 +1300,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                     : isConnSrc ? 'border-amber-400 shadow-lg'
                     : 'border-border/60 hover:border-primary/50 hover:shadow-md'
                   }`}>
-                    <img
-                      src={stakeholder.avatar}
-                      alt={stakeholder.name}
-                      className="w-full h-full object-cover"
-                      onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(stakeholder.name)}&background=1a1f36&color=fff&size=40`; }}
-                    />
+                    <StakeholderAvatar name={stakeholder.name} avatarUrl={stakeholder.avatar} size="sm" className="w-full h-full" />
                     <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-card"
                       style={{ backgroundColor: sentimentDot(stakeholder.sentiment) }}
                     />
@@ -1367,14 +1363,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                     {/* Avatar + name row */}
                     <div className="flex items-center gap-3 mb-3">
                       <div className="relative shrink-0">
-                        <img
-                          src={stakeholder.avatar}
-                          alt={stakeholder.name}
-                          className="w-12 h-12 rounded-full object-cover border-2 border-background"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(stakeholder.name)}&background=1a1f36&color=fff&size=48`;
-                          }}
-                        />
+                        <StakeholderAvatar name={stakeholder.name} avatarUrl={stakeholder.avatar} size="lg" className="border-2 border-background" />
                         <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-card"
                           style={{ backgroundColor: sentimentDot(stakeholder.sentiment) }}
                         />
@@ -1613,10 +1602,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
             >
               <div className="bg-card/95 backdrop-blur-md border border-border/60 rounded-xl shadow-2xl p-4">
                 <div className="flex items-center gap-3 mb-3">
-                  <img src={s.avatar} alt={s.name}
-                    className="w-10 h-10 rounded-full object-cover border-2 border-background"
-                    onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=1a1f36&color=fff&size=40`; }}
-                  />
+                  <StakeholderAvatar name={s.name} avatarUrl={s.avatar} size="md" className="border-2 border-background" />
                   <div>
                     <div className="text-[13px] font-semibold">{s.name}</div>
                     <div className="text-[11px] text-muted-foreground">{s.title}</div>
@@ -1730,10 +1716,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                 <div className="flex items-center justify-between px-6 py-4 border-b border-border/40">
                   <div className="flex items-center gap-3">
                     <div className="relative">
-                      <img src={s.avatar} alt={s.name}
-                        className="w-14 h-14 rounded-full object-cover border-2 border-background"
-                        onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=1a1f36&color=fff&size=56`; }}
-                      />
+                      <StakeholderAvatar name={s.name} avatarUrl={s.avatar} size="lg" className="w-14 h-14 border-2 border-background" />
                       {isEditingModal && (
                         <>
                           <button onClick={() => fileInputRef.current?.click()}

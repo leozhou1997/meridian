@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Link } from 'wouter';
+import { CompanyLogo, StakeholderAvatar } from '@/components/Avatars';
 
 const SENTIMENT_ICON = {
   Positive: TrendingUp,
@@ -116,12 +117,7 @@ export default function Stakeholders() {
                     onClick={() => toggleDeal(deal.id)}
                     className="w-full flex items-center gap-3 px-4 py-3 hover:bg-accent/30 transition-colors text-left"
                   >
-                    <img
-                      src={deal.logo ?? `https://ui-avatars.com/api/?name=${deal.company}&background=1a1f36&color=fff&size=28`}
-                      alt=""
-                      className="w-7 h-7 rounded bg-white/10 object-contain p-0.5 shrink-0"
-                      onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${deal.company}&background=1a1f36&color=fff&size=28`; }}
-                    />
+                    <CompanyLogo name={deal.company} logoUrl={deal.logo} size="sm" />
                     <div className="flex-1 min-w-0">
                       <span className="font-display text-sm font-semibold">{deal.company}</span>
                       <span className="text-xs text-muted-foreground ml-2">{deal.stage}</span>
@@ -165,12 +161,7 @@ export default function Stakeholders() {
                               return (
                                 <Link key={`${deal.id}-${s.id}`} href={`/deal/${deal.id}`}>
                                   <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-accent/40 transition-all cursor-pointer border border-transparent hover:border-border/50">
-                                    <img
-                                      src={s.avatar ?? `https://ui-avatars.com/api/?name=${s.name}&background=2a3050&color=fff&size=40`}
-                                      alt={s.name}
-                                      className="w-10 h-10 rounded-full object-cover border-2 border-border/40 shrink-0"
-                                      onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${s.name}&background=2a3050&color=fff&size=40`; }}
-                                    />
+                                    <StakeholderAvatar name={s.name} avatarUrl={s.avatar} size="md" />
                                     <div className="flex-1 min-w-0">
                                       <div className="text-sm font-medium truncate">{s.name}</div>
                                       <div className="text-xs text-muted-foreground truncate">{s.title}</div>

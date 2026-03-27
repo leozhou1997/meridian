@@ -169,3 +169,18 @@
 
 ### 3. English-first focus
 - [x] Pause Chinese i18n work, focus on English demo quality
+
+## Deal Activity Timeline (March 27)
+
+### Merge Account Signals + All Interactions into unified timeline
+- [x] Remove Account Signals tab
+- [x] Remove All Interactions tab
+- [x] Create new "Deal Timeline" tab (replaces both)
+- [x] Vertical timeline component: top-to-bottom chronological (newest first), center line
+- [x] Left side: AI-generated insights (snapshots — What's Happening, Key Risks, What's Next)
+- [x] Right side: Transcript/meeting events (uploaded recordings, call notes)
+- [x] Each node expandable: click to see full details (animated expand/collapse)
+- [x] Fix [object Object] bug in Key Risks rendering on snapshot cards (proper formatKeyRisk helper)
+- [ ] Editable metadata on timeline nodes (date, source, etc.)
+- [x] Clear source labeling: "AI Analysis" vs "Initial Assessment" badges on snapshot nodes
+- [x] Company Overview card at the top of timeline as anchor

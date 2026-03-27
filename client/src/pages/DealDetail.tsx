@@ -50,12 +50,13 @@ type NextAction = {
 };
 import StakeholderMap from '@/components/StakeholderMap';
 import DealInsightPanel from '@/components/DealInsightPanel';
+import DealTimeline from '@/components/DealTimeline';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Globe, Clock, TrendingUp, TrendingDown, AlertTriangle,
   ChevronRight, User, MessageSquare, FileText, Map, BarChart3, X, ExternalLink,
   Mic, Check, Edit2, Save, Camera, GripHorizontal, ChevronDown, ChevronUp,
-  Plus, Trash2, Pencil, Calendar, Lightbulb, Lock, Target, Sparkles, Heart, StickyNote, UserCircle
+  Plus, Trash2, Pencil, Calendar, Lightbulb, Lock, Target, Sparkles, Heart, StickyNote, UserCircle, Activity
 } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -594,13 +595,9 @@ export default function DealDetail() {
                   <Map className="w-3.5 h-3.5" />
                   {t('deal.buyingCommittee')}
                 </TabsTrigger>
-                <TabsTrigger value="signals" className="data-[state=active]:bg-muted/50 data-[state=active]:shadow-none rounded-lg text-xs font-display gap-1.5 px-3 h-8">
-                  <BarChart3 className="w-3.5 h-3.5" />
-                  {t('deal.accountSignals')}
-                </TabsTrigger>
-                <TabsTrigger value="discussions" className="data-[state=active]:bg-muted/50 data-[state=active]:shadow-none rounded-lg text-xs font-display gap-1.5 px-3 h-8">
-                  <MessageSquare className="w-3.5 h-3.5" />
-                  {t('deal.allInteractions')}
+                <TabsTrigger value="timeline" className="data-[state=active]:bg-muted/50 data-[state=active]:shadow-none rounded-lg text-xs font-display gap-1.5 px-3 h-8">
+                  <Activity className="w-3.5 h-3.5" />
+                  Deal Timeline
                 </TabsTrigger>
                 <TabsTrigger value="strategy" className="data-[state=active]:bg-muted/50 data-[state=active]:shadow-none rounded-lg text-xs font-display gap-1.5 px-3 h-8">
                   <Target className="w-3.5 h-3.5" />
@@ -649,262 +646,18 @@ export default function DealDetail() {
               </div>
             </TabsContent>
 
-            <TabsContent value="signals" className="flex-1 m-0 overflow-auto">
-              <div className="p-6 max-w-3xl space-y-4">
-                <h3 className="font-display text-sm font-semibold mb-4">Account Signals & Intelligence</h3>
-                {deal.companyInfo && (
-                  <Card className="bg-card border-border/50">
-                    <CardContent className="p-4">
-                      <h4 className="text-xs font-display font-semibold mb-2">Company Overview</h4>
-                      <p className="text-xs text-muted-foreground leading-relaxed">{deal.companyInfo}</p>
-                    </CardContent>
-                  </Card>
-                )}
-                {deal.snapshots.map(snap => (
-                  <Card key={snap.id} className="bg-card border-border/50">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-[10px]">{snap.interactionType}</Badge>
-                          <span className="text-xs text-muted-foreground">{formatDate(new Date(snap.date).toISOString())}</span>
-                        </div>
-                        <Badge variant="outline" className={`text-[10px] ${getConfidenceBg(snap.confidenceScore)}`}>
-                          {snap.confidenceScore}%
-                          {snap.confidenceChange !== 0 && (
-                            <span className="ml-1">
-                              ({snap.confidenceChange > 0 ? '+' : ''}{snap.confidenceChange})
-                            </span>
-                          )}
-                        </Badge>
-                      </div>
-                      <div className="space-y-2 text-xs">
-                        <div>
-                          <span className="font-medium text-status-info">Happening: </span>
-                          <span className="text-muted-foreground">{snap.whatsHappening}</span>
-                        </div>
-                        <div>
-                          <span className="font-medium text-status-success">Next: </span>
-                          <span className="text-muted-foreground">{Array.isArray(snap.whatsNext) ? snap.whatsNext.map((w: any) => typeof w === 'string' ? w : w.action).join('; ') : ''}</span>
-                        </div>
-                        {(snap.keyRisks as string[] | null)?.length ? (
-                          <div>
-                            <span className="font-medium text-status-danger">Risks: </span>
-                            <span className="text-muted-foreground">{(snap.keyRisks as string[]).join('; ')}</span>
-                          </div>
-                        ) : null}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+            <TabsContent value="timeline" className="flex-1 m-0 overflow-auto">
+              <DealTimeline
+                snapshots={deal.snapshots}
+                meetings={localInteractions}
+                companyInfo={deal.companyInfo}
+                companyName={deal.company}
+                onAddMeeting={addInteraction}
+                onEditMeeting={(id) => setEditingInteractionId(id)}
+                onDeleteMeeting={deleteInteraction}
+              />
             </TabsContent>
 
-            <TabsContent value="discussions" className="flex-1 m-0 overflow-auto">
-              <div className="p-6 max-w-3xl space-y-3">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="font-display text-sm font-semibold">All Interactions</h3>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">{localInteractions.length} interaction{localInteractions.length !== 1 ? 's' : ''} recorded</p>
-                  </div>
-                  <button
-                    onClick={addInteraction}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
-                  >
-                    <Plus className="w-3 h-3" /> Add Interaction
-                  </button>
-                </div>
-                {localInteractions
-                  .slice()
-                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                  .map(interaction => {
-                    const isEditing = editingInteractionId === interaction.id;
-                    return (
-                      <Card key={interaction.id} className={`border-border/50 transition-colors ${
-                        isEditing ? 'bg-muted/40 border-primary/30' : 'bg-card'
-                      }`}>
-                        <CardContent className="p-4">
-                          {isEditing ? (
-                            /* ── Edit mode ── */
-                            <div className="space-y-3">
-                              {/* Type + Participant row */}
-                              <div className="flex gap-2">
-                                <select
-                                  value={interaction.type}
-                                  onChange={e => updateInteraction(interaction.id, { type: e.target.value as Interaction['type'] })}
-                                  className="flex-1 text-xs bg-background border border-border/50 rounded-md px-2.5 py-1.5 text-foreground"
-                                >
-                                  {INTERACTION_TYPES.map(t => (
-                                    <option key={t} value={t}>{t}</option>
-                                  ))}
-                                </select>
-                                <input
-                                  type="text"
-                                  value={interaction.keyParticipant ?? ''}
-                                  onChange={e => updateInteraction(interaction.id, { keyParticipant: e.target.value })}
-                                  placeholder="Participant name"
-                                  className="flex-1 text-xs bg-background border border-border/50 rounded-md px-2.5 py-1.5 text-foreground"
-                                />
-                              </div>
-                              {/* Date + Duration row */}
-                              <div className="flex gap-2 items-center">
-                                <div className="flex items-center gap-1.5 flex-1">
-                                  <Calendar className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                                  <input
-                                    type="date"
-                                    value={typeof interaction.date === 'string' ? interaction.date : new Date(interaction.date).toISOString().slice(0,10)}
-                                    onChange={e => updateInteraction(interaction.id, { date: e.target.value })}
-                                    className="flex-1 text-xs bg-background border border-border/50 rounded-md px-2.5 py-1.5 text-foreground"
-                                  />
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                  <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                                  <input
-                                    type="number"
-                                    value={interaction.duration ?? 30}
-                                    onChange={e => updateInteraction(interaction.id, { duration: Number(e.target.value) })}
-                                    min={1}
-                                    className="w-16 text-xs bg-background border border-border/50 rounded-md px-2.5 py-1.5 text-foreground"
-                                  />
-                                  <span className="text-xs text-muted-foreground">min</span>
-                                </div>
-                              </div>
-                              {/* Notes / transcript */}
-                              <div>
-                                <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Notes / Transcript</div>
-                                <textarea
-                                  value={interaction.summary ?? ''}
-                                  onChange={e => updateInteraction(interaction.id, { summary: e.target.value })}
-                                  placeholder="Meeting notes, key decisions, action items..."
-                                  rows={5}
-                                  className="w-full text-xs bg-background border border-border/50 rounded-md px-2.5 py-2 text-foreground resize-y leading-relaxed"
-                                />
-                              </div>
-                              {/* Action buttons */}
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => setEditingInteractionId(null)}
-                                  className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
-                                >
-                                  <Check className="w-3 h-3" /> Done
-                                </button>
-                                <button
-                                  onClick={() => deleteInteraction(interaction.id)}
-                                  className="px-4 py-1.5 rounded-lg bg-destructive/10 text-destructive text-xs font-medium hover:bg-destructive/20 transition-colors"
-                                >
-                                  Delete
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            /* ── Read mode ── */
-                            <div>
-                              {/* Top row: icon + type badge + meta */}
-                              <div className="flex items-start gap-3">
-                                <div className="mt-0.5 w-7 h-7 rounded-lg bg-muted/50 flex items-center justify-center shrink-0">
-                                  <MessageSquare className="w-3.5 h-3.5 text-muted-foreground/60" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center flex-wrap gap-2 mb-1.5">
-                                    {(() => {
-                                      const tc = getInteractionTypeColor(interaction.type);
-                                      return (
-                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${tc.bg} ${tc.text} ${tc.border}`}>
-                                          {interaction.type}
-                                        </span>
-                                      );
-                                    })()}
-                                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                                      <Calendar className="w-3 h-3" />
-                                      <span>{formatDate(typeof interaction.date === 'string' ? interaction.date : new Date(interaction.date).toISOString())}</span>
-                                    </div>
-                                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                                      <Clock className="w-3 h-3" />
-                                      <span>{interaction.duration} min</span>
-                                    </div>
-                                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                                      <User className="w-3 h-3" />
-                                      <span>{interaction.keyParticipant || <span className="italic opacity-50">Unknown</span>}</span>
-                                    </div>
-                                    <div className="ml-auto flex items-center gap-1">
-                                      <button
-                                        onClick={() => setEditingInteractionId(interaction.id)}
-                                        className="w-6 h-6 rounded flex items-center justify-center hover:bg-muted transition-colors"
-                                        title="Edit"
-                                      >
-                                        <Pencil className="w-3 h-3 text-muted-foreground/50" />
-                                      </button>
-                                    </div>
-                                  </div>
-                                  {/* Summary line */}
-                                  {interaction.summary ? (
-                                    <p className="text-xs text-muted-foreground leading-relaxed">
-                                      {interaction.summary}
-                                    </p>
-                                  ) : (
-                                    <p className="text-xs text-muted-foreground/40 italic">No notes yet — click ✏ to add</p>
-                                  )}
-                                  {/* View Full Transcript toggle — only shown when a separate transcript exists */}
-                                  {(interaction.transcriptUrl || (interaction.summary && interaction.summary.length > 120)) && (
-                                    <button
-                                      onClick={() => setExpandedTranscriptId(id => id === interaction.id ? null : interaction.id)}
-                                      className="mt-2 flex items-center gap-1.5 text-[10px] text-primary hover:text-primary/80 font-medium transition-colors"
-                                    >
-                                      <FileText className="w-3 h-3" />
-                                      {expandedTranscriptId === interaction.id ? 'Collapse Transcript' : 'View Full Transcript'}
-                                      {expandedTranscriptId === interaction.id
-                                        ? <ChevronUp className="w-3 h-3" />
-                                        : <ChevronDown className="w-3 h-3" />
-                                      }
-                                    </button>
-                                  )}
-                                  {/* Expanded transcript — shows interaction.transcript if available, else full summary */}
-                                  <AnimatePresence>
-                                    {expandedTranscriptId === interaction.id && (
-                                      <motion.div
-                                        initial={{ height: 0, opacity: 0 }}
-                                        animate={{ height: 'auto', opacity: 1 }}
-                                        exit={{ height: 0, opacity: 0 }}
-                                        transition={{ duration: 0.2 }}
-                                        className="overflow-hidden"
-                                      >
-                                        <div className="mt-2 rounded-lg border border-border/30 overflow-hidden">
-                                          <div className="flex items-center justify-between px-3 py-2 bg-muted/40 border-b border-border/30">
-                                            <div className="flex items-center gap-1.5">
-                                              <FileText className="w-3 h-3 text-muted-foreground" />
-                                              <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">
-                                                {interaction.transcriptUrl ? 'Full Transcript' : 'Full Notes'}
-                                              </span>
-                                            </div>
-                                            <span className="text-[9px] text-muted-foreground/50">
-                                              {interaction.duration} min · {formatDate(typeof interaction.date === 'string' ? interaction.date : new Date(interaction.date).toISOString())}
-                                            </span>
-                                          </div>
-                                          <div className="p-3 bg-muted/20 max-h-96 overflow-y-auto">
-                                            <p className="text-xs text-foreground/80 leading-relaxed whitespace-pre-wrap font-mono">
-                                              {interaction.transcriptUrl ?? interaction.summary}
-                                            </p>
-                                          </div>
-                                        </div>
-                                      </motion.div>
-                                    )}
-                                  </AnimatePresence>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                {localInteractions.length === 0 && (
-                  <div className="text-center py-12 text-muted-foreground/60">
-                    <MessageSquare className="w-8 h-8 mx-auto mb-3 opacity-30" />
-                    <p className="text-sm">No interactions recorded yet</p>
-                    <p className="text-xs mt-1">Click "Add Interaction" to log your first touchpoint</p>
-                  </div>
-                )}
-              </div>
-            </TabsContent>
 
             {/* ── Deal Strategy Tab ── */}
             <TabsContent value="strategy" className="flex-1 m-0 overflow-auto">

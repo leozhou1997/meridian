@@ -1,0 +1,82 @@
+{
+  "query": "\nSELECT id, name, company, stage, value, salesModel FROM deals WHERE tenantId = 1 ORDER BY id;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute \nSELECT id, name, company, stage, value, salesModel FROM deals WHERE tenantId = 1 ORDER BY id;\n",
+  "rows": [
+    {
+      "id": "1",
+      "name": "Acme Corp Enterprise Platform",
+      "company": "Acme Corp",
+      "stage": "Technical Evaluation",
+      "value": "240000",
+      "salesModel": "meddic"
+    },
+    {
+      "id": "2",
+      "name": "GlobalTech AI Suite",
+      "company": "GlobalTech",
+      "stage": "Negotiation",
+      "value": "180000",
+      "salesModel": "meddic"
+    },
+    {
+      "id": "3",
+      "name": "Meridian Analytics POC",
+      "company": "Meridian Analytics",
+      "stage": "POC",
+      "value": "95000",
+      "salesModel": "meddic"
+    },
+    {
+      "id": "4",
+      "name": "Nexus Systems Platform",
+      "company": "Nexus Systems",
+      "stage": "Demo",
+      "value": "320000",
+      "salesModel": "meddic"
+    },
+    {
+      "id": "5",
+      "name": "Velocity Commerce Suite",
+      "company": "Velocity Commerce",
+      "stage": "Discovery",
+      "value": "60000",
+      "salesModel": "meddic"
+    },
+    {
+      "id": "30001",
+      "name": "Doctor Scrap - New Opportunity",
+      "company": "Doctor Scrap",
+      "stage": "Discovery",
+      "value": "0",
+      "salesModel": "meddic"
+    },
+    {
+      "id": "30003",
+      "name": "Budweiser",
+      "company": "Budweiser",
+      "stage": "Discovery",
+      "value": "0",
+      "salesModel": "meddic"
+    },
+    {
+      "id": "30004",
+      "name": "Stellantis N.V.",
+      "company": "Stellantis N.V.",
+      "stage": "Discovery",
+      "value": "0",
+      "salesModel": "meddic"
+    },
+    {
+      "id": "60001",
+      "name": "Nike, Inc.",
+      "company": "Nike, Inc.",
+      "stage": "Discovery",
+      "value": "0",
+      "salesModel": "meddic"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tcompany\tstage\tvalue\tsalesModel\n1\tAcme Corp Enterprise Platform\tAcme Corp\tTechnical Evaluation\t240000\tmeddic\n2\tGlobalTech AI Suite\tGlobalTech\tNegotiation\t180000\tmeddic\n3\tMeridian Analytics POC\tMeridian Analytics\tPOC\t95000\tmeddic\n4\tNexus Systems Platform\tNexus Systems\tDemo\t320000\tmeddic\n5\tVelocity Commerce Suite\tVelocity Commerce\tDiscovery\t60000\tmeddic\n30001\tDoctor Scrap - New Opportunity\tDoctor Scrap\tDiscovery\t0\tmeddic\n30003\tBudweiser\tBudweiser\tDiscovery\t0\tmeddic\n30004\tStellantis N.V.\tStellantis N.V.\tDiscovery\t0\tmeddic\n60001\tNike, Inc.\tNike, Inc.\tDiscovery\t0\tmeddic\n",
+  "stderr": "",
+  "execution_time_ms": 387
+}

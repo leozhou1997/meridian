@@ -1,0 +1,109 @@
+{
+  "query": "SELECT d.id, d.name, d.company, d.stage, d.value, d.confidenceScore,\n  (SELECT COUNT(*) FROM meetings m WHERE m.dealId = d.id) as meetingCount,\n  (SELECT COUNT(*) FROM stakeholders s WHERE s.dealId = d.id) as stakeholderCount,\n  (SELECT COUNT(*) FROM snapshots sn WHERE sn.dealId = d.id) as snapshotCount\nFROM deals d WHERE d.tenantId = 1 ORDER BY d.id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute SELECT d.id, d.name, d.company, d.stage, d.value, d.confidenceScore,\n  (SELECT COUNT(*) FROM meetings m WHERE m.dealId = d.id) as meetingCount,\n  (SELECT COUNT(*) FROM stakeholders s WHERE s.dealId = d.id) as stakeholderCount,\n  (SELECT COUNT(*) FROM snapshots sn WHERE sn.dealId = d.id) as snapshotCount\nFROM deals d WHERE d.tenantId = 1 ORDER BY d.id;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "Acme Corp Enterprise Platform",
+      "company": "Acme Corp",
+      "stage": "Technical Evaluation",
+      "value": "240000",
+      "confidenceScore": "72",
+      "meetingCount": "3",
+      "stakeholderCount": "3",
+      "snapshotCount": "4"
+    },
+    {
+      "id": "2",
+      "name": "GlobalTech AI Suite",
+      "company": "GlobalTech",
+      "stage": "Negotiation",
+      "value": "180000",
+      "confidenceScore": "85",
+      "meetingCount": "2",
+      "stakeholderCount": "2",
+      "snapshotCount": "2"
+    },
+    {
+      "id": "3",
+      "name": "Meridian Analytics POC",
+      "company": "Meridian Analytics",
+      "stage": "POC",
+      "value": "95000",
+      "confidenceScore": "58",
+      "meetingCount": "1",
+      "stakeholderCount": "1",
+      "snapshotCount": "2"
+    },
+    {
+      "id": "4",
+      "name": "Nexus Systems Platform",
+      "company": "Nexus Systems",
+      "stage": "Demo",
+      "value": "320000",
+      "confidenceScore": "45",
+      "meetingCount": "1",
+      "stakeholderCount": "1",
+      "snapshotCount": "3"
+    },
+    {
+      "id": "5",
+      "name": "Velocity Commerce Suite",
+      "company": "Velocity Commerce",
+      "stage": "Discovery",
+      "value": "60000",
+      "confidenceScore": "65",
+      "meetingCount": "1",
+      "stakeholderCount": "1",
+      "snapshotCount": "2"
+    },
+    {
+      "id": "30001",
+      "name": "Doctor Scrap - New Opportunity",
+      "company": "Doctor Scrap",
+      "stage": "Discovery",
+      "value": "0",
+      "confidenceScore": "30",
+      "meetingCount": "0",
+      "stakeholderCount": "5",
+      "snapshotCount": "1"
+    },
+    {
+      "id": "30003",
+      "name": "Budweiser",
+      "company": "Budweiser",
+      "stage": "Discovery",
+      "value": "0",
+      "confidenceScore": "30",
+      "meetingCount": "0",
+      "stakeholderCount": "5",
+      "snapshotCount": "1"
+    },
+    {
+      "id": "30004",
+      "name": "Stellantis N.V.",
+      "company": "Stellantis N.V.",
+      "stage": "Discovery",
+      "value": "0",
+      "confidenceScore": "30",
+      "meetingCount": "0",
+      "stakeholderCount": "6",
+      "snapshotCount": "2"
+    },
+    {
+      "id": "60001",
+      "name": "Nike, Inc.",
+      "company": "Nike, Inc.",
+      "stage": "Discovery",
+      "value": "0",
+      "confidenceScore": "30",
+      "meetingCount": "0",
+      "stakeholderCount": "5",
+      "snapshotCount": "5"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tcompany\tstage\tvalue\tconfidenceScore\tmeetingCount\tstakeholderCount\tsnapshotCount\n1\tAcme Corp Enterprise Platform\tAcme Corp\tTechnical Evaluation\t240000\t72\t3\t3\t4\n2\tGlobalTech AI Suite\tGlobalTech\tNegotiation\t180000\t85\t2\t2\t2\n3\tMeridian Analytics POC\tMeridian Analytics\tPOC\t95000\t58\t1\t1\t2\n4\tNexus Systems Platform\tNexus Systems\tDemo\t320000\t45\t1\t1\t3\n5\tVelocity Commerce Suite\tVelocity Commerce\tDiscovery\t60000\t65\t1\t1\t2\n30001\tDoctor Scrap - New Opportunity\tDoctor Scrap\tDiscovery\t0\t30\t0\t5\t1\n30003\tBudweiser\tBudweiser\tDiscovery\t0\t30\t0\t5\t1\n30004\tStellantis N.V.\tStellantis N.V.\tDiscovery\t0\t30\t0\t6\t2\n60001\tNike, Inc.\tNike, Inc.\tDiscovery\t0\t30\t0\t5\t5\n",
+  "stderr": "",
+  "execution_time_ms": 361
+}

@@ -13,6 +13,7 @@ import {
   setActivePrompt,
   rateAiLog,
   getSalesModelById,
+  getCompanyProfile,
 } from "../db";
 import { BUILT_IN_MODELS, getModelDimensions, getModelName } from "./salesModels";
 
@@ -366,6 +367,22 @@ ${input.transcript}`;
     .mutation(async ({ ctx, input }) => {
       const tenant = await getOrCreateDefaultTenant(ctx.user.id, ctx.user.name ?? "User");
 
+      // Fetch seller's own company profile (Knowledge Base) to ground AI in seller context
+      const sellerProfile = await getCompanyProfile(tenant.id);
+      const sellerContext = sellerProfile ? `
+
+=== SELLER CONTEXT (CRITICAL — READ FIRST) ===
+You are analyzing deals on behalf of **${sellerProfile.companyName}**.
+Seller Company: ${sellerProfile.companyName}
+Seller Products: ${(sellerProfile.products as string[] | null)?.join(', ') ?? 'Not specified'}
+Seller Description: ${sellerProfile.companyDescription ?? ''}
+Key Differentiators: ${sellerProfile.keyDifferentiator ?? ''}
+Target Market: ${sellerProfile.targetMarket ?? ''}
+ICP Pain Points: ${sellerProfile.icpPainPoints ?? ''}
+${sellerProfile.knowledgeBaseText ? `\nKnowledge Base:\n${sellerProfile.knowledgeBaseText.slice(0, 2000)}` : ''}
+
+CRITICAL: All deal analysis must be from the perspective of ${sellerProfile.companyName} selling their products to the prospect. The "company" in the deal is the PROSPECT (buyer), not the seller.` : '';
+
       // Resolve sales model dimensions
       let modelDimensions = BUILT_IN_MODELS.meddic.dimensions;
       let modelName = "MEDDIC";
@@ -401,7 +418,7 @@ ${input.transcript}`;
 
       if (dataLevel === 'evidence-based') {
         // ── EVIDENCE-BASED MODE: Ground everything in transcript data ──
-        systemPrompt = `You are Meridian, a veteran B2B enterprise sales strategist. You analyze deals STRICTLY based on evidence from meeting transcripts and recorded interactions.
+        systemPrompt = `You are Meridian, a veteran B2B enterprise sales strategist. You analyze deals STRICTLY based on evidence from meeting transcripts and recorded interactions.${sellerContext}
 
 You are analyzing this deal through the **${modelName}** sales framework.
 The ${modelName} framework dimensions:
@@ -439,7 +456,7 @@ Rules:
 - Return ONLY JSON, no markdown.`;
       } else {
         // ── EARLY-STAGE MODE: Only company + stakeholder info, no transcripts ──
-        systemPrompt = `You are Meridian, a B2B sales strategist. This is an EARLY-STAGE deal with NO meeting transcripts yet. You can only work with the company profile and identified stakeholders.
+        systemPrompt = `You are Meridian, a B2B sales strategist. This is an EARLY-STAGE deal with NO meeting transcripts yet. You can only work with the company profile and identified stakeholders.${sellerContext}
 
 You are evaluating this deal through the **${modelName}** framework.
 The ${modelName} dimensions:

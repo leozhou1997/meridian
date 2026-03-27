@@ -558,8 +558,11 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
 
   const handleRestoreVersion = (version: MapVersion) => {
     const { positions: p, connections: c, localInteractions: li } = version.state;
-    const maxX = containerW - NODE_W;
-    setPositions(resolveCollisions(p, null, 0, 0, maxX));
+    const nodeW = compactMode ? COMPACT_NODE_W : NODE_W;
+    const nodeH = compactMode ? COMPACT_NODE_H : NODE_H;
+    const cardGap = compactMode ? COMPACT_CARD_GAP : CARD_GAP;
+    const maxX = containerW - nodeW;
+    setPositions(resolveCollisions(p, null, 0, 0, maxX, nodeH, nodeW, cardGap));
     setConnections(c);
     setLocalInteractions(li);
     setShowHistory(false);
@@ -629,11 +632,14 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
 
     const rawX = dragStart.nx + dx;
     const rawY = dragStart.ny + dy;
-    const maxX = (containerW / zoom) - NODE_W;
+    const nodeW = compactMode ? COMPACT_NODE_W : NODE_W;
+    const nodeH = compactMode ? COMPACT_NODE_H : NODE_H;
+    const cardGap = compactMode ? COMPACT_CARD_GAP : CARD_GAP;
+    const maxX = (containerW / zoom) - nodeW;
     const clampedX = Math.max(0, Math.min(rawX, maxX));
     const clampedY = Math.max(0, rawY);
 
-    setPositions(prev => resolveCollisions(prev, dragging, clampedX, clampedY, maxX));
+    setPositions(prev => resolveCollisions(prev, dragging, clampedX, clampedY, maxX, nodeH, nodeW, cardGap));
   }, [dragging, dragStart, zoom, containerW, dragMoved]);
 
   const handleMouseUp = useCallback(() => {
@@ -1167,98 +1173,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
               </div>
             </div>
           )}
-          {/* SVG connections */}
-          <svg className="absolute inset-0 w-full h-full" style={{ overflow: 'visible', pointerEvents: mode === 'edit' ? 'all' : 'none' }}>
-            <defs>
-              {CONNECTION_TYPES.map(ct => (
-                <marker
-                  key={ct.value}
-                  id={`arrow-${ct.value}`}
-                  markerWidth="12" markerHeight="10"
-                  refX="11" refY="5"
-                  orient="auto"
-                >
-                  {/* Bold filled arrowhead */}
-                  <polygon points="0 0, 12 5, 0 10" fill={ct.color} />
-                </marker>
-              ))}
-            </defs>
-            {connections.map(conn => {
-              const fromPos = getPos(conn.from);
-              const toPos = getPos(conn.to);
-              if (!fromPos || !toPos) return null;
-
-              const fx = fromPos.x + NODE_W / 2;
-              const fy = fromPos.y + NODE_H / 2;
-              const tx = toPos.x + NODE_W / 2;
-              const ty = toPos.y + NODE_H / 2;
-
-              // Bezier control points
-              const cpx1 = fx + (tx - fx) * 0.4;
-              const cpx2 = fx + (tx - fx) * 0.6;
-
-              const cfg = connConfig(conn.type);
-              const isSelected = selectedConnId === conn.id;
-
-              // True midpoint of cubic bezier at t=0.5
-              const t = 0.5;
-              const mt = 1 - t;
-              const mx = mt*mt*mt*fx + 3*mt*mt*t*cpx1 + 3*mt*t*t*cpx2 + t*t*t*tx;
-              const my = mt*mt*mt*fy + 3*mt*mt*t*fy  + 3*mt*t*t*ty  + t*t*t*ty;
-
-              // Direction angle at midpoint for the arrowhead
-              // Derivative of cubic bezier at t=0.5
-              const dxdt = 3*mt*mt*(cpx1-fx) + 6*mt*t*(cpx2-cpx1) + 3*t*t*(tx-cpx2);
-              const dydt = 3*mt*mt*(fy-fy)   + 6*mt*t*(ty-fy)     + 3*t*t*(ty-ty);
-              const angle = Math.atan2(dydt, dxdt) * 180 / Math.PI;
-
-              return (
-                <g key={conn.id}>
-                  {/* Wide invisible hit area */}
-                  <path d={`M ${fx} ${fy} C ${cpx1} ${fy}, ${cpx2} ${ty}, ${tx} ${ty}`}
-                    fill="none" stroke="transparent" strokeWidth="14"
-                    style={{ cursor: mode === 'edit' ? 'pointer' : 'default' }}
-                    onClick={(e) => handleConnClick(e as unknown as React.MouseEvent, conn.id)}
-                  />
-                  {/* Visible line — no markerEnd, arrowhead drawn manually at midpoint */}
-                  <path d={`M ${fx} ${fy} C ${cpx1} ${fy}, ${cpx2} ${ty}, ${tx} ${ty}`}
-                    fill="none"
-                    stroke={isSelected ? 'rgba(255,255,255,0.9)' : cfg.color}
-                    strokeWidth={isSelected ? 3 : 2}
-                    strokeDasharray={cfg.dash === 'none' ? undefined : cfg.dash}
-                    style={{ pointerEvents: 'none' }}
-                  />
-                  {/* Source dot at FROM end */}
-                  <circle
-                    cx={fx} cy={fy} r={isSelected ? 5 : 4}
-                    fill={isSelected ? 'rgba(255,255,255,0.9)' : cfg.color}
-                    style={{ pointerEvents: 'none' }}
-                  />
-                  {/* Arrowhead at TRUE midpoint of the bezier curve */}
-                  <polygon
-                    points="-7,-4 6,0 -7,4"
-                    fill={isSelected ? 'rgba(255,255,255,0.9)' : cfg.color}
-                    transform={`translate(${mx},${my}) rotate(${angle})`}
-                    style={{ pointerEvents: 'none' }}
-                  />
-                  {/* Label — plain text, no background, offset above midpoint */}
-                  <text
-                    x={mx} y={my - 10}
-                    textAnchor="middle"
-                    fontSize="9"
-                    fill={cfg.color}
-                    fontWeight="600"
-                    opacity="0.85"
-                    style={{ pointerEvents: 'none', userSelect: 'none', fontFamily: 'var(--font-mono, monospace)' }}
-                  >
-                    {cfg.label}
-                  </text>
-                </g>
-              );
-            })}
-          </svg>
-
-          {/* Stakeholder nodes */}
+          {/* Stakeholder nodes — z-20 base, z-30 when dragging */}
           {localStakeholders.map((stakeholder, idx) => {
             const pos = getPos(stakeholder.id);
             if (!pos) return null;
@@ -1569,6 +1484,76 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
               </motion.div>
             );
           })}
+          {/* SVG connections — rendered AFTER cards so z-index 25 puts lines above z-20 cards */}
+          <svg className="absolute inset-0 w-full h-full" style={{ overflow: 'visible', pointerEvents: (mode === 'edit' ? 'all' : 'none') as React.CSSProperties['pointerEvents'], zIndex: 25 }}>
+            <defs>
+              {CONNECTION_TYPES.map(ct => (
+                <marker
+                  key={ct.value}
+                  id={`arrow-${ct.value}`}
+                  markerWidth="12" markerHeight="10"
+                  refX="11" refY="5"
+                  orient="auto"
+                >
+                  <polygon points="0 0, 12 5, 0 10" fill={ct.color} />
+                </marker>
+              ))}
+            </defs>
+            {connections.map(conn => {
+              const fromPos = getPos(conn.from);
+              const toPos = getPos(conn.to);
+              if (!fromPos || !toPos) return null;
+              const connNodeW = compactMode ? COMPACT_NODE_W : NODE_W;
+              const connNodeH = compactMode ? COMPACT_NODE_H : NODE_H;
+              const fx = fromPos.x + connNodeW / 2;
+              const fy = fromPos.y + connNodeH / 2;
+              const tx = toPos.x + connNodeW / 2;
+              const ty = toPos.y + connNodeH / 2;
+              const cpx1 = fx + (tx - fx) * 0.4;
+              const cpx2 = fx + (tx - fx) * 0.6;
+              const cfg = connConfig(conn.type);
+              const isSelected = selectedConnId === conn.id;
+              const t = 0.5;
+              const mt = 1 - t;
+              const mx = mt*mt*mt*fx + 3*mt*mt*t*cpx1 + 3*mt*t*t*cpx2 + t*t*t*tx;
+              const my = mt*mt*mt*fy + 3*mt*mt*t*fy  + 3*mt*t*t*ty  + t*t*t*ty;
+              const dxdt = 3*mt*mt*(cpx1-fx) + 6*mt*t*(cpx2-cpx1) + 3*t*t*(tx-cpx2);
+              const dydt = 3*mt*mt*(fy-fy)   + 6*mt*t*(ty-fy)     + 3*t*t*(ty-ty);
+              const angle = Math.atan2(dydt, dxdt) * 180 / Math.PI;
+              return (
+                <g key={conn.id}>
+                  <path d={`M ${fx} ${fy} C ${cpx1} ${fy}, ${cpx2} ${ty}, ${tx} ${ty}`}
+                    fill="none" stroke="transparent" strokeWidth="14"
+                    style={{ cursor: mode === 'edit' ? 'pointer' : 'default' }}
+                    onClick={(e) => handleConnClick(e as unknown as React.MouseEvent, conn.id)}
+                  />
+                  <path d={`M ${fx} ${fy} C ${cpx1} ${fy}, ${cpx2} ${ty}, ${tx} ${ty}`}
+                    fill="none"
+                    stroke={isSelected ? 'rgba(255,255,255,0.9)' : cfg.color}
+                    strokeWidth={isSelected ? 4 : 2.5}
+                    strokeDasharray={cfg.dash === 'none' ? undefined : cfg.dash}
+                    style={{ pointerEvents: 'none' }}
+                  />
+                  <circle cx={fx} cy={fy} r={isSelected ? 6 : 4}
+                    fill={isSelected ? 'rgba(255,255,255,0.9)' : cfg.color}
+                    style={{ pointerEvents: 'none' }}
+                  />
+                  <polygon
+                    points="-8,-5 7,0 -8,5"
+                    fill={isSelected ? 'rgba(255,255,255,0.9)' : cfg.color}
+                    transform={`translate(${mx},${my}) rotate(${angle})`}
+                    style={{ pointerEvents: 'none' }}
+                  />
+                  <text x={mx} y={my - 12} textAnchor="middle" fontSize="10"
+                    fill={cfg.color} fontWeight="700" opacity="0.9"
+                    style={{ pointerEvents: 'none', userSelect: 'none', fontFamily: 'var(--font-mono, monospace)' }}
+                  >
+                    {cfg.label}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
         </div>
       </div>
 

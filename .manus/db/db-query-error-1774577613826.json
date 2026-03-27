@@ -1,0 +1,8 @@
+{
+  "query": "\nSELECT id, companyName, stage, acv, salesModel FROM deals WHERE tenantId = 1 ORDER BY id;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute \nSELECT id, companyName, stage, acv, salesModel FROM deals WHERE tenantId = 1 ORDER BY id;\n",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 2: Unknown column 'companyname' in 'field list'"
+  ]
+}

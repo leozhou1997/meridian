@@ -1,0 +1,36 @@
+{
+  "query": "\nSELECT * FROM companyProfiles WHERE tenantId = 1;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute \nSELECT * FROM companyProfiles WHERE tenantId = 1;\n",
+  "rows": [
+    {
+      "id": "1",
+      "tenantId": "1",
+      "userId": "1",
+      "companyName": "Doctor Scrap",
+      "companyWebsite": "www.doctorscrap.com",
+      "companyDescription": "Doctor Scrap specializes in the recycling and processing of various types of scrap materials, including ferrous and non-ferrous metals. They offer services for collecting, sorting, and preparing scrap for reuse in industrial processes, contributing to sustainable resource management.",
+      "industry": "Metal Recycling",
+      "products": "[\"Ferrous Scrap Recycling\", \"Non-Ferrous Scrap Recycling\", \"Scrap Metal Collection\", \"Scrap Metal Processing\"]",
+      "targetMarket": "Industrial manufacturers, construction companies, demolition contractors, and other businesses generating scrap metal.",
+      "headquarters": "Puebla, Mexico",
+      "estimatedSize": "Small to Medium (10-50 employees)",
+      "keyDifferentiator": "Focus on comprehensive scrap management solutions with a commitment to environmental sustainability and efficient processing.",
+      "salesStages": "[\"Discovery\", \"Demo\", \"Technical Evaluation\", \"POC\", \"Negotiation\"]",
+      "avgDealSize": "1",
+      "avgDealCycle": "1",
+      "salesTeamSize": "1",
+      "icpIndustries": "1",
+      "icpCompanySize": "1",
+      "icpTitles": "1",
+      "icpPainPoints": "1",
+      "knowledgeBaseText": "NULL",
+      "onboardingCompleted": "1",
+      "createdAt": "2026-03-26 16:24:32",
+      "updatedAt": "2026-03-26 16:44:52"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttenantId\tuserId\tcompanyName\tcompanyWebsite\tcompanyDescription\tindustry\tproducts\ttargetMarket\theadquarters\testimatedSize\tkeyDifferentiator\tsalesStages\tavgDealSize\tavgDealCycle\tsalesTeamSize\ticpIndustries\ticpCompanySize\ticpTitles\ticpPainPoints\tknowledgeBaseText\tonboardingCompleted\tcreatedAt\tupdatedAt\n1\t1\t1\tDoctor Scrap\twww.doctorscrap.com\tDoctor Scrap specializes in the recycling and processing of various types of scrap materials, including ferrous and non-ferrous metals. They offer services for collecting, sorting, and preparing scrap for reuse in industrial processes, contributing to sustainable resource management.\tMetal Recycling\t[\"Ferrous Scrap Recycling\", \"Non-Ferrous Scrap Recycling\", \"Scrap Metal Collection\", \"Scrap Metal Processing\"]\tIndustrial manufacturers, construction companies, demolition contractors, and other businesses generating scrap metal.\tPuebla, Mexico\tSmall to Medium (10-50 employees)\tFocus on comprehensive scrap management solutions with a commitment to environmental sustainability and efficient processing.\t[\"Discovery\", \"Demo\", \"Technical Evaluation\", \"POC\", \"Negotiation\"]\t1\t1\t1\t1\t1\t1\t1\tNULL\t1\t2026-03-26 16:24:32\t2026-03-26 16:44:52\n",
+  "stderr": "",
+  "execution_time_ms": 354
+}

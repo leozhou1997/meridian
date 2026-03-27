@@ -1,0 +1,20 @@
+{
+  "query": "\nSELECT u.id as user_id, u.email, u.name, tm.tenantId,\n  (SELECT COUNT(*) FROM deals WHERE tenantId = tm.tenantId) as deal_count,\n  (SELECT COUNT(*) FROM stakeholders WHERE tenantId = tm.tenantId) as stakeholder_count,\n  (SELECT COUNT(*) FROM meetings WHERE tenantId = tm.tenantId) as meeting_count,\n  (SELECT COUNT(*) FROM snapshots WHERE tenantId = tm.tenantId) as snapshot_count\nFROM users u\nJOIN tenantMembers tm ON tm.userId = u.id\nWHERE u.email = 'leo@meridianos.ai';\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute \nSELECT u.id as user_id, u.email, u.name, tm.tenantId,\n  (SELECT COUNT(*) FROM deals WHERE tenantId = tm.tenantId) as deal_count,\n  (SELECT COUNT(*) FROM stakeholders WHERE tenantId = tm.tenantId) as stakeholder_count,\n  (SELECT COUNT(*) FROM meetings WHERE tenantId = tm.tenantId) as meeting_count,\n  (SELECT COUNT(*) FROM snapshots WHERE tenantId = tm.tenantId) as snapshot_count\nFROM users u\nJOIN tenantMembers tm ON tm.userId = u.id\nWHERE u.email = 'leo@meridianos.ai';\n",
+  "rows": [
+    {
+      "user_id": "1",
+      "email": "leo@meridianos.ai",
+      "name": "Leo Zhou",
+      "tenantId": "1",
+      "deal_count": "9",
+      "stakeholder_count": "29",
+      "meeting_count": "8",
+      "snapshot_count": "22"
+    }
+  ],
+  "messages": [],
+  "stdout": "user_id\temail\tname\ttenantId\tdeal_count\tstakeholder_count\tmeeting_count\tsnapshot_count\n1\tleo@meridianos.ai\tLeo Zhou\t1\t9\t29\t8\t22\n",
+  "stderr": "",
+  "execution_time_ms": 348
+}

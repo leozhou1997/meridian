@@ -1,0 +1,8 @@
+{
+  "query": "\nSELECT u.email, u.name, t.id as tenant_id, \n  (SELECT COUNT(*) FROM deals WHERE tenant_id = t.id) as deal_count,\n  (SELECT COUNT(*) FROM stakeholders WHERE tenant_id = t.id) as stakeholder_count,\n  (SELECT COUNT(*) FROM meetings WHERE tenant_id = t.id) as meeting_count,\n  (SELECT COUNT(*) FROM snapshots WHERE tenant_id = t.id) as snapshot_count\nFROM users u\nJOIN tenants t ON t.id = u.tenant_id\nWHERE u.email = 'leo@meridianos.ai';\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute \nSELECT u.email, u.name, t.id as tenant_id, \n  (SELECT COUNT(*) FROM deals WHERE tenant_id = t.id) as deal_count,\n  (SELECT COUNT(*) FROM stakeholders WHERE tenant_id = t.id) as stakeholder_count,\n  (SELECT COUNT(*) FROM meetings WHERE tenant_id = t.id) as meeting_count,\n  (SELECT COUNT(*) FROM snapshots WHERE tenant_id = t.id) as snapshot_count\nFROM users u\nJOIN tenants t ON t.id = u.tenant_id\nWHERE u.email = 'leo@meridianos.ai';\n",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 2: Unknown column 'u.tenant_id' in 'on clause'"
+  ]
+}

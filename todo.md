@@ -206,3 +206,25 @@
 - [x] File icon + title + date + type badge (PDF, Doc, etc.)
 - [x] Click to expand and see full content
 - [x] Visual distinction from Sales Framework section
+
+## Stakeholder Map Fixes + AI Context + Demo Data Rebuild (March 27)
+
+### 1. Stakeholder Map — Collision Detection & Connection Lines
+- [x] Fix card overlap in Expanded mode: improve collision detection algorithm so cards don't stack on top of each other
+- [x] Fix connection lines z-order: lines render AFTER cards in DOM with z-index 25 so they appear above z-20 cards
+- [x] Fix connection lines in Compact mode: coordinates now use COMPACT_NODE_W/H, SVG layer fixed
+- [x] Ensure lines are clearly visible (color, opacity, stroke-width) in both modes
+
+### 2. AI Context Fix — Use Leo's Knowledge Base
+- [x] Deal Insight AI must read from tenant's companyProfile (Leo's Meridian product info) as the seller context
+- [x] Remove any logic that uses deal's target company as the "seller" context
+- [x] Verify all AI prompts (generateDealInsight, chatWithDeal, generateBrief) use companyProfile as seller identity
+
+### 3. Demo Data Rebuild
+- [x] Clear ALL existing deals, stakeholders, meetings, snapshots, nextActions from Leo's account
+- [x] Create 4 demo deals (Meridian selling to enterprise targets): Acme Corp, GlobalTech, Nexus Systems, Nike
+- [x] Each deal: 4-6 stakeholders with realistic titles and roles
+- [x] Each deal: 4-6 rich transcripts (30-min conversation level, detailed summaries)
+- [x] Transcripts show realistic sales progression (discovery → demo → technical eval → negotiation)
+- [x] Generate AI snapshots for each deal based on transcripts (via seed-snapshots.mjs)
+- [x] Verify Deal Insight correctly references Meridian as the product being sold

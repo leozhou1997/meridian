@@ -1,0 +1,9 @@
+{
+  "query": "-- Delete data for deals we're removing (3, 5, 30001, 30003, 30004)\nDELETE FROM snapshots WHERE dealId IN (3, 5, 30001, 30003, 30004) AND tenantId = 1;\nDELETE FROM nextActions WHERE dealId IN (3, 5, 30001, 30003, 30004) AND tenantId = 1;\nDELETE FROM meetings WHERE dealId IN (3, 5, 30001, 30003, 30004) AND tenantId = 1;\nDELETE FROM stakeholders WHERE dealId IN (3, 5, 30001, 30003, 30004) AND tenantId = 1;\nDELETE FROM deals WHERE id IN (3, 5, 30001, 30003, 30004) AND tenantId = 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute -- Delete data for deals we're removing (3, 5, 30001, 30003, 30004)\nDELETE FROM snapshots WHERE dealId IN (3, 5, 30001, 30003, 30004) AND tenantId = 1;\nDELETE FROM nextActions WHERE dealId IN (3, 5, 30001, 30003, 30004) AND tenantId = 1;\nDELETE FROM meetings WHERE dealId IN (3, 5, 30001, 30003, 30004) AND tenantId = 1;\nDELETE FROM stakeholders WHERE dealId IN (3, 5, 30001, 30003, 30004) AND tenantId = 1;\nDELETE FROM deals WHERE id IN (3, 5, 30001, 30003, 30004) AND tenantId = 1;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 608
+}

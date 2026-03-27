@@ -1,0 +1,20 @@
+{
+  "query": "SELECT id, tenantId, companyName, companyDescription, products, industry, keyDifferentiator, onboardingCompleted FROM companyProfiles WHERE tenantId = 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute SELECT id, tenantId, companyName, companyDescription, products, industry, keyDifferentiator, onboardingCompleted FROM companyProfiles WHERE tenantId = 1;",
+  "rows": [
+    {
+      "id": "1",
+      "tenantId": "1",
+      "companyName": "Doctor Scrap",
+      "companyDescription": "Doctor Scrap specializes in the recycling and processing of various types of scrap materials, including ferrous and non-ferrous metals. They offer services for collecting, sorting, and preparing scrap for reuse in industrial processes, contributing to sustainable resource management.",
+      "products": "[\"Ferrous Scrap Recycling\", \"Non-Ferrous Scrap Recycling\", \"Scrap Metal Collection\", \"Scrap Metal Processing\"]",
+      "industry": "Metal Recycling",
+      "keyDifferentiator": "Focus on comprehensive scrap management solutions with a commitment to environmental sustainability and efficient processing.",
+      "onboardingCompleted": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttenantId\tcompanyName\tcompanyDescription\tproducts\tindustry\tkeyDifferentiator\tonboardingCompleted\n1\t1\tDoctor Scrap\tDoctor Scrap specializes in the recycling and processing of various types of scrap materials, including ferrous and non-ferrous metals. They offer services for collecting, sorting, and preparing scrap for reuse in industrial processes, contributing to sustainable resource management.\t[\"Ferrous Scrap Recycling\", \"Non-Ferrous Scrap Recycling\", \"Scrap Metal Collection\", \"Scrap Metal Processing\"]\tMetal Recycling\tFocus on comprehensive scrap management solutions with a commitment to environmental sustainability and efficient processing.\t1\n",
+  "stderr": "",
+  "execution_time_ms": 346
+}

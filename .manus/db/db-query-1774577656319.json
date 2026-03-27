@@ -1,0 +1,35 @@
+{
+  "query": "SELECT id, company, LEFT(companyInfo, 300) as companyInfo_preview FROM deals WHERE tenantId = 1 LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute SELECT id, company, LEFT(companyInfo, 300) as companyInfo_preview FROM deals WHERE tenantId = 1 LIMIT 5;",
+  "rows": [
+    {
+      "id": "1",
+      "company": "Acme Corp",
+      "companyInfo_preview": "Fortune 500 manufacturing company, 12,000 employees. Digital transformation initiative led by new CTO."
+    },
+    {
+      "id": "2",
+      "company": "GlobalTech",
+      "companyInfo_preview": "Mid-market SaaS company, 800 employees. Series C funded, rapid growth phase."
+    },
+    {
+      "id": "3",
+      "company": "Meridian Analytics",
+      "companyInfo_preview": "Analytics startup, 150 employees. Seed funded. Strong technical team."
+    },
+    {
+      "id": "4",
+      "company": "Nexus Systems",
+      "companyInfo_preview": "Enterprise software company, 3,500 employees. Going through M&A process."
+    },
+    {
+      "id": "5",
+      "company": "Velocity Commerce",
+      "companyInfo_preview": "E-commerce platform, 200 employees. Growing 40% YoY."
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tcompany\tcompanyInfo_preview\n1\tAcme Corp\tFortune 500 manufacturing company, 12,000 employees. Digital transformation initiative led by new CTO.\n2\tGlobalTech\tMid-market SaaS company, 800 employees. Series C funded, rapid growth phase.\n3\tMeridian Analytics\tAnalytics startup, 150 employees. Seed funded. Strong technical team.\n4\tNexus Systems\tEnterprise software company, 3,500 employees. Going through M&A process.\n5\tVelocity Commerce\tE-commerce platform, 200 employees. Growing 40% YoY.\n",
+  "stderr": "",
+  "execution_time_ms": 344
+}

@@ -55,7 +55,7 @@ const CONNECTION_TYPES: { value: ConnectionType; label: string; color: string; d
 
 // Collapsed card dimensions (used for layout math — the default resting size)
 const NODE_W = 148;
-const NODE_H = 76;
+const NODE_H = 108;
 const CARD_GAP = 32; // minimum gap between card edges (more room for connection lines)
 
 type ViewLayout = 'concentric' | 'stages';
@@ -1690,9 +1690,9 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                     handleNodeClick(e, stakeholder);
                   }}
                 >
-                  <CardContent className="p-2.5">
-                    {/* ── Collapsed view: avatar + name + role badge + sentiment ── */}
-                    <div className="flex items-center gap-2">
+                  <CardContent className="p-2">
+                    {/* ── Row 1: avatar + name + role badge + sentiment dot ── */}
+                    <div className="flex items-center gap-1.5">
                       <div className="relative shrink-0">
                         <StakeholderAvatar name={stakeholder.name} avatarUrl={stakeholder.avatar} size="sm" className="border-2 border-background" />
                         <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-card"
@@ -1719,64 +1719,32 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                       )}
                     </div>
 
-                    {/* ── Expanded details: visible on hover (view mode) or always (edit mode) ── */}
-                    <AnimatePresence>
-                      {isCardExpanded && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          transition={{ duration: 0.18, ease: 'easeOut' }}
-                          className="overflow-hidden"
-                        >
-                          <div className="mt-2 pt-2 border-t border-border/20">
-                            {/* Drag handle — only visible in edit mode */}
-                            {mode === 'edit' && (
-                              <div className="flex items-center justify-center mb-1.5 -mt-1 opacity-40 hover:opacity-70 transition-opacity">
-                                <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
-                              </div>
-                            )}
+                    {/* ── Row 2: job title ── */}
+                    {stakeholder.title && (
+                      <div className="text-[9px] text-muted-foreground mt-1 truncate leading-tight">{stakeholder.title}</div>
+                    )}
 
-                            {/* Job title */}
-                            {stakeholder.title && (
-                              <div className="text-[9px] text-muted-foreground mb-2 truncate">{stakeholder.title}</div>
-                            )}
+                    {/* ── Row 3: heat bar (always visible) ── */}
+                    <div className="mt-1.5">
+                      <div className="flex items-center gap-1 mb-0.5">
+                        <Flame className="w-2.5 h-2.5 shrink-0" style={{ color: heatColor }} />
+                        <div className="flex-1 h-1 rounded-full bg-muted/60 overflow-hidden">
+                          <motion.div
+                            className="h-full rounded-full"
+                            style={{ background: heatColor }}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${heat * 100}%` }}
+                            transition={{ duration: 0.5, ease: 'easeOut' }}
+                          />
+                        </div>
+                        <span className="text-[9px] font-medium shrink-0" style={{ color: heatColor }}>
+                          {touchpoints > 0 ? `${touchpoints}tp` : '—'}
+                        </span>
+                      </div>
+                    </div>
 
-                            {/* Additional role badges */}
-                            {(stakeholder.roles ?? [stakeholder.role]).length > 1 && (
-                              <div className="flex flex-wrap gap-1 mb-2">
-                                {(stakeholder.roles ?? [stakeholder.role]).slice(1, 3).map(r => (
-                                  <Badge key={r} variant="outline" className={`text-[8px] px-1 py-0 h-3.5 leading-none ${getRoleColor(r as Stakeholder['role'])}`}>
-                                    {r}
-                                  </Badge>
-                                ))}
-                              </div>
-                            )}
-
-                            {/* Heat bar */}
-                            <div className="space-y-1 mb-2">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-1">
-                                  <Flame className="w-2.5 h-2.5" style={{ color: heatColor }} />
-                                  <span className="text-[9px] text-muted-foreground font-mono">{heatWindow}</span>
-                                </div>
-                                <span className="text-[9px] font-medium" style={{ color: heatColor }}>
-                                  {touchpoints > 0 ? `${touchpoints} tp` : 'No contact'}
-                                </span>
-                              </div>
-                              <div className="h-1 rounded-full bg-muted/60 overflow-hidden">
-                                <motion.div
-                                  className="h-full rounded-full"
-                                  style={{ background: heatColor }}
-                                  initial={{ width: 0 }}
-                                  animate={{ width: `${heat * 100}%` }}
-                                  transition={{ duration: 0.5, ease: 'easeOut' }}
-                                />
-                              </div>
-                            </div>
-
-                            {/* Expandable interaction history */}
-                            <div className="border-t border-border/20 pt-1.5">
+                    {/* ── Row 4: interaction count + add button (always visible) ── */}
+                    <div className="border-t border-border/20 mt-1.5 pt-1">
                               <div className="flex items-center justify-between">
                                 <button
                                   className="flex items-center gap-1 text-[9px] text-muted-foreground hover:text-foreground transition-colors"
@@ -1920,10 +1888,6 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                                 )}
                               </AnimatePresence>
                             </div>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
                   </CardContent>
                 </Card>
               </motion.div>

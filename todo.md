@@ -310,3 +310,42 @@
 - [x] Update ring radii and layout geometry for new smaller default card dimensions
 - [x] Update connection line routing to use collapsed card dimensions as base
 - [x] Remove the Compact/Full mode toggle button from the toolbar (no longer needed)
+
+## Stakeholder Card Always-Visible Compact Redesign (March 28)
+
+- [ ] Remove hover-expand pattern — all key info always visible (no AnimatePresence expand)
+- [ ] Compress card to ~148×110px: tighten padding, merge title+heat into single row, inline interaction count
+- [ ] Layout: row1=avatar+name+role badge+sentiment dot, row2=title (truncated), row3=heat bar + touchpoints + interaction count inline
+- [ ] Hover: subtle border highlight only, no layout change
+- [ ] Edit mode: show delete button + drag grip, same layout
+- [ ] Update NODE_H to match new fixed card height
+
+## Pipeline Sidebar & Toggle Button Redesign (March 28)
+
+- [x] Restrict Pipeline sidebar to only Dashboard (/) and Deal detail (/deal/:id) pages — hide on Settings, Stakeholders, Transcripts, Ask, Knowledge
+- [x] Remove the floating toggle button from AppLayout — it should not exist as a standalone element
+- [x] Add PipelineContext to manage toggle state and pass to child pages
+- [x] Deal detail page: add PipelineToggleButton in the deal header
+- [x] Export PipelineToggleButton component for reuse in other pages
+
+## Editable Deal Info (March 28)
+
+- [ ] Add inline-editable deal fields: company name, deal name, ACV/value, website, stage — click to edit, save on blur/Enter
+- [ ] Place edit controls in the deal header or a dedicated "Deal Info" card in the overview tab
+
+## Next Steps Redesign (March 28)
+
+- [ ] Redesign Next Steps with status per item: Accepted / Rejected / Pending (for AI suggestions) + Done / In Progress / Blocked (for tasks)
+- [ ] Keep history of all past AI-generated next steps snapshots (each insight refresh creates a new snapshot)
+- [ ] Allow sales rep to mark each suggestion as accepted/rejected/pending
+- [ ] Show historical snapshots in a collapsible timeline view
+
+## Deal Timeline Rebuild (March 28)
+
+- [ ] Rename "Deal Timeline" to "Deal Hub" or similar — make it a 3-tier content management library
+- [ ] Tier 1 (top): AI-generated Insights (existing)
+- [ ] Tier 2 (middle): Notes — text notes, conversation screenshots, any freeform context
+- [ ] Tier 3 (bottom): Sales Actions — outbound artifacts sent to customer (PDFs, proposals, emails)
+- [ ] Support multi-type uploads: Meeting Transcript (text), Video/Audio file, Screenshot (image), PDF document
+- [ ] Remove the "Update Customer History" refresh button from deal header (or move into timeline as a CRM sync action item)
+- [ ] Frontend only — no backend parsing needed yet, just UI scaffolding with upload placeholders

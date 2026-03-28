@@ -69,6 +69,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { CompanyLogo, StakeholderAvatar } from '@/components/Avatars';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { PipelineToggleButton } from '@/components/AppLayout';
 
 type SentimentType = 'Positive' | 'Neutral' | 'Negative';
 type RoleType = 'Champion' | 'Decision Maker' | 'Influencer' | 'Blocker' | 'User' | 'Evaluator';
@@ -574,11 +575,13 @@ export default function DealDetail() {
               <Progress value={deal.confidenceScore} className="w-24 h-1.5" />
             </div>
           </div>
+          <PipelineToggleButton className="mr-2" />
           <Button
-            onClick={() => toast('Update Account History coming soon')}
+            onClick={() => toast('CRM sync coming soon')}
             className="font-display text-xs shrink-0"
+            variant="outline"
           >
-            {t('deal.updateHistory')}
+            {t('deal.updateHistory') || 'Sync CRM'}
           </Button>
         </div>
       </div>

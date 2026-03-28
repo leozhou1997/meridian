@@ -501,6 +501,8 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
   const [hoveredConnId, setHoveredConnId] = useState<string | null>(null);
   // ── Hovered ring index (for legend highlight) ────────────────────────────
   const [hoveredRingIdx, setHoveredRingIdx] = useState<number | null>(null);
+  // ── Newly added stakeholder ID (for auto-pan) ────────────────────────────
+  const [newlyAddedId, setNewlyAddedId] = useState<string | null>(null);
 
   // ── Expanded interaction history on cards ─────────────────────────────────
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
@@ -575,6 +577,25 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
+
+  // ── Auto-pan to newly added stakeholder ────────────────────────────
+  useEffect(() => {
+    if (!newlyAddedId) return;
+    const pos = positions.find(p => p.id === newlyAddedId);
+    if (!pos) return;
+    // Get viewport dimensions from the container element
+    const containerEl = containerRef.current;
+    const viewportW = containerEl?.clientWidth ?? containerW;
+    const viewportH = containerEl?.clientHeight ?? 500;
+    const nodeW = compactMode ? COMPACT_NODE_W : NODE_W;
+    const nodeH = compactMode ? COMPACT_NODE_H : NODE_H;
+    // Center the new card in the viewport
+    const targetPanX = viewportW / 2 - (pos.x + nodeW / 2) * zoom;
+    const targetPanY = viewportH / 2 - (pos.y + nodeH / 2) * zoom;
+    setPanOffset({ x: targetPanX, y: targetPanY });
+    setNewlyAddedId(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newlyAddedId, positions]);
 
   // ── Heat scores ───────────────────────────────────────────────────────────
   const maxTouchpoints = Math.max(
@@ -949,6 +970,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     setLocalStakeholders(updated);
     onStakeholdersChange?.(updated);
     setPositions(prev => [...prev, { id: newS.id, x: 20, y: 20 + prev.length * (NODE_H + 20) }]);
+    setNewlyAddedId(String(newS.id));
     toast('New stakeholder added — click to edit their profile');
   };
 
@@ -1309,18 +1331,44 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
           {viewLayout === 'concentric' ? (() => {
             const nodeW = compactMode ? COMPACT_NODE_W : NODE_W;
             const { cx, cy, radii } = computeRingGeometry(localStakeholders, containerW, compactMode);
+            const ringBaseColors = ['#6382ff', '#10b981', '#ef4444'];
             return (
               <svg className="absolute inset-0 w-full pointer-events-none" style={{ height: '100%', overflow: 'visible' }}>
+                <defs>
+                  {ringBaseColors.map((color, idx) => (
+                    <radialGradient key={idx} id={`ring-glow-${idx}`} cx="50%" cy="50%" r="50%">
+                      <stop offset="70%" stopColor={color} stopOpacity="0" />
+                      <stop offset="100%" stopColor={color} stopOpacity="0.25" />
+                    </radialGradient>
+                  ))}
+                </defs>
                 {[...radii].reverse().map((r, revIdx) => {
                   const idx = radii.length - 1 - revIdx;
+                  const isRingHovered = hoveredRingIdx === idx;
+                  const isOtherHovered = hoveredRingIdx !== null && hoveredRingIdx !== idx;
+                  const ringR = r + nodeW / 2 + 30;
                   return (
-                    <g key={idx}>
-                      <circle cx={cx} cy={cy} r={r + nodeW / 2 + 30}
+                    <g key={idx} style={{ transition: 'opacity 0.2s' }} opacity={isOtherHovered ? 0.3 : 1}>
+                      {/* Base fill */}
+                      <circle cx={cx} cy={cy} r={ringR}
                         fill={RING_COLORS[idx]}
-                        stroke={RING_COLORS[idx].replace(/[\d.]+\)$/, '0.3)')}
-                        strokeWidth="1"
+                        stroke={isRingHovered
+                          ? ringBaseColors[idx]
+                          : RING_COLORS[idx].replace(/[\d.]+\)$/, '0.3)')}
+                        strokeWidth={isRingHovered ? 1.5 : 1}
                         strokeDasharray="6 4"
+                        style={{ transition: 'stroke 0.2s, stroke-width 0.2s, fill 0.2s' }}
                       />
+                      {/* Glow ring on hover */}
+                      {isRingHovered && (
+                        <circle cx={cx} cy={cy} r={ringR}
+                          fill="none"
+                          stroke={ringBaseColors[idx]}
+                          strokeWidth="12"
+                          strokeOpacity="0.15"
+                          style={{ filter: `blur(4px)` }}
+                        />
+                      )}
                     </g>
                   );
                 })}
@@ -1436,12 +1484,20 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                     <marker
                       key={ct.value}
                       id={`arrow-${ct.value}`}
-                      markerWidth="10" markerHeight="8"
-                      refX="9" refY="4"
+                      markerWidth="12" markerHeight="10"
+                      refX="10" refY="5"
                       orient="auto"
                     >
-                      <polygon points="0 0, 10 4, 0 8" fill={ct.color} opacity="0.85" />
+                      <polygon points="0 1, 11 5, 0 9" fill={ct.color} opacity="0.9" />
                     </marker>
+                  ))}
+                  {/* Glow filters for hovered connections */}
+                  {CONNECTION_TYPES.map(ct => (
+                    <filter key={`glow-${ct.value}`} id={`glow-${ct.value}`} x="-50%" y="-50%" width="200%" height="200%">
+                      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur" />
+                      <feColorMatrix in="blur" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 12 -4" result="glow" />
+                      <feMerge><feMergeNode in="glow" /><feMergeNode in="SourceGraphic" /></feMerge>
+                    </filter>
                   ))}
                 </defs>
                 {connections.map(conn => {
@@ -1461,15 +1517,19 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                   const to   = getEdgePoint(toPos.x,   toPos.y,   fcx, fcy);
 
                   // Cubic bezier control points — arc that bows perpendicular to the line
-                  // Compute perpendicular direction for the bow
                   const lineDx = to.x - from.x;
                   const lineDy = to.y - from.y;
                   const lineLen = Math.sqrt(lineDx * lineDx + lineDy * lineDy) || 1;
                   // Perpendicular unit vector (rotated 90° clockwise)
                   const perpX = lineDy / lineLen;
                   const perpY = -lineDx / lineLen;
-                  // Bow amount: 20% of line length, min 30px, max 80px
-                  const bow = Math.min(Math.max(lineLen * 0.22, 30), 80);
+                  // Adaptive bow: larger for short connections so arc is always visible
+                  // Short (<120px): large bow (80-100px). Long (>300px): moderate bow (60-80px).
+                  const bow = lineLen < 120
+                    ? Math.max(lineLen * 0.7, 80)   // short: very pronounced arc
+                    : lineLen < 250
+                      ? Math.max(lineLen * 0.35, 60) // medium: moderate arc
+                      : Math.min(lineLen * 0.22, 80); // long: gentle arc
                   // Mid-point of the straight line
                   const midX = (from.x + to.x) / 2;
                   const midY = (from.y + to.y) / 2;
@@ -1479,7 +1539,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                   const cpx2 = to.x + (midX - to.x) * 0.6 + perpX * bow * 0.5;
                   const cpy2 = to.y + (midY - to.y) * 0.6 + perpY * bow * 0.5;
 
-                  // Midpoint on bezier at t=0.5 for label placement
+                  // Midpoint on bezier at t=0.5 for label/dot placement
                   const t = 0.5;
                   const mt = 1 - t;
                   const mx = mt*mt*mt*from.x + 3*mt*mt*t*cpx1 + 3*mt*t*t*cpx2 + t*t*t*to.x;
@@ -1489,13 +1549,25 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                   const isSelected = selectedConnId === conn.id;
                   const isHovered = hoveredConnId === conn.id;
                   const showLabel = isSelected || isHovered;
+                  const pathD = `M ${from.x} ${from.y} C ${cpx1} ${cpy1}, ${cpx2} ${cpy2}, ${to.x} ${to.y}`;
 
                   return (
                     <g key={conn.id}>
+                      {/* Glow layer on hover */}
+                      {isHovered && (
+                        <path
+                          d={pathD}
+                          fill="none"
+                          stroke={cfg.color}
+                          strokeWidth="6"
+                          opacity="0.25"
+                          style={{ pointerEvents: 'none', filter: `blur(3px)` }}
+                        />
+                      )}
                       {/* Wide invisible hit area for hover/click */}
                       <path
-                        d={`M ${from.x} ${from.y} C ${cpx1} ${cpy1}, ${cpx2} ${cpy2}, ${to.x} ${to.y}`}
-                        fill="none" stroke="transparent" strokeWidth="16"
+                        d={pathD}
+                        fill="none" stroke="transparent" strokeWidth="18"
                         style={{ cursor: mode === 'edit' ? 'pointer' : 'default', pointerEvents: 'stroke' }}
                         onMouseEnter={() => setHoveredConnId(conn.id)}
                         onMouseLeave={() => setHoveredConnId(null)}
@@ -1503,29 +1575,47 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                       />
                       {/* Visible line */}
                       <path
-                        d={`M ${from.x} ${from.y} C ${cpx1} ${cpy1}, ${cpx2} ${cpy2}, ${to.x} ${to.y}`}
+                        d={pathD}
                         fill="none"
                         stroke={isSelected ? 'rgba(255,255,255,0.9)' : cfg.color}
                         strokeWidth={isSelected ? 3 : isHovered ? 2.5 : 1.8}
                         strokeDasharray={cfg.dash === 'none' ? undefined : cfg.dash}
-                        opacity={isSelected || isHovered ? 1 : 0.65}
+                        opacity={isSelected || isHovered ? 1 : 0.7}
                         markerEnd={`url(#arrow-${conn.type})`}
                         style={{ pointerEvents: 'none', transition: 'opacity 0.15s, stroke-width 0.15s' }}
                       />
-                      {/* Label — only visible on hover or selection */}
+                      {/* Always-visible type indicator dot at midpoint */}
+                      {!showLabel && (
+                        <circle
+                          cx={mx} cy={my} r={isHovered ? 6 : 4.5}
+                          fill={cfg.color}
+                          opacity={isHovered ? 1 : 0.75}
+                          stroke="hsl(var(--card))" strokeWidth="1.5"
+                          style={{ pointerEvents: 'none', transition: 'r 0.15s, opacity 0.15s' }}
+                        />
+                      )}
+                      {/* Label pill — visible on hover or selection */}
                       {showLabel && (
                         <>
                           <rect
-                            x={mx - 32} y={my - 14}
-                            width="64" height="18" rx="4"
-                            fill="hsl(var(--card))" opacity="0.92"
+                            x={mx - 36} y={my - 12}
+                            width="72" height="20" rx="10"
+                            fill={cfg.color} opacity="0.15"
                             style={{ pointerEvents: 'none' }}
                           />
-                          <text x={mx} y={my - 2} textAnchor="middle" fontSize="10"
+                          <rect
+                            x={mx - 36} y={my - 12}
+                            width="72" height="20" rx="10"
+                            fill="none"
+                            stroke={cfg.color} strokeWidth="1"
+                            opacity="0.5"
+                            style={{ pointerEvents: 'none' }}
+                          />
+                          <text x={mx} y={my + 3} textAnchor="middle" fontSize="10"
                             fill={cfg.color} fontWeight="700"
-                            style={{ pointerEvents: 'none', userSelect: 'none', fontFamily: 'var(--font-mono, monospace)' }}
+                            style={{ pointerEvents: 'none', userSelect: 'none', fontFamily: 'var(--font-sans, sans-serif)', letterSpacing: '0.03em' }}
                           >
-                            {cfg.label}
+                            {cfg.label.toUpperCase()}
                           </text>
                         </>
                       )}
@@ -1581,15 +1671,19 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
               Number(stakeholder.id) === highlightedStakeholderId
             );
 
+            // ── Ring hover dim: if a ring legend is hovered, dim cards not in that ring ──
+            const cardRingIdx = getRing(stakeholder.role ?? '');
+            const isRingDimmed = hoveredRingIdx !== null && hoveredRingIdx !== cardRingIdx;
+
             // ── Compact mode: small avatar dot + name ──
             if (compactMode) {
               return (
                 <motion.div
                   key={stakeholder.id}
                   className={`absolute select-none z-20 flex flex-col items-center cursor-pointer stakeholder-node`}
-                  style={{ left: pos.x, top: pos.y, width: COMPACT_NODE_W }}
+                  style={{ left: pos.x, top: pos.y, width: COMPACT_NODE_W, opacity: isRingDimmed ? 0.2 : undefined, transition: 'opacity 0.2s' }}
                   initial={{ opacity: 0, scale: 0.5 }}
-                  animate={{ opacity: 1, scale: isHighlighted ? 1.2 : 1 }}
+                  animate={{ opacity: isRingDimmed ? 0.2 : 1, scale: isHighlighted ? 1.2 : 1 }}
                   transition={{ duration: 0.25, delay: idx * 0.03 }}
                   onMouseDown={(e) => handleMouseDown(e, String(stakeholder.id))}
                   onMouseEnter={(e) => { setHoveredId(String(stakeholder.id)); setHoverPos({ x: e.clientX, y: e.clientY }); }}
@@ -1627,8 +1721,8 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                 className={`absolute select-none ${isDragging ? 'z-30' : 'z-20'} stakeholder-node`}
                 style={{ left: pos.x, top: pos.y, width: NODE_W }}
                 initial={{ opacity: 0, scale: 0.85 }}
-                animate={{ opacity: 1, scale: isDragging ? 1.04 : 1 }}
-                transition={{ duration: 0.25, delay: idx * 0.04 }}
+                animate={{ opacity: isRingDimmed ? 0.15 : 1, scale: isDragging ? 1.04 : 1 }}
+                transition={{ duration: 0.2, delay: idx * 0.04 }}
                 onMouseDown={(e) => handleMouseDown(e, String(stakeholder.id))}
                 onMouseEnter={(e) => {
                   if (mode === 'edit' && dragging) return;

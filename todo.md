@@ -295,3 +295,9 @@
 - [x] Connection lines: upgrade to cubic bezier arcs bowing perpendicular to line direction (22% bow, min 30px, max 80px)
 - [x] Reset Layout button: clear localStorage cache (positions + history) and rebuild default connections
 - [x] Map empty state: show guided prompt when a deal has no stakeholders
+
+## Stakeholder Map Improvements Round 2 (March 28)
+
+- [x] Ring legend hover: highlight corresponding ring SVG circle + dim cards of other roles
+- [x] Auto-pan/zoom to newly added stakeholder after creation
+- [x] Redesign connection lines for non-compact mode: adaptive bow (80px+ for short connections), always-visible type dot at midpoint, glow effect on hover, larger arrow markers

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRoute, Link } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { formatCurrency, getConfidenceColor, getConfidenceBg, getRoleColor, getSentimentColor, formatDate, getStageColor } from '@/lib/data';
@@ -290,6 +290,7 @@ export default function DealDetail() {
   const [showSummary, setShowSummary] = useState(true);
   const [hoveredStakeholderId, setHoveredStakeholderId] = useState<number | null>(null);
   const [mapCollapsed, setMapCollapsed] = useState(false);
+  const [mapSheetOpen, setMapSheetOpen] = useState(false);
   // Draggable Deal Summary panel
   const [summaryPos, setSummaryPos] = useState({ x: 16, y: 16 });
   const summaryDragRef = useRef<{ mx: number; my: number; px: number; py: number } | null>(null);
@@ -868,6 +869,7 @@ export default function DealDetail() {
                     const s = deal.stakeholders.find((st: any) => st.id === id);
                     if (s) handleStakeholderClick(s as Stakeholder);
                   }}
+                  onOpenMapSheet={() => setMapSheetOpen(true)}
                 />
 
                 {/* ── Stakeholder Map canvas — hidden on mobile, right side on desktop ── */}
@@ -904,6 +906,17 @@ export default function DealDetail() {
 
 
               </div>
+
+              {/* ── Mobile Stakeholder Map Bottom Sheet ── */}
+              <MobileMapSheet
+                open={mapSheetOpen}
+                onClose={() => setMapSheetOpen(false)}
+                deal={deal as any}
+                hoveredStakeholderId={hoveredStakeholderId}
+                onStakeholderClick={(s: any) => handleStakeholderClick(s as Stakeholder)}
+                onStakeholdersChange={() => utils.stakeholders.listByDeal.invalidate({ dealId })}
+                onBuyingStagesChange={(stages: any) => updateDealMutation.mutate({ id: dealId, buyingStages: stages })}
+              />
             </TabsContent>
 
             <TabsContent value="timeline" className="flex-1 m-0 overflow-auto">
@@ -1942,6 +1955,119 @@ export default function DealDetail() {
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+// ─── Mobile Stakeholder Map Bottom Sheet ─────────────────────────────────────
+
+interface MobileMapSheetProps {
+  open: boolean;
+  onClose: () => void;
+  deal: any;
+  hoveredStakeholderId: number | null;
+  onStakeholderClick: (s: any) => void;
+  onStakeholdersChange: () => void;
+  onBuyingStagesChange: (stages: any) => void;
+}
+
+function MobileMapSheet({
+  open,
+  onClose,
+  deal,
+  hoveredStakeholderId,
+  onStakeholderClick,
+  onStakeholdersChange,
+  onBuyingStagesChange,
+}: MobileMapSheetProps) {
+  const sheetRef = React.useRef<HTMLDivElement>(null);
+  const dragStartY = React.useRef<number | null>(null);
+  const dragCurrentY = React.useRef<number>(0);
+  const [dragOffset, setDragOffset] = React.useState(0);
+
+  // Lock body scroll when sheet is open
+  React.useEffect(() => {
+    if (open) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [open]);
+
+  // Touch drag to dismiss
+  const handleTouchStart = (e: React.TouchEvent) => {
+    dragStartY.current = e.touches[0].clientY;
+    dragCurrentY.current = 0;
+    setDragOffset(0);
+  };
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (dragStartY.current === null) return;
+    const dy = e.touches[0].clientY - dragStartY.current;
+    if (dy > 0) {
+      dragCurrentY.current = dy;
+      setDragOffset(dy);
+    }
+  };
+  const handleTouchEnd = () => {
+    if (dragCurrentY.current > 80) {
+      onClose();
+    }
+    dragStartY.current = null;
+    setDragOffset(0);
+  };
+
+  if (!open) return null;
+
+  return (
+    <div className="md:hidden fixed inset-0 z-50 flex flex-col justify-end">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      {/* Sheet */}
+      <div
+        ref={sheetRef}
+        className="relative flex flex-col rounded-t-2xl bg-background border-t border-border/40 shadow-2xl"
+        style={{
+          height: '72vh',
+          transform: `translateY(${dragOffset}px)`,
+          transition: dragOffset === 0 ? 'transform 0.3s cubic-bezier(0.32,0.72,0,1)' : 'none',
+        }}
+      >
+        {/* Drag handle + header */}
+        <div
+          className="shrink-0 flex flex-col items-center pt-2 pb-1 cursor-grab active:cursor-grabbing select-none"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          <div className="w-10 h-1 rounded-full bg-muted-foreground/30 mb-2" />
+          <div className="w-full flex items-center justify-between px-4 pb-2">
+            <span className="text-sm font-semibold text-foreground">Stakeholder Map</span>
+            <button
+              onClick={onClose}
+              className="w-7 h-7 rounded-full flex items-center justify-center bg-muted/60 hover:bg-muted transition-colors"
+            >
+              <X className="w-4 h-4 text-muted-foreground" />
+            </button>
+          </div>
+        </div>
+
+        {/* Map canvas */}
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <StakeholderMap
+            key={`mobile-sheet-${deal.id}`}
+            deal={deal}
+            highlightedStakeholderId={hoveredStakeholderId}
+            onStakeholderClick={onStakeholderClick}
+            onStakeholdersChange={onStakeholdersChange}
+            onBuyingStagesChange={onBuyingStagesChange}
+          />
+        </div>
+      </div>
     </div>
   );
 }

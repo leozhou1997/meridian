@@ -488,3 +488,18 @@
 - [x] Stakeholders page: compact header on mobile
 - [x] Deal Room page: responsive header (stack on mobile), full-width Add Interaction button on mobile
 - [x] Deal Room page: flex-wrap metrics row already works on mobile
+
+## Mobile Stakeholder Map Bottom Sheet
+- [ ] Add mobile-only trigger bar at bottom of DealInsightPanel: "Stakeholder Map · N people" with chevron-up icon
+- [ ] Bottom sheet slides up from bottom (60% screen height) with smooth CSS transition
+- [ ] Sheet contains full StakeholderMap with touch pan/zoom support (CSS transform + touch events)
+- [ ] Drag-down gesture or backdrop tap dismisses the sheet
+- [ ] Sheet only renders on mobile (md:hidden)
+
+## Mobile Bottom Sheet for Stakeholder Map (March 28)
+
+- [x] Mobile bottom sheet component for Stakeholder Map (drag-to-dismiss, 72vh height)
+- [x] Trigger bar in DealInsightPanel (mobile only, shows stakeholder count, opens bottom sheet)
+- [x] Full interactive StakeholderMap inside bottom sheet with touch pan/zoom
+- [x] Body scroll lock when sheet is open
+- [x] Fixed pre-existing TypeScript errors in Transcripts.tsx and meetings.ts

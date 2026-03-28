@@ -176,7 +176,7 @@ function DealSummaryCard({ deal, interactions, stakeholderCount, snapshotCount, 
               {/* Type breakdown */}
               {Object.keys(typeCounts).length > 0 && (
                 <div className="px-4 py-2 flex items-center gap-2 flex-wrap border-b border-border/20 bg-muted/10">
-                  {Object.entries(typeCounts).sort((a, b) => b[1] - a[1]).map(([type, count]) => (
+                  {(Object.entries(typeCounts) as [string, number][]).sort((a, b) => b[1] - a[1]).map(([type, count]) => (
                     <Badge key={type} variant="outline" className={`text-[9px] px-1.5 py-0 gap-1 ${TYPE_COLORS[type] ?? ''}`}>
                       {type} <span className="font-mono">{count}</span>
                     </Badge>

@@ -105,7 +105,7 @@ export const meetingsRouter = router({
       let transcriptText = '';
       try {
         const result = await transcribeAudio({ audioUrl });
-        transcriptText = result.text ?? '';
+        transcriptText = ('text' in result ? result.text : null) ?? '';
       } catch (err) {
         console.warn('[transcribeAndCreate] Transcription failed, using placeholder:', err);
         transcriptText = `Voice note recorded on ${new Date().toLocaleString()}`;

@@ -232,3 +232,14 @@
 ## Bug Fixes (March 27)
 
 - [x] Fix WhatsNextCard: TypeError "Cannot read properties of undefined (reading 'split')" on /deal/4
+
+## Stakeholder Map: Circles & Stages Rebuild
+
+- [x] Stages view: vertical lane columns (Stage 1 → Stage 4) from left to right
+- [x] Stages view: each lane is a tall vertical rectangle as background
+- [x] Stages view: editable lane titles (click to rename)
+- [x] Stages view: independent position storage (separate from Circles positions)
+- [x] Stages view: no role legend (Decision Maker / Influencer / Blocker) in top-left
+- [x] Circles view: legend only shows in Circles mode, hidden in Stages mode
+- [x] Switching between Circles and Stages auto-restores each view's independent positions
+- [x] Stages positions persisted to DB (separate column or key from Circles positions)

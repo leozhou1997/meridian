@@ -29,6 +29,7 @@ interface StakeholderMapProps {
   deal: Deal;
   onStakeholderClick?: (stakeholder: Stakeholder) => void;
   onStakeholdersChange?: (stakeholders: Stakeholder[]) => void;
+  onBuyingStagesChange?: (stages: string[]) => void;
   highlightedStakeholderId?: number | null;
 }
 
@@ -84,6 +85,8 @@ function historyKey(dealId: string) { return `meridian_map_history_${dealId}`; }
 
 interface PersistedMapState {
   positions: NodePosition[];
+  circlePositions?: NodePosition[];
+  stagePositions?: NodePosition[];
   connections: Connection[];
   localInteractions: Interaction[];
 }
@@ -116,10 +119,12 @@ function loadState(dealId: string): PersistedMapState | null {
     const raw = localStorage.getItem(storageKey(dealId));
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    const { positions, connections, localInteractions } = parsed;
+    const { positions, circlePositions, stagePositions, connections, localInteractions } = parsed;
     if (!Array.isArray(positions)) return null;
     return {
       positions,
+      circlePositions: circlePositions ?? undefined,
+      stagePositions: stagePositions ?? undefined,
       connections: connections ?? [],
       localInteractions: localInteractions ?? [],
     };
@@ -402,7 +407,7 @@ const sentimentLabel = (s: string) =>
   s === 'Positive' ? 'text-emerald-400' : s === 'Neutral' ? 'text-amber-400' : 'text-red-400';
 
 // ── Component ─────────────────────────────────────────────────────────────────
-export default function StakeholderMap({ deal, onStakeholderClick, onStakeholdersChange, highlightedStakeholderId }: StakeholderMapProps) {
+export default function StakeholderMap({ deal, onStakeholderClick, onStakeholdersChange, onBuyingStagesChange, highlightedStakeholderId }: StakeholderMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerW, setContainerW] = useState(800);
   const [mode, setMode] = useState<'view' | 'edit'>('view');
@@ -412,6 +417,12 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
 
   // ── Per-deal state ────────────────────────────────────────────────────────
   const [currentDealId, setCurrentDealId] = useState(deal.id);
+  // Independent position caches for each layout
+  const circlePositionsRef = useRef<NodePosition[]>([]);
+  const stagePositionsRef = useRef<NodePosition[]>([]);
+  // Editing stage title inline
+  const [editingStageIdx, setEditingStageIdx] = useState<number | null>(null);
+  const [editingStageName, setEditingStageName] = useState('');
   const [localStakeholders, setLocalStakeholders] = useState<Stakeholder[]>([]);
   const [positions, setPositions] = useState<NodePosition[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
@@ -457,6 +468,13 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
 
     if (saved && saved.positions.length > 0) {
       const validIds = new Set(stks.map(s => s.id));
+      // Restore per-layout position caches
+      if (saved.circlePositions && saved.circlePositions.length > 0) {
+        circlePositionsRef.current = saved.circlePositions.filter(p => validIds.has(p.id));
+      }
+      if (saved.stagePositions && saved.stagePositions.length > 0) {
+        stagePositionsRef.current = saved.stagePositions.filter(p => validIds.has(p.id));
+      }
       const validPositions = saved.positions.filter(p => validIds.has(p.id));
       if (validPositions.length === stks.length) {
         // Run collision pass on loaded positions too
@@ -468,7 +486,11 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
         return;
       }
     }
-    setPositions(computeInitialPositions(stks, deal.buyingStages ?? [], actualW, viewLayout, compactMode));
+    // Fresh start — compute initial positions for current layout
+    const freshPositions = computeInitialPositions(stks, deal.buyingStages ?? [], actualW, viewLayout, compactMode);
+    setPositions(freshPositions);
+    if (viewLayout === 'concentric') circlePositionsRef.current = freshPositions;
+    else stagePositionsRef.current = freshPositions;
     setConnections(buildDefaultConnections(stks, deal.buyingStages ?? []));
     setLocalInteractions([...(deal.meetings ?? [])]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -541,7 +563,16 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
 
   // ── Save ──────────────────────────────────────────────────────────────────
   const handleSave = () => {
-    const state: PersistedMapState = { positions, connections, localInteractions };
+    // Update the current layout's cache before saving
+    if (viewLayout === 'concentric') circlePositionsRef.current = positions;
+    else stagePositionsRef.current = positions;
+    const state: PersistedMapState = {
+      positions,
+      circlePositions: circlePositionsRef.current,
+      stagePositions: stagePositionsRef.current,
+      connections,
+      localInteractions,
+    };
     saveState(currentDealId, state);
     // Push to history
     const version: MapVersion = {
@@ -576,9 +607,33 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
 
   // Switch between concentric and stage layouts
   const handleLayoutSwitch = (newLayout: ViewLayout) => {
+    if (newLayout === viewLayout) return;
+    // Save current layout's positions before switching
+    if (viewLayout === 'concentric') circlePositionsRef.current = positions;
+    else stagePositionsRef.current = positions;
+
     setViewLayout(newLayout);
     const actualW = containerRef.current?.getBoundingClientRect().width || containerW;
-    setPositions(computeInitialPositions(localStakeholders, Array.isArray(deal.buyingStages) ? deal.buyingStages : [], actualW, newLayout, compactMode));
+    const stages = Array.isArray(deal.buyingStages) ? deal.buyingStages : [];
+
+    // Try to restore saved positions for the target layout
+    const cached = newLayout === 'concentric' ? circlePositionsRef.current : stagePositionsRef.current;
+    const validIds = new Set(localStakeholders.map(s => s.id));
+    const validCached = cached.filter(p => validIds.has(p.id));
+
+    if (validCached.length === localStakeholders.length) {
+      const nodeH = compactMode ? COMPACT_NODE_H : NODE_H;
+      const nodeW = compactMode ? COMPACT_NODE_W : NODE_W;
+      const cardGap = compactMode ? COMPACT_CARD_GAP : CARD_GAP;
+      const maxX = actualW - nodeW;
+      setPositions(resolveCollisions(validCached, null, 0, 0, maxX, nodeH, nodeW, cardGap));
+    } else {
+      // No cached positions — compute fresh layout
+      const fresh = computeInitialPositions(localStakeholders, stages, actualW, newLayout, compactMode);
+      setPositions(fresh);
+      if (newLayout === 'concentric') circlePositionsRef.current = fresh;
+      else stagePositionsRef.current = fresh;
+    }
     setZoom(1);
   };
 
@@ -821,15 +876,17 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
 
   return (
     <div className="relative h-full w-full" ref={containerRef}>
-      {/* Concentric circle ring labels */}
-      <div className="absolute top-2 left-3 z-10 flex items-center gap-3 text-[10px] text-muted-foreground bg-card/80 backdrop-blur-sm rounded-md px-3 py-2 border border-border/30">
-        {RING_LABELS.map((label, i) => (
-          <div key={label} className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-full border-2" style={{ borderColor: RING_COLORS[i].replace(/[\d.]+\)$/, '0.6)'), backgroundColor: RING_COLORS[i] }} />
-            <span className="font-medium">{label}</span>
-          </div>
-        ))}
-      </div>
+      {/* Concentric circle ring labels — only shown in Circles mode */}
+      {viewLayout === 'concentric' && (
+        <div className="absolute top-2 left-3 z-10 flex items-center gap-3 text-[10px] text-muted-foreground bg-card/80 backdrop-blur-sm rounded-md px-3 py-2 border border-border/30">
+          {RING_LABELS.map((label, i) => (
+            <div key={label} className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-full border-2" style={{ borderColor: RING_COLORS[i].replace(/[\d.]+\)$/, '0.6)'), backgroundColor: RING_COLORS[i] }} />
+              <span className="font-medium">{label}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Top-right controls */}
       <div className="absolute top-14 right-3 z-20 flex flex-col gap-1.5">
@@ -1149,27 +1206,84 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
               </svg>
             );
           })() : (
-            /* Stage column headers */
-            <div className="absolute inset-0 w-full h-full pointer-events-none">
-              {/* Column dividers */}
+            /* Stage column lanes — colored vertical rectangles with editable titles */
+            <div className="absolute inset-0 w-full h-full" style={{ pointerEvents: 'none' }}>
               <div className="flex w-full h-full">
-                {stageOrder.map((stage, i) => (
-                  <div key={stage} className="flex-1 relative" style={{ borderRight: i < stageOrder.length - 1 ? '1px dashed hsla(var(--border), 0.15)' : 'none' }}>
-                    {/* Stage header */}
-                    <div className="text-center py-3 border-b border-border/20 bg-background/30 backdrop-blur-sm">
-                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                        Stage {i + 1}
+                {stageOrder.map((stage, i) => {
+                  const laneColors = [
+                    { bg: 'rgba(99,130,255,0.06)', border: 'rgba(99,130,255,0.18)', header: 'rgba(99,130,255,0.14)', text: '#6382ff' },
+                    { bg: 'rgba(16,185,129,0.05)', border: 'rgba(16,185,129,0.16)', header: 'rgba(16,185,129,0.12)', text: '#10b981' },
+                    { bg: 'rgba(245,158,11,0.05)', border: 'rgba(245,158,11,0.16)', header: 'rgba(245,158,11,0.12)', text: '#f59e0b' },
+                    { bg: 'rgba(239,68,68,0.04)',  border: 'rgba(239,68,68,0.14)',  header: 'rgba(239,68,68,0.10)',  text: '#ef4444' },
+                    { bg: 'rgba(168,85,247,0.05)', border: 'rgba(168,85,247,0.16)', header: 'rgba(168,85,247,0.12)', text: '#a855f7' },
+                  ];
+                  const lc = laneColors[i % laneColors.length];
+                  const isEditingThis = editingStageIdx === i;
+                  return (
+                    <div
+                      key={stage}
+                      className="flex-1 relative flex flex-col"
+                      style={{
+                        backgroundColor: lc.bg,
+                        borderRight: i < stageOrder.length - 1 ? `1px solid ${lc.border}` : 'none',
+                        pointerEvents: 'none',
+                      }}
+                    >
+                      {/* Lane header */}
+                      <div
+                        className="flex flex-col items-center justify-center py-3 px-2"
+                        style={{ backgroundColor: lc.header, borderBottom: `1px solid ${lc.border}`, pointerEvents: 'auto', minHeight: 56 }}
+                      >
+                        <div className="text-[9px] font-bold uppercase tracking-widest mb-0.5" style={{ color: lc.text, opacity: 0.7 }}>
+                          Stage {i + 1}
+                        </div>
+                        {isEditingThis ? (
+                          <input
+                            autoFocus
+                            value={editingStageName}
+                            onChange={e => setEditingStageName(e.target.value)}
+                            onBlur={() => {
+                              if (editingStageName.trim() && editingStageName !== stage) {
+                                const newStages = [...stageOrder];
+                                newStages[i] = editingStageName.trim();
+                                onBuyingStagesChange?.(newStages);
+                              }
+                              setEditingStageIdx(null);
+                            }}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') {
+                                if (editingStageName.trim() && editingStageName !== stage) {
+                                  const newStages = [...stageOrder];
+                                  newStages[i] = editingStageName.trim();
+                                  onBuyingStagesChange?.(newStages);
+                                }
+                                setEditingStageIdx(null);
+                              } else if (e.key === 'Escape') {
+                                setEditingStageIdx(null);
+                              }
+                            }}
+                            className="text-[11px] font-semibold text-center bg-transparent border-b outline-none w-full max-w-[120px]"
+                            style={{ color: lc.text, borderColor: lc.text }}
+                          />
+                        ) : (
+                          <div
+                            className="text-[11px] font-semibold text-center cursor-text hover:opacity-80 transition-opacity px-1 rounded"
+                            style={{ color: lc.text }}
+                            title="Click to rename stage"
+                            onClick={() => {
+                              setEditingStageIdx(i);
+                              setEditingStageName(stage);
+                            }}
+                          >
+                            {stage}
+                          </div>
+                        )}
                       </div>
-                      <div className="text-[11px] font-medium text-foreground/80 mt-0.5">
-                        {stage}
-                      </div>
+                      {/* Lane body */}
+                      <div className="flex-1" />
                     </div>
-                    {/* Subtle column background alternation */}
-                    {i % 2 === 1 && (
-                      <div className="absolute inset-0 bg-foreground/[0.02]" />
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -1485,7 +1599,10 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
             );
           })}
           {/* SVG connections — rendered AFTER cards so z-index 25 puts lines above z-20 cards */}
-          <svg className="absolute inset-0 w-full h-full" style={{ overflow: 'visible', pointerEvents: (mode === 'edit' ? 'all' : 'none') as React.CSSProperties['pointerEvents'], zIndex: 25 }}>
+          {(() => {
+            const svgPE: React.CSSProperties['pointerEvents'] = mode === 'edit' ? 'all' : 'none';
+            return (
+          <svg className="absolute inset-0 w-full h-full" style={{ overflow: 'visible', pointerEvents: svgPE, zIndex: 25 }}>
             <defs>
               {CONNECTION_TYPES.map(ct => (
                 <marker
@@ -1554,6 +1671,8 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
               );
             })}
           </svg>
+          );
+          })()}
         </div>
       </div>
 

@@ -1,0 +1,40 @@
+{
+  "query": "SELECT id, name, buyingStages FROM deals WHERE tenantId = 1 ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute SELECT id, name, buyingStages FROM deals WHERE tenantId = 1 ORDER BY id;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "Acme Corp — Enterprise Sales Intelligence",
+      "buyingStages": "[\"Discovery\", \"Demo\", \"Technical Evaluation\", \"POC\", \"Negotiation\", \"Closed Won\"]"
+    },
+    {
+      "id": "2",
+      "name": "GlobalTech — Revenue Intelligence Platform",
+      "buyingStages": "[\"Discovery\", \"Demo\", \"Technical Evaluation\", \"POC\", \"Negotiation\", \"Closed Won\"]"
+    },
+    {
+      "id": "4",
+      "name": "Nexus Systems — Sales Ops Transformation",
+      "buyingStages": "[\"Discovery\", \"Demo\", \"Technical Evaluation\", \"POC\", \"Negotiation\", \"Closed Won\"]"
+    },
+    {
+      "id": "60001",
+      "name": "Nike — Global Sales Intelligence",
+      "buyingStages": "NULL"
+    },
+    {
+      "id": "90001",
+      "name": "Adidas AG",
+      "buyingStages": "NULL"
+    },
+    {
+      "id": "90002",
+      "name": "MiraclePlus",
+      "buyingStages": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tbuyingStages\n1\tAcme Corp — Enterprise Sales Intelligence\t[\"Discovery\", \"Demo\", \"Technical Evaluation\", \"POC\", \"Negotiation\", \"Closed Won\"]\n2\tGlobalTech — Revenue Intelligence Platform\t[\"Discovery\", \"Demo\", \"Technical Evaluation\", \"POC\", \"Negotiation\", \"Closed Won\"]\n4\tNexus Systems — Sales Ops Transformation\t[\"Discovery\", \"Demo\", \"Technical Evaluation\", \"POC\", \"Negotiation\", \"Closed Won\"]\n60001\tNike — Global Sales Intelligence\tNULL\n90001\tAdidas AG\tNULL\n90002\tMiraclePlus\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 360
+}

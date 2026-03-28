@@ -171,6 +171,9 @@ export default function DealDetail() {
   const deleteMeetingMutation = trpc.meetings.delete.useMutation({
     onSuccess: () => utils.meetings.listByDeal.invalidate({ dealId }),
   });
+  const updateDealMutation = trpc.deals.update.useMutation({
+    onSuccess: () => utils.deals.get.invalidate({ id: dealId }),
+  });
 
   // Build a unified deal object that matches the UI's expected shape
   const deal = useMemo(() => {
@@ -635,6 +638,7 @@ export default function DealDetail() {
                     highlightedStakeholderId={hoveredStakeholderId}
                     onStakeholderClick={(s: any) => handleStakeholderClick(s as Stakeholder)}
                     onStakeholdersChange={() => utils.stakeholders.listByDeal.invalidate({ dealId })}
+                    onBuyingStagesChange={(stages) => updateDealMutation.mutate({ id: dealId, buyingStages: stages })}
                   />
                 </div>
 

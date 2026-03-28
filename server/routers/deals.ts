@@ -57,6 +57,7 @@ export const dealsRouter = router({
       companyInfo: z.string().optional(),
       lastActivity: z.string().optional(),
       daysInStage: z.number().optional(),
+      buyingStages: z.array(z.string()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const tenant = await getOrCreateDefaultTenant(ctx.user.id, ctx.user.name ?? "User");

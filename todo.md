@@ -332,31 +332,31 @@
 
 ## Editable Deal Info (March 28)
 
-- [ ] Add inline-editable deal fields: company name, deal name, ACV/value, website, stage — click to edit, save on blur/Enter
-- [ ] Place edit controls in the deal header or a dedicated "Deal Info" card in the overview tab
+- [x] Add inline-editable deal fields: company name, deal name, ACV/value, website — click to edit, save on blur/Enter
+- [x] Place edit controls in the deal header with "Click to edit" hints
 
 ## Next Steps Redesign (March 28)
 
 - [ ] Redesign Next Steps with status per item: Accepted / Rejected / Pending (for AI suggestions) + Done / In Progress / Blocked (for tasks)
-- [ ] Keep history of all past AI-generated next steps snapshots (each insight refresh creates a new snapshot)
-- [ ] Allow sales rep to mark each suggestion as accepted/rejected/pending
-- [ ] Show historical snapshots in a collapsible timeline view
+- [x] Keep history of all past AI-generated next steps snapshots (each insight refresh creates a new snapshot)
+- [ ] Allow sales rep to mark each suggestion as accepted/rejected/pending (already partially implemented with Accept/Dismiss/Later)
+- [x] Show historical snapshots in a collapsible InsightHistory component
 
 ## Deal Timeline Rebuild (March 28)
 
-- [ ] Rename "Deal Timeline" to "Deal Hub" or similar — make it a 3-tier content management library
-- [ ] Tier 1 (top): AI-generated Insights (existing)
-- [ ] Tier 2 (middle): Notes — text notes, conversation screenshots, any freeform context
-- [ ] Tier 3 (bottom): Sales Actions — outbound artifacts sent to customer (PDFs, proposals, emails)
-- [ ] Support multi-type uploads: Meeting Transcript (text), Video/Audio file, Screenshot (image), PDF document
-- [ ] Remove the "Update Customer History" refresh button from deal header (or move into timeline as a CRM sync action item)
-- [ ] Frontend only — no backend parsing needed yet, just UI scaffolding with upload placeholders
+- [x] Rename "Deal Timeline" to "Deal Room" — 3-tier content management library
+- [x] Tier 1 (top): AI-generated Insights with green badge
+- [x] Tier 2 (middle): Notes & Media — meetings, text notes, screenshots
+- [x] Tier 3 (bottom): Sales Actions — outbound artifacts
+- [x] Support multi-type uploads: Add Meeting + Add Content (meeting transcript, video/audio, screenshot, PDF, note)
+- [x] Remove the "Update Customer History" refresh button from deal header
+- [x] Frontend scaffolding with upload modals and type selection
 
 ## Deals Management Page & Pipeline Handle Redesign (March 28)
 
-- [ ] Create Deals management page (/deals) — comprehensive table/list view with filtering, sorting, stage grouping
-- [ ] Pipeline sidebar only shows on Deal Detail pages (/deal/:id), NOT on Dashboard or Deals page
-- [ ] Remove Pipeline toggle from icon sidebar nav items
-- [ ] Add edge-tab handle: when Pipeline sidebar is collapsed on Deal Detail, show a protruding tab on the right edge of icon sidebar with arrow icon (→), clicking expands the Pipeline sidebar
-- [ ] Handle should visually "poke out" from the icon sidebar layer, suggesting a hidden layer behind it
-- [ ] Register /deals route in App.tsx
+- [x] Create Deals management page (/deals) — table view with stage grouping, search, and sorting
+- [x] Pipeline sidebar only shows on Deal Detail pages (/deal/:id), NOT on Dashboard or Deals page
+- [x] Remove Pipeline toggle from icon sidebar nav items
+- [x] Add edge-tab handle: protruding tab on right edge of icon sidebar with ChevronRight icon
+- [x] Handle visually "pokes out" from icon sidebar layer (z-50, rounded-r, bg-muted/80)
+- [x] Register /deals route in App.tsx

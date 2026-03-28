@@ -384,6 +384,23 @@ export default function DealDetail() {
   // Avatar upload ref — must be before early returns (Rules of Hooks)
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
+  // ── Inline edit state for deal header (must be before early returns) ──
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [editCompany, setEditCompany] = useState(deal?.company ?? '');
+  const [editDealName, setEditDealName] = useState(deal?.name ?? '');
+  const [editValue, setEditValue] = useState(deal?.value?.toString() ?? '');
+  const [editWebsite, setEditWebsite] = useState(deal?.website || '');
+
+  // Sync local edit state when deal data changes (must be before early returns)
+  useEffect(() => {
+    if (!editingField && deal) {
+      setEditCompany(deal.company);
+      setEditDealName(deal.name);
+      setEditValue(deal.value.toString());
+      setEditWebsite(deal.website || '');
+    }
+  }, [deal?.company, deal?.name, deal?.value, deal?.website, editingField]);
+
   const generateBriefMutation = trpc.ai.generateBrief.useMutation();
 
   const generateBrief = (stakeholder: Stakeholder) => {
@@ -532,12 +549,57 @@ export default function DealDetail() {
     reader.readAsDataURL(file);
   };
 
+
+  const saveField = (field: string) => {
+    const updates: Record<string, any> = {};
+    if (field === 'company' && editCompany.trim() !== deal.company) updates.company = editCompany.trim();
+    if (field === 'name' && editDealName.trim() !== deal.name) updates.name = editDealName.trim();
+    if (field === 'value') {
+      const num = parseFloat(editValue);
+      if (!isNaN(num) && num !== deal.value) updates.value = num;
+    }
+    if (field === 'website' && editWebsite.trim() !== (deal.website || '')) updates.website = editWebsite.trim();
+    if (Object.keys(updates).length > 0) {
+      updateDealMutation.mutate({ id: dealId, ...updates }, {
+        onSuccess: () => toast.success('Deal updated'),
+        onError: () => toast.error('Failed to update deal'),
+      });
+    }
+    setEditingField(null);
+  };
+
+  const InlineEdit = ({ field, value, setValue, displayValue, className = '', inputClassName = '' }: {
+    field: string; value: string; setValue: (v: string) => void; displayValue?: string; className?: string; inputClassName?: string;
+  }) => {
+    if (editingField === field) {
+      return (
+        <input
+          autoFocus
+          value={value}
+          onChange={e => setValue(e.target.value)}
+          onBlur={() => saveField(field)}
+          onKeyDown={e => { if (e.key === 'Enter') saveField(field); if (e.key === 'Escape') setEditingField(null); }}
+          className={`bg-muted/50 border border-primary/30 rounded px-1.5 py-0.5 outline-none focus:border-primary text-foreground ${inputClassName}`}
+        />
+      );
+    }
+    return (
+      <span
+        onClick={() => setEditingField(field)}
+        className={`cursor-pointer hover:bg-muted/40 rounded px-1 py-0.5 -mx-1 transition-colors ${className}`}
+        title="Click to edit"
+      >
+        {displayValue || value}
+      </span>
+    );
+  };
+
   return (
     <div className="h-full flex flex-col">
       {/* Deal header */}
       <div className="border-b border-border/50 bg-card/50 backdrop-blur-sm px-6 py-3.5 shrink-0">
         <div className="flex items-center gap-4">
-          <Link href="/">
+          <Link href="/deals">
             <button className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors">
               <ArrowLeft className="w-4 h-4" />
             </button>
@@ -545,20 +607,60 @@ export default function DealDetail() {
           <CompanyLogo name={deal.company} logoUrl={deal.logo} size="md" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3">
-              <h1 className="font-display text-lg font-bold">{deal.company}</h1>
-              <a
-                href={`https://${deal.website}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
-              >
-                {deal.website} <ExternalLink className="w-3 h-3" />
-              </a>
-              <span className="text-[10px] text-muted-foreground">last edited 13 mins ago</span>
+              <InlineEdit
+                field="company"
+                value={editCompany}
+                setValue={setEditCompany}
+                className="font-display text-lg font-bold"
+                inputClassName="font-display text-lg font-bold w-48"
+              />
+              <span className="text-muted-foreground/30">·</span>
+              <InlineEdit
+                field="name"
+                value={editDealName}
+                setValue={setEditDealName}
+                className="text-sm text-muted-foreground font-medium"
+                inputClassName="text-sm w-48"
+              />
+              <span className="text-muted-foreground/30">·</span>
+              {editWebsite ? (
+                <div className="flex items-center gap-1">
+                  <InlineEdit
+                    field="website"
+                    value={editWebsite}
+                    setValue={setEditWebsite}
+                    className="text-xs text-muted-foreground hover:text-primary"
+                    inputClassName="text-xs w-40"
+                  />
+                  <a
+                    href={`https://${editWebsite}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground/50 hover:text-primary transition-colors"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              ) : (
+                <button
+                  onClick={() => { setEditWebsite(''); setEditingField('website'); }}
+                  className="text-xs text-muted-foreground/40 hover:text-primary flex items-center gap-1 transition-colors"
+                >
+                  <Globe className="w-3 h-3" /> Add website
+                </button>
+              )}
             </div>
             <div className="flex items-center gap-3 mt-1">
               <Badge variant="outline" className={`text-[10px] ${getStageColor(deal.stage)}`}>{deal.stage}</Badge>
-              <span className="font-mono text-sm font-medium">{formatCurrency(deal.value)} ACV</span>
+              <InlineEdit
+                field="value"
+                value={editValue}
+                setValue={setEditValue}
+                displayValue={`${formatCurrency(deal.value)} ACV`}
+                className="font-mono text-sm font-medium"
+                inputClassName="font-mono text-sm w-28"
+              />
               <div className="flex items-center gap-1">
                 <span className={`font-mono text-sm font-medium ${getConfidenceColor(deal.confidenceScore)}`}>
                   {deal.confidenceScore}%
@@ -576,13 +678,6 @@ export default function DealDetail() {
             </div>
           </div>
           <PipelineToggleButton className="mr-2" />
-          <Button
-            onClick={() => toast('CRM sync coming soon')}
-            className="font-display text-xs shrink-0"
-            variant="outline"
-          >
-            {t('deal.updateHistory') || 'Sync CRM'}
-          </Button>
         </div>
       </div>
 

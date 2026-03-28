@@ -90,6 +90,75 @@ type Props = {
 type SuggestedContact = { name: string; title: string; reason: string };
 type WhatsNextItem = string | { action: string; rationale: string; suggestedContacts?: SuggestedContact[] };
 
+/** Collapsible Insight History showing older snapshots */
+function InsightHistory({ snapshots }: { snapshots: Snapshot[] }) {
+  const [showHistory, setShowHistory] = useState(false);
+  const olderSnapshots = snapshots.slice(1); // skip latest
+  if (olderSnapshots.length === 0) return null;
+  return (
+    <div>
+      <button
+        onClick={() => setShowHistory(v => !v)}
+        className="flex items-center gap-1.5 text-[10px] text-muted-foreground/60 hover:text-muted-foreground transition-colors w-full"
+      >
+        {showHistory ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+        <span>Insight History ({olderSnapshots.length} previous {olderSnapshots.length === 1 ? 'snapshot' : 'snapshots'})</span>
+      </button>
+      {showHistory && (
+        <div className="mt-2 space-y-3">
+          {olderSnapshots.map((snap, si) => (
+            <div key={snap.id || si} className="rounded-lg border border-border/20 bg-muted/10 p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] text-muted-foreground/70 font-medium">
+                  {new Date(snap.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  {snap.interactionType && ` \u00b7 ${snap.interactionType}`}
+                </span>
+                <span className={`text-[10px] font-mono font-semibold ${getConfidenceColor(snap.confidenceScore)}`}>
+                  {snap.confidenceScore}%
+                  {snap.confidenceChange !== 0 && (
+                    <span className={snap.confidenceChange > 0 ? 'text-emerald-400' : 'text-red-400'}>
+                      {' '}{snap.confidenceChange > 0 ? '\u2191' : '\u2193'}{Math.abs(snap.confidenceChange)}
+                    </span>
+                  )}
+                </span>
+              </div>
+              {snap.whatsHappening && (
+                <p className="text-[10px] text-foreground/60 leading-relaxed mb-2">{snap.whatsHappening}</p>
+              )}
+              {snap.whatsNext && snap.whatsNext.length > 0 && (
+                <div>
+                  <span className="text-[9px] text-emerald-400/70 uppercase tracking-wider font-semibold">Suggested Actions</span>
+                  <div className="mt-1 space-y-1">
+                    {snap.whatsNext.map((item: any, idx: number) => (
+                      <div key={idx} className="text-[10px] text-foreground/50 flex items-start gap-1.5">
+                        <div className="w-1 h-1 rounded-full bg-emerald-400/40 mt-1.5 shrink-0" />
+                        <span>{typeof item === 'string' ? item : item.action}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {snap.keyRisks && (snap.keyRisks as any[]).length > 0 && (
+                <div className="mt-2">
+                  <span className="text-[9px] text-red-400/70 uppercase tracking-wider font-semibold">Risks at the time</span>
+                  <div className="mt-1 space-y-1">
+                    {(snap.keyRisks as any[]).map((risk: any, idx: number) => (
+                      <div key={idx} className="text-[10px] text-foreground/50 flex items-start gap-1.5">
+                        <div className="w-1 h-1 rounded-full bg-red-400/40 mt-1.5 shrink-0" />
+                        <span>{typeof risk === 'string' ? risk : risk.title}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Expandable action card for What's Next items */
 function WhatsNextCard({
   item,
@@ -975,6 +1044,9 @@ export default function DealInsightPanel({
               </div>
             );
           })()}
+
+          {/* ── Insight History ── */}
+          <InsightHistory snapshots={deal.snapshots} />
 
           {/* ── Divider ── */}
           <div className="border-t border-border/25" />

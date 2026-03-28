@@ -327,6 +327,8 @@
 - [x] Add PipelineContext to manage toggle state and pass to child pages
 - [x] Deal detail page: add PipelineToggleButton in the deal header
 - [x] Export PipelineToggleButton component for reuse in other pages
+- [x] Add Deals button to left icon sidebar (Briefcase icon) between Dashboard and Stakeholders
+- [x] Show Pipeline toggle button in left icon sidebar when sidebar is collapsed on Deal pages
 
 ## Editable Deal Info (March 28)
 

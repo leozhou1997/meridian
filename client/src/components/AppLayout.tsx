@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Compass, LayoutDashboard, Users, FileText, MessageSquare,
   Search, LogOut, ChevronDown, ChevronRight, Settings, Sun, Moon, BookOpen, Plus,
-  PanelLeftClose, PanelLeftOpen
+  PanelLeftClose, PanelLeftOpen, Briefcase
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -99,6 +99,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   const navItems = [
     { icon: LayoutDashboard, label: t('nav.dashboard'), path: '/' },
+    { icon: Briefcase, label: t('nav.deals') || 'Deals', path: '/deals' },
     { icon: Users, label: t('nav.stakeholders'), path: '/stakeholders' },
     { icon: FileText, label: t('nav.transcripts'), path: '/transcripts' },
     { icon: BookOpen, label: t('nav.knowledge'), path: '/knowledge' },
@@ -142,6 +143,26 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 </Tooltip>
               );
             })}
+
+            {/* Pipeline toggle button — only show when sidebar is collapsed and on pipeline pages */}
+            {hasPipeline && isCollapsed && (
+              <>
+                <div className="my-2 w-10 h-px bg-sidebar-border" />
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={toggle}
+                      className="w-10 h-10 rounded-lg flex items-center justify-center text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all"
+                    >
+                      <PanelLeftOpen className="w-[18px] h-[18px]" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="font-display text-xs">
+                    {t('nav.showPipeline') || 'Show Pipeline'}
+                  </TooltipContent>
+                </Tooltip>
+              </>
+            )}
 
             {/* New Deal button */}
             <div className="my-2 w-10 h-px bg-sidebar-border" />

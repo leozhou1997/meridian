@@ -20,7 +20,7 @@ import {
   ZoomIn, ZoomOut, Maximize2, Edit2, Eye, Plus, Trash2,
   Link2, Link2Off, Save, X, Check, Camera, Mail, Flame,
   GripVertical, ChevronDown, ChevronUp, Pencil, Clock, Calendar,
-  Layers, LayoutGrid, RotateCcw
+  Layers, LayoutGrid, RotateCcw, MessageSquare, Image, FileText, Mic, Send, Upload
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { nanoid } from 'nanoid';
@@ -497,6 +497,9 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
   // Editing a specific interaction entry: { interactionId, field }
   const [editingInteraction, setEditingInteraction] = useState<string | null>(null);
+
+  // ── Add Interaction Modal (contextual, opens from card hover) ────────────
+  const [addModalStakeholder, setAddModalStakeholder] = useState<Stakeholder | null>(null);
 
   // ── Click modal state ─────────────────────────────────────────────────────
   const [modalStakeholder, setModalStakeholder] = useState<Stakeholder | null>(null);
@@ -1743,151 +1746,66 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                       </div>
                     </div>
 
-                    {/* ── Row 4: interaction count + add button (always visible) ── */}
+                    {/* ── Row 4: interaction count (always visible) + hover auto-expand ── */}
                     <div className="border-t border-border/20 mt-1.5 pt-1">
-                              <div className="flex items-center justify-between">
-                                <button
-                                  className="flex items-center gap-1 text-[9px] text-muted-foreground hover:text-foreground transition-colors"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setExpandedCardId(isExpanded ? null : stakeholder.id);
-                                  }}
-                                  onMouseDown={(e) => e.stopPropagation()}
-                                >
-                                  <span className="font-medium uppercase tracking-wider">
-                                    {interactions.length} interaction{interactions.length !== 1 ? 's' : ''}
-                                  </span>
-                                  {isExpanded ? <ChevronUp className="w-3 h-3 ml-0.5" /> : <ChevronDown className="w-3 h-3 ml-0.5" />}
-                                </button>
-                                <button
-                                  className="w-4 h-4 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    addInteraction(stakeholder.name);
-                                    setExpandedCardId(stakeholder.id);
-                                  }}
-                                  onMouseDown={(e) => e.stopPropagation()}
-                                  title="Add interaction"
-                                >
-                                  <Plus className="w-3 h-3" />
-                                </button>
-                              </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider">
+                          {interactions.length} interaction{interactions.length !== 1 ? 's' : ''}
+                        </span>
+                        {isCardHovered && (
+                          <button
+                            className="flex items-center gap-0.5 text-[9px] text-primary hover:text-primary/80 transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setAddModalStakeholder(stakeholder);
+                            }}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            title="Add content for this person"
+                          >
+                            <Plus className="w-3 h-3" />
+                            <span>Add</span>
+                          </button>
+                        )}
+                      </div>
 
-                              <AnimatePresence>
-                                {isExpanded && (
-                                  <motion.div
-                                    initial={{ opacity: 0, height: 0 }}
-                                    animate={{ opacity: 1, height: 'auto' }}
-                                    exit={{ opacity: 0, height: 0 }}
-                                    transition={{ duration: 0.2 }}
-                                    className="overflow-hidden"
-                                  >
-                                    <div className="mt-1.5 space-y-2 max-h-48 overflow-y-auto pr-0.5">
-                                      {interactions.slice(0, 6).map(interaction => {
-                                        const isEditingThis = editingInteraction === interaction.id;
-                                        return (
-                                          <div
-                                            key={interaction.id}
-                                            className={`rounded-lg border transition-colors ${
-                                              isEditingThis
-                                                ? 'bg-muted/50 border-primary/30 p-2'
-                                                : 'bg-muted/20 border-border/20 p-1.5'
-                                            }`}
-                                            onMouseDown={(e) => e.stopPropagation()}
-                                          >
-                                            {isEditingThis ? (
-                                              /* ── Edit mode for this interaction ── */
-                                              <div className="space-y-1.5">
-                                                <div className="flex gap-1.5">
-                                                  <select
-                                                    value={interaction.type}
-                                                    onChange={(e) => updateInteraction(interaction.id, { type: e.target.value as Interaction['type'] })}
-                                                    className="flex-1 text-[9px] bg-background border border-border/50 rounded px-1.5 py-1 text-foreground"
-                                                    onClick={(e) => e.stopPropagation()}
-                                                  >
-                                                    {INTERACTION_TYPES.map(t => (
-                                                      <option key={t} value={t}>{t}</option>
-                                                    ))}
-                                                  </select>
-                                                  <input
-                                                    type="date"
-                                                    value={typeof interaction.date === 'string' ? interaction.date : new Date(interaction.date).toISOString().slice(0, 10)}
-                                                    onChange={(e) => updateInteraction(interaction.id, { date: e.target.value })}
-                                                    className="w-24 text-[9px] bg-background border border-border/50 rounded px-1.5 py-1 text-foreground"
-                                                    onClick={(e) => e.stopPropagation()}
-                                                  />
-                                                </div>
-                                                <div className="flex items-center gap-1.5">
-                                                  <Clock className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
-                                                  <input
-                                                    type="number"
-                                                    value={interaction.duration}
-                                                    onChange={(e) => updateInteraction(interaction.id, { duration: Number(e.target.value) })}
-                                                    className="w-14 text-[9px] bg-background border border-border/50 rounded px-1.5 py-1 text-foreground"
-                                                    min={1}
-                                                    onClick={(e) => e.stopPropagation()}
-                                                  />
-                                                  <span className="text-[9px] text-muted-foreground">min</span>
-                                                </div>
-                                                <textarea
-                                                  value={interaction.summary}
-                                                  onChange={(e) => updateInteraction(interaction.id, { summary: e.target.value })}
-                                                  placeholder="Notes..."
-                                                  rows={2}
-                                                  className="w-full text-[9px] bg-background border border-border/50 rounded px-1.5 py-1 text-foreground resize-none leading-relaxed"
-                                                  onClick={(e) => e.stopPropagation()}
-                                                />
-                                                <div className="flex gap-1">
-                                                  <button
-                                                    className="flex-1 flex items-center justify-center gap-1 text-[9px] py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                                                    onClick={(e) => { e.stopPropagation(); setEditingInteraction(null); }}
-                                                  >
-                                                    <Check className="w-2.5 h-2.5" /> Done
-                                                  </button>
-                                                  <button
-                                                    className="flex items-center justify-center w-6 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
-                                                    onClick={(e) => { e.stopPropagation(); deleteInteraction(interaction.id); }}
-                                                  >
-                                                    <Trash2 className="w-2.5 h-2.5" />
-                                                  </button>
-                                                </div>
-                                              </div>
-                                            ) : (
-                                              /* ── Read mode for this interaction ── */
-                                              <div>
-                                                <div className="flex items-center gap-1.5 mb-0.5">
-                                                  <span className="text-[9px] font-semibold text-foreground/80 truncate">{interaction.type}</span>
-                                                  <div className="flex items-center gap-1 ml-auto shrink-0">
-                                                    <Calendar className="w-2.5 h-2.5 text-muted-foreground/60" />
-                                                    <span className="text-[9px] text-muted-foreground">{(typeof interaction.date === 'string' ? interaction.date : new Date(interaction.date).toISOString().slice(0, 10)).slice(5)}</span>
-                                                    <Clock className="w-2.5 h-2.5 text-muted-foreground/60 ml-1" />
-                                                    <span className="text-[9px] text-muted-foreground">{interaction.duration}m</span>
-                                                    <button
-                                                      className="ml-1 w-4 h-4 rounded flex items-center justify-center hover:bg-muted/60 transition-colors"
-                                                      onClick={(e) => { e.stopPropagation(); setEditingInteraction(interaction.id); }}
-                                                    >
-                                                      <Pencil className="w-2.5 h-2.5 text-muted-foreground/60 hover:text-foreground" />
-                                                    </button>
-                                                  </div>
-                                                </div>
-                                                {interaction.summary && (
-                                                  <p className="text-[9px] text-muted-foreground leading-relaxed line-clamp-2">{interaction.summary}</p>
-                                                )}
-                                              </div>
-                                            )}
-                                          </div>
-                                        );
-                                      })}
-                                      {interactions.length > 6 && (
-                                        <div className="text-[9px] text-muted-foreground/60 text-center py-0.5">
-                                          +{interactions.length - 6} more — open profile to view all
-                                        </div>
-                                      )}
-                                    </div>
-                                  </motion.div>
-                                )}
-                              </AnimatePresence>
+                      {/* Auto-expand recent 3 interactions on hover */}
+                      <AnimatePresence>
+                        {isCardHovered && interactions.length > 0 && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.15 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="mt-1.5 space-y-1">
+                              {interactions.slice(0, 3).map(interaction => (
+                                <div
+                                  key={interaction.id}
+                                  className="rounded-md bg-muted/20 border border-border/20 px-1.5 py-1"
+                                  onMouseDown={(e) => e.stopPropagation()}
+                                >
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[9px] font-semibold text-foreground/80 truncate flex-1">{interaction.type}</span>
+                                    <span className="text-[8px] text-muted-foreground shrink-0">
+                                      {(typeof interaction.date === 'string' ? interaction.date : new Date(interaction.date).toISOString().slice(0, 10)).slice(5)}
+                                    </span>
+                                  </div>
+                                  {interaction.summary && (
+                                    <p className="text-[8px] text-muted-foreground leading-snug line-clamp-1 mt-0.5">{interaction.summary}</p>
+                                  )}
+                                </div>
+                              ))}
+                              {interactions.length > 3 && (
+                                <div className="text-[8px] text-muted-foreground/50 text-center">
+                                  +{interactions.length - 3} more
+                                </div>
+                              )}
                             </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -1896,6 +1814,41 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
         </div>
       </div>
 
+
+      {/* ── Add Interaction Modal ── */}
+      {addModalStakeholder && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setAddModalStakeholder(null)}>
+          <div className="bg-card border border-border rounded-xl shadow-2xl w-[440px] max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border/30">
+              <div>
+                <h3 className="font-display text-sm font-semibold">Add Content</h3>
+                <p className="text-[10px] text-muted-foreground mt-0.5">For {addModalStakeholder.name} — {addModalStakeholder.title}</p>
+              </div>
+              <button onClick={() => setAddModalStakeholder(null)} className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-muted transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <AddInteractionForm
+              stakeholder={addModalStakeholder}
+              onSubmit={(type, title, description) => {
+                const newI: Interaction = {
+                  id: nanoid(8),
+                  dealId: deal.id,
+                  date: new Date().toISOString().slice(0, 10),
+                  type: type as Interaction['type'],
+                  keyParticipant: addModalStakeholder.name,
+                  summary: `[${title}] ${description}`,
+                  duration: 30,
+                };
+                setLocalInteractions(prev => [newI, ...prev]);
+                setAddModalStakeholder(null);
+                toast.success(`Added to ${addModalStakeholder.name}'s interactions`);
+              }}
+              onCancel={() => setAddModalStakeholder(null)}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Legend */}
       <div className="absolute bottom-3 left-3 z-20 flex items-center gap-3 text-[10px] text-muted-foreground bg-card/90 backdrop-blur-sm rounded-md px-3 py-2 border border-border/30 flex-wrap">
@@ -1928,7 +1881,129 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
   );
 }
 
-// ── Default connections builder ───────────────────────────────────────────────
+// ── Add Interaction Form (used in modal) ─────────────────────────────────────────
+const CONTENT_TYPES = [
+  { value: 'meeting', label: 'Meeting Notes', icon: MessageSquare, desc: 'Record meeting notes or paste transcript' },
+  { value: 'screenshot', label: 'Screenshot', icon: Image, desc: 'Upload a conversation screenshot or image' },
+  { value: 'document', label: 'Document / PDF', icon: FileText, desc: 'Attach a PDF, proposal, or document' },
+  { value: 'recording', label: 'Video / Audio', icon: Mic, desc: 'Upload a recording file' },
+  { value: 'note', label: 'Quick Note', icon: Pencil, desc: 'Add a freeform text note' },
+] as const;
+
+function AddInteractionForm({ stakeholder, onSubmit, onCancel }: {
+  stakeholder: Stakeholder;
+  onSubmit: (type: string, title: string, description: string) => void;
+  onCancel: () => void;
+}) {
+  const [selectedType, setSelectedType] = useState<string>('meeting');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [fileName, setFileName] = useState('');
+
+  const selected = CONTENT_TYPES.find(t => t.value === selectedType)!;
+
+  return (
+    <div className="p-5 space-y-4">
+      {/* Type selector */}
+      <div className="grid grid-cols-5 gap-1.5">
+        {CONTENT_TYPES.map(ct => {
+          const Icon = ct.icon;
+          const isActive = selectedType === ct.value;
+          return (
+            <button
+              key={ct.value}
+              onClick={() => setSelectedType(ct.value)}
+              className={`flex flex-col items-center gap-1 py-2 px-1 rounded-lg border text-[10px] transition-all ${
+                isActive
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-border/40 text-muted-foreground hover:border-border hover:bg-muted/30'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              <span className="leading-tight text-center">{ct.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <p className="text-[10px] text-muted-foreground">{selected.desc}</p>
+
+      {/* Title */}
+      <div>
+        <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Title</label>
+        <input
+          type="text"
+          value={title}
+          onChange={e => setTitle(e.target.value)}
+          placeholder={selectedType === 'meeting' ? 'e.g. Discovery Call with VP Sales' : 'Brief title...'}
+          className="w-full mt-1 text-xs bg-background border border-border/50 rounded-md px-3 py-2 text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-primary/50"
+        />
+      </div>
+
+      {/* Content area - varies by type */}
+      {(selectedType === 'screenshot' || selectedType === 'document' || selectedType === 'recording') ? (
+        <div>
+          <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">File</label>
+          <div className="mt-1 border-2 border-dashed border-border/40 rounded-lg p-6 text-center hover:border-primary/30 transition-colors cursor-pointer">
+            <Upload className="w-6 h-6 mx-auto text-muted-foreground/40 mb-2" />
+            {fileName ? (
+              <p className="text-xs text-foreground">{fileName}</p>
+            ) : (
+              <>
+                <p className="text-xs text-muted-foreground">Drop file here or click to browse</p>
+                <p className="text-[10px] text-muted-foreground/50 mt-1">
+                  {selectedType === 'screenshot' ? 'PNG, JPG, WebP' : selectedType === 'document' ? 'PDF, DOCX' : 'MP3, WAV, MP4, WebM'}
+                </p>
+              </>
+            )}
+            <input
+              type="file"
+              className="absolute inset-0 opacity-0 cursor-pointer"
+              accept={selectedType === 'screenshot' ? 'image/*' : selectedType === 'document' ? '.pdf,.docx' : 'audio/*,video/*'}
+              onChange={e => {
+                const f = e.target.files?.[0];
+                if (f) setFileName(f.name);
+              }}
+            />
+          </div>
+        </div>
+      ) : (
+        <div>
+          <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+            {selectedType === 'meeting' ? 'Meeting Notes / Transcript' : 'Note'}
+          </label>
+          <textarea
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            placeholder={selectedType === 'meeting' ? 'Paste meeting notes or key takeaways...' : 'Write your note...'}
+            rows={4}
+            className="w-full mt-1 text-xs bg-background border border-border/50 rounded-md px-3 py-2 text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none leading-relaxed"
+          />
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="flex justify-end gap-2 pt-2">
+        <button
+          onClick={onCancel}
+          className="px-3 py-1.5 text-xs rounded-md border border-border/50 text-muted-foreground hover:bg-muted/30 transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={() => onSubmit(selectedType === 'meeting' ? 'Follow-up' : 'Email', title || selected.label, description || fileName || '')}
+          disabled={!title && !description && !fileName}
+          className="px-4 py-1.5 text-xs rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
+        >
+          <Send className="w-3 h-3" />
+          Save
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Default connections builder ───────────────────────────────────────────────────
 function buildDefaultConnections(stakeholders: Stakeholder[], _stages: string[]): Connection[] {
   const result: Connection[] = [];
 

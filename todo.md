@@ -360,3 +360,18 @@
 - [x] Add edge-tab handle: protruding tab on right edge of icon sidebar with ChevronRight icon
 - [x] Handle visually "pokes out" from icon sidebar layer (z-50, rounded-r, bg-muted/80)
 - [x] Register /deals route in App.tsx
+
+## Deal Room Upload Merge (March 28)
+
+- [x] Merge "Add Meeting" + "Add Content" into single "+ Add" button with type dropdown/modal
+- [x] Type options: Meeting Notes, Video/Audio, Screenshot, PDF Document, Quick Note
+- [x] Each type shows appropriate form fields in the modal
+
+## Stakeholder Card Hover Interaction Redesign (March 28)
+
+- [x] Hover auto-expands recent 3 interactions (type + date + one-line summary)
+- [x] Keep "+ Add" button at bottom of expanded interaction list
+- [x] "+ Add" opens a modal (not navigate away) for adding content tied to this stakeholder
+- [x] Modal: select type (Meeting Notes / Screenshot / Note / Video / PDF) → fill content → save
+- [x] Auto-associate new content with the hovered stakeholder
+- [ ] After save, interaction list updates in real-time (needs backend wiring)

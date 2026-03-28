@@ -114,12 +114,11 @@ function UploadDialog({ onClose, onAdd }: { onClose: () => void; onAdd: (item: C
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const uploadTypes: { value: ContentItem['type']; label: string; icon: any; accept?: string }[] = [
-    { value: 'note', label: 'Meeting Notes / Transcript', icon: FileText },
-    { value: 'audio', label: 'Audio Recording', icon: Mic, accept: 'audio/*' },
-    { value: 'video', label: 'Video Recording', icon: Video, accept: 'video/*' },
-    { value: 'screenshot', label: 'Screenshot / Image', icon: Image, accept: 'image/*' },
+    { value: 'note', label: 'Meeting Notes', icon: MessageSquare },
+    { value: 'audio', label: 'Audio / Video', icon: Mic, accept: 'audio/*,video/*' },
+    { value: 'screenshot', label: 'Screenshot', icon: Image, accept: 'image/*' },
     { value: 'pdf', label: 'PDF Document', icon: File, accept: '.pdf' },
-    { value: 'action', label: 'Sales Action Log', icon: Send },
+    { value: 'action', label: 'Sales Action', icon: Send },
   ];
 
   const needsFile = ['audio', 'video', 'screenshot', 'pdf'].includes(uploadType);
@@ -620,22 +619,12 @@ export default function DealTimeline({ snapshots, meetings, companyInfo, company
               All deal-related content in one place
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            {onAddMeeting && (
-              <button
-                onClick={onAddMeeting}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted/50 border border-border/30 text-xs font-medium hover:bg-muted/80 transition-colors"
-              >
-                <MessageSquare className="w-3 h-3" /> Add Meeting
-              </button>
-            )}
-            <button
-              onClick={() => setShowUpload(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
-            >
-              <Plus className="w-3 h-3" /> Add Content
-            </button>
-          </div>
+          <button
+            onClick={() => setShowUpload(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="w-3 h-3" /> Add
+          </button>
         </div>
 
         {/* 3-Tier Filter Tabs */}
@@ -698,7 +687,7 @@ export default function DealTimeline({ snapshots, meetings, companyInfo, company
             <p className="text-xs mt-1">
               {activeFilter === 'all'
                 ? 'Upload meeting transcripts, add notes, or run an analysis to build the deal room'
-                : 'Click "Add Content" to start adding items'}
+                : 'Click "+ Add" to start adding items'}
             </p>
           </div>
         ) : (

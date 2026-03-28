@@ -45,6 +45,9 @@ type NextAction = {
   dueDate: Date | string | null;
   priority: string;
   completed: boolean;
+  status?: string;
+  source?: string;
+  snapshotId?: number | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -729,12 +732,12 @@ export default function DealDetail() {
                   toggleAction={toggleAction}
                   deleteAction={deleteAction}
                   updateActionStatus={updateActionStatus}
-                  createAiAction={(text: string, snapshotId?: number) => {
+                  createAiAction={(text: string, snapshotId?: number, status?: string) => {
                     createActionMutation.mutate({
                       dealId,
                       text,
                       source: 'ai_suggested',
-                      status: 'pending',
+                      status: (status ?? 'pending') as any,
                       snapshotId,
                     });
                   }}

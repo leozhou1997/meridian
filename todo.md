@@ -400,3 +400,9 @@
 - [x] Each refresh creates a new snapshot (already works) — ensure What's Next items from new snapshot replace old pending suggestions
 - [x] Context unchanged = same insight: if no new interactions since last analysis, show warning "No new context — analysis may not change" (handled by early-stage data level warning)
 - [x] Insight History: show diff/comparison between current and previous snapshot (implemented as collapsible history with snapshot details)
+
+## Bug Fixes (March 28 - User Reported)
+
+- [x] BUG: Accept/Later/Dismiss buttons in What's Next cards not working — no action created
+- [x] BUG: After Accept/Later/Dismiss, no way to change status or undo the action
+- [x] BUG: Pipeline deal selection should navigate directly to deal page, not stay on expanded pipeline overlay

@@ -92,7 +92,7 @@ type Props = {
   toggleAction: (id: number) => void;
   deleteAction: (id: number) => void;
   updateActionStatus?: (id: number, status: string) => void;
-  createAiAction?: (text: string, snapshotId?: number) => void;
+  createAiAction?: (text: string, snapshotId?: number, status?: string) => void;
   setActiveTab: (tab: string) => void;
   onStakeholderHover?: (id: number | null) => void;
   onStakeholderClick?: (id: number) => void;
@@ -211,6 +211,7 @@ function WhatsNextCard({
   onDismiss,
   onLater,
   onAddToMap,
+  onStatusChange,
   dealCompany,
   existingActions,
 }: {
@@ -222,6 +223,7 @@ function WhatsNextCard({
   onDismiss?: (actionText: string) => void;
   onLater?: (actionText: string) => void;
   onAddToMap?: (contact: SuggestedContact) => void;
+  onStatusChange?: (actionId: number, status: string) => void;
   dealCompany?: string;
   existingActions?: NextAction[];
 }) {
@@ -261,13 +263,22 @@ function WhatsNextCard({
     onLater?.(actionText);
   };
 
-  // If dismissed, show muted
+  // If dismissed, show muted with undo option
   if (currentStatus === 'rejected') {
     return (
-      <div className="rounded-lg border border-border/20 bg-muted/5 px-3 py-2 flex items-center gap-2 opacity-40">
+      <div className="rounded-lg border border-border/20 bg-muted/5 px-3 py-2 flex items-center gap-2 opacity-50 hover:opacity-70 transition-opacity">
         <div className="w-3 h-3 rounded-full border border-muted-foreground/30 shrink-0" />
         <span className="flex-1 text-[11px] text-muted-foreground/60 line-through leading-snug">{actionText}</span>
-        <span className="text-[9px] text-muted-foreground/40">Dismissed</span>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            if (existingAction) onStatusChange?.(existingAction.id, 'accepted');
+          }}
+          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] text-blue-400/70 hover:text-blue-400 hover:bg-blue-400/10 transition-colors"
+          title="Undo dismiss and accept this action"
+        >
+          <RotateCcw className="w-2.5 h-2.5" /> Undo
+        </button>
       </div>
     );
   }
@@ -399,18 +410,44 @@ function WhatsNextCard({
             </div>
           )}
 
-          {/* Accept / Dismiss / Later — only show if no action exists yet */}
+          {/* Accept / Dismiss / Later — show if no action exists yet */}
           {!currentStatus && (
             <div className="flex items-center gap-1.5 pt-1">
               <button onClick={handleAccept} className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-400/10 hover:bg-emerald-400/20 text-emerald-400 text-[10.5px] font-medium transition-colors">
                 <Check className="w-3 h-3" /> Accept
               </button>
               <button onClick={handleDismiss} className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-muted/30 hover:bg-muted/50 text-muted-foreground/70 text-[10.5px] font-medium transition-colors">
-                <span className="text-[11px]">{'\u2715'}</span> Dismiss
+                <span className="text-[11px]">{'✕'}</span> Dismiss
               </button>
               <button onClick={handleLater} className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-purple-400/10 hover:bg-purple-400/20 text-purple-400/80 text-[10.5px] font-medium transition-colors">
                 <Pause className="w-3 h-3" /> Later
               </button>
+            </div>
+          )}
+
+          {/* Status change for already-actioned items */}
+          {currentStatus && existingAction && (
+            <div className="pt-1">
+              <div className="text-[9px] text-muted-foreground/50 uppercase tracking-wider mb-1.5">Change Status</div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {STATUS_TRANSITIONS[currentStatus]?.map(targetStatus => {
+                  const tc = STATUS_CONFIG[targetStatus];
+                  const TIcon = tc.icon;
+                  return (
+                    <button
+                      key={targetStatus}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onStatusChange?.(existingAction.id, targetStatus);
+                      }}
+                      className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-colors border ${tc.bg} ${tc.color} ${tc.border} hover:opacity-80`}
+                    >
+                      <TIcon className="w-2.5 h-2.5" />
+                      {tc.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
@@ -937,6 +974,7 @@ export default function DealInsightPanel({
                       onStakeholderClick={onStakeholderClick}
                       dealCompany={deal.name}
                       existingActions={nextActions}
+                      onStatusChange={(actionId, status) => updateActionStatus?.(actionId, status)}
                       onAddToMap={(contact) => {
                         addSuggestedContactMutation.mutate({
                           dealId: deal.id, name: contact.name, title: contact.title,
@@ -944,27 +982,15 @@ export default function DealInsightPanel({
                         });
                       }}
                       onAccept={(actionText) => {
-                        createAiAction?.(actionText, latestSnapshot?.id);
-                        // Immediately update status to accepted
-                        setTimeout(() => {
-                          const created = nextActions.find(a => a.text === actionText && a.source === 'ai_suggested');
-                          if (created) updateActionStatus?.(created.id, 'accepted');
-                        }, 500);
+                        createAiAction?.(actionText, latestSnapshot?.id, 'accepted');
                         toast.success('Action accepted \u2014 added to your task list');
                       }}
                       onDismiss={(actionText) => {
-                        createAiAction?.(actionText, latestSnapshot?.id);
-                        setTimeout(() => {
-                          const created = nextActions.find(a => a.text === actionText && a.source === 'ai_suggested');
-                          if (created) updateActionStatus?.(created.id, 'rejected');
-                        }, 500);
+                        createAiAction?.(actionText, latestSnapshot?.id, 'rejected');
+                        toast.success('Suggestion dismissed');
                       }}
                       onLater={(actionText) => {
-                        createAiAction?.(actionText, latestSnapshot?.id);
-                        setTimeout(() => {
-                          const created = nextActions.find(a => a.text === actionText && a.source === 'ai_suggested');
-                          if (created) updateActionStatus?.(created.id, 'later');
-                        }, 500);
+                        createAiAction?.(actionText, latestSnapshot?.id, 'later');
                         toast.success('Saved for later');
                       }}
                     />

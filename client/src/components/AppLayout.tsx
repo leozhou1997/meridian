@@ -306,7 +306,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                                     exit={{ opacity: 0, height: 0 }}
                                     transition={{ duration: 0.15 }}
                                   >
-                                    <Link href={`/deal/${deal.id}`}>
+                                    <Link href={`/deal/${deal.id}`} onClick={() => { if (!isActive) setIsCollapsed(true); }}>
                                       <div
                                         className={`flex items-center gap-2.5 px-2 py-2 rounded-md mx-1 mb-0.5 transition-all duration-150 ${
                                           isActive

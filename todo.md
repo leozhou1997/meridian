@@ -250,3 +250,7 @@
 - [x] Fix connection lines: all lines missing from map (SVG layer broken)
 - [x] Fix Draw Link: clicking card after activating Draw Link does nothing
 - [x] Add canvas pan: left-click drag on background moves the entire map viewport
+
+## Bug Fixes (March 28 - Post Checkpoint)
+
+- [x] Fix all stakeholder cards invisible: validIds Set<number> vs p.id string mismatch — positions filtered to empty, all cards disappeared

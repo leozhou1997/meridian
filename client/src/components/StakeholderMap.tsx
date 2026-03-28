@@ -467,15 +467,15 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     const saved = loadState(deal.id);
 
     if (saved && saved.positions.length > 0) {
-      const validIds = new Set(stks.map(s => s.id));
+      const validIds = new Set(stks.map(s => String(s.id)));
       // Restore per-layout position caches
       if (saved.circlePositions && saved.circlePositions.length > 0) {
-        circlePositionsRef.current = saved.circlePositions.filter(p => validIds.has(p.id));
+        circlePositionsRef.current = saved.circlePositions.filter(p => validIds.has(String(p.id)));
       }
       if (saved.stagePositions && saved.stagePositions.length > 0) {
-        stagePositionsRef.current = saved.stagePositions.filter(p => validIds.has(p.id));
+        stagePositionsRef.current = saved.stagePositions.filter(p => validIds.has(String(p.id)));
       }
-      const validPositions = saved.positions.filter(p => validIds.has(p.id));
+      const validPositions = saved.positions.filter(p => validIds.has(String(p.id)));
       if (validPositions.length === stks.length) {
         // Run collision pass on loaded positions too
         setPositions(resolveCollisions(validPositions, null, 0, 0, maxX));
@@ -626,8 +626,8 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
 
     // Try to restore saved positions for the target layout
     const cached = newLayout === 'concentric' ? circlePositionsRef.current : stagePositionsRef.current;
-    const validIds = new Set(localStakeholders.map(s => s.id));
-    const validCached = cached.filter(p => validIds.has(p.id));
+    const validIds = new Set(localStakeholders.map(s => String(s.id)));
+    const validCached = cached.filter(p => validIds.has(String(p.id)));
 
     if (validCached.length === localStakeholders.length) {
       const nodeH = compactMode ? COMPACT_NODE_H : NODE_H;
@@ -709,7 +709,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
 
   const handleMouseUp = useCallback(() => {
     if (dragging && !dragMoved) {
-      const stakeholder = localStakeholders.find(s => s.id === dragging);
+      const stakeholder = localStakeholders.find(s => String(s.id) === dragging);
       if (stakeholder) {
         setHoveredId(null);
         setModalStakeholder(stakeholder);

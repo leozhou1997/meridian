@@ -31,6 +31,9 @@ export default function Dashboard() {
   const { data: companyProfile } = trpc.onboarding.getCompanyProfile.useQuery(undefined, {
     refetchOnWindowFocus: false,
   });
+  const { data: overdueActions = [] } = trpc.nextActions.listOverdue.useQuery(undefined, {
+    refetchOnWindowFocus: true,
+  });
 
   const atRiskDeals = deals.filter(d => (d.confidenceScore ?? 0) < 60 || (d.daysInStage ?? 0) > 90);
   const totalPipeline = deals.reduce((s, d) => s + (d.value ?? 0), 0);
@@ -143,6 +146,23 @@ export default function Dashboard() {
             <span className="hidden sm:inline">{language === 'zh' ? '新建 Deal' : 'New Deal'}</span>
           </Button>
         </motion.div>
+
+        {/* Overdue Actions Banner */}
+        {overdueActions.length > 0 && (
+          <motion.div variants={item} className="mb-4">
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/25 text-red-400">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <span className="text-xs font-semibold">
+                  {overdueActions.length} overdue action{overdueActions.length > 1 ? 's' : ''} need attention
+                </span>
+                <div className="text-[11px] text-red-400/70 mt-0.5 truncate">
+                  {overdueActions.slice(0, 2).map(a => a.text).join(' · ')}{overdueActions.length > 2 ? ` +${overdueActions.length - 2} more` : ''}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* KPI Cards */}
         <motion.div variants={item} className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">

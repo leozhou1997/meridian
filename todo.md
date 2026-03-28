@@ -455,3 +455,36 @@
 - [ ] Min 44px tap targets throughout
 - [ ] No horizontal scroll on any page
 - [ ] Test at 390px width (iPhone 14) — to be verified by user on real device
+
+## Phase 0 Pre-Launch Features (March 28)
+
+### P0-1: Post-Action Feedback Prompt
+- [x] When Next Action status changes to "done", show a dialog prompting user to log an interaction
+- [x] Dialog: "Great job! Want to log what happened? This will update your deal analysis."
+- [x] Options: "Log Interaction" (opens interaction form pre-filled with deal) | "Skip for now"
+- [x] If user clicks "Log Interaction", open the Add Meeting modal pre-filled with the deal
+
+### P0-2: Overdue Next Action Alerts
+- [x] dueDate field already exists in nextActions DB table
+- [x] Add listOverdue procedure to nextActions router
+- [x] Add getOverdueNextActions helper to db.ts
+- [x] Dashboard: show overdue action count banner at top when there are overdue actions
+- [x] Deal Detail: overdue actions shown with red badge in Next Actions list
+
+### P0-3: Mobile Deal Summary Card
+- [x] Add MobileSummaryCard component at top of Deal Detail page (md:hidden)
+- [x] Card shows: confidence score, last interaction date, pending action count
+- [x] Expandable: tap to see AI insight summary + top next actions
+- [x] Card has a "Quick Log" button that opens the Add Meeting modal
+
+### P1-4: Voice Capture → Auto Insight Refresh
+- [x] Add transcribeAndCreate mutation to meetings router (upload → transcribe → create meeting)
+- [x] FAB voice recording: upload audio to S3, call transcribeAndCreate, auto-trigger insight refresh
+- [x] Show transcription status in FAB UI (Uploading / Transcribing / Done)
+- [x] Show transcribed text preview before submitting
+
+### P1-5: Mobile Polish — Stakeholders & Deal Room
+- [x] Stakeholders page: responsive layout on mobile, hide secondary badges on small screens
+- [x] Stakeholders page: compact header on mobile
+- [x] Deal Room page: responsive header (stack on mobile), full-width Add Interaction button on mobile
+- [x] Deal Room page: flex-wrap metrics row already works on mobile

@@ -125,6 +125,92 @@ const roleConfig: Record<RoleType, { bg: string; text: string; border: string }>
   'Evaluator':      { bg: 'bg-orange-500/10',  text: 'text-orange-400',  border: 'border-orange-500/30'  },
 };
 
+// ─── Mobile Pre-Meeting Summary Card ─────────────────────────────────────────
+function MobileSummaryCard({
+  deal, latestSnapshot, nextActions, interactions
+}: {
+  deal: any;
+  latestSnapshot: any;
+  nextActions: any[];
+  interactions: any[];
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const pendingActions = nextActions.filter(a => a.status === 'accepted' || a.status === 'in_progress');
+  const overdueActions = pendingActions.filter(a => a.dueDate && new Date(a.dueDate) < new Date());
+  const lastInteraction = interactions[interactions.length - 1];
+  const daysSinceLast = lastInteraction
+    ? Math.floor((Date.now() - new Date(lastInteraction.date).getTime()) / 86400000)
+    : null;
+
+  return (
+    <div className="md:hidden border-b border-border/30 bg-card/30">
+      {/* Collapsed: 3 key numbers */}
+      <button
+        className="w-full flex items-center gap-3 px-4 py-2.5 text-left"
+        onClick={() => setExpanded(e => !e)}
+      >
+        <div className="flex-1 flex items-center gap-4">
+          <div className="flex items-center gap-1.5">
+            <span className={`font-mono text-sm font-bold ${deal.confidenceScore >= 75 ? 'text-emerald-400' : deal.confidenceScore >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
+              {deal.confidenceScore}%
+            </span>
+            <span className="text-[10px] text-muted-foreground">confidence</span>
+          </div>
+          {pendingActions.length > 0 && (
+            <div className="flex items-center gap-1.5">
+              <span className={`font-mono text-sm font-bold ${overdueActions.length > 0 ? 'text-red-400' : 'text-foreground'}`}>
+                {pendingActions.length}
+              </span>
+              <span className="text-[10px] text-muted-foreground">
+                {overdueActions.length > 0 ? `actions (${overdueActions.length} overdue)` : 'actions'}
+              </span>
+            </div>
+          )}
+          {daysSinceLast !== null && (
+            <div className="flex items-center gap-1.5">
+              <span className="font-mono text-sm font-bold text-foreground">{daysSinceLast}d</span>
+              <span className="text-[10px] text-muted-foreground">since last touch</span>
+            </div>
+          )}
+        </div>
+        <ChevronRight className={`w-3.5 h-3.5 text-muted-foreground/50 shrink-0 transition-transform ${expanded ? 'rotate-90' : ''}`} />
+      </button>
+
+      {/* Expanded: AI summary + next action + last interaction */}
+      {expanded && (
+        <div className="px-4 pb-3 space-y-2.5 border-t border-border/20 pt-2.5">
+          {latestSnapshot?.whatsHappening && (
+            <div>
+              <div className="text-[9px] text-primary/60 uppercase tracking-wider font-semibold mb-1">Situation</div>
+              <p className="text-[12px] text-foreground/80 leading-relaxed line-clamp-3">{latestSnapshot.whatsHappening}</p>
+            </div>
+          )}
+          {pendingActions.length > 0 && (
+            <div>
+              <div className="text-[9px] text-amber-400/60 uppercase tracking-wider font-semibold mb-1">Next Action</div>
+              <p className="text-[12px] text-foreground/80 leading-snug">{pendingActions[0].text}</p>
+              {pendingActions[0].dueDate && (
+                <span className={`text-[10px] ${new Date(pendingActions[0].dueDate) < new Date() ? 'text-red-400' : 'text-muted-foreground/60'}`}>
+                  Due {new Date(pendingActions[0].dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </span>
+              )}
+            </div>
+          )}
+          {lastInteraction && (
+            <div>
+              <div className="text-[9px] text-muted-foreground/50 uppercase tracking-wider font-semibold mb-1">Last Interaction</div>
+              <p className="text-[12px] text-muted-foreground/70 leading-snug">
+                {lastInteraction.type} · {daysSinceLast === 0 ? 'Today' : `${daysSinceLast}d ago`}
+                {lastInteraction.summary ? ` · ${lastInteraction.summary.slice(0, 80)}${lastInteraction.summary.length > 80 ? '...' : ''}` : ''}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function DealDetail() {
   const [, params] = useRoute('/deal/:id');
   const dealId = params?.id ? Number(params.id) : 0;
@@ -276,7 +362,23 @@ export default function DealDetail() {
     setNewActionDue('');
     setAddingAction(false);
   };
+  // Post-action feedback prompt state
+  const [showDonePrompt, setShowDonePrompt] = useState(false);
+  const [donePromptDealId, setDonePromptDealId] = useState<number | null>(null);
+  const [donePromptActionText, setDonePromptActionText] = useState('');
+  // Quick log interaction state (from done prompt)
+  const [showQuickLog, setShowQuickLog] = useState(false);
+  const [quickLogType, setQuickLogType] = useState('Follow-up');
+  const [quickLogSummary, setQuickLogSummary] = useState('');
+
   const updateActionStatus = (id: number, status: string) => {
+    // If marking as done, show the feedback prompt
+    if (status === 'done') {
+      const action = actionsData.find(a => a.id === id);
+      setDonePromptActionText(action?.text ?? '');
+      setDonePromptDealId(dealId);
+      setShowDonePrompt(true);
+    }
     updateActionStatusMutation.mutate({ id, status: status as any });
   };
 
@@ -699,6 +801,14 @@ export default function DealDetail() {
           <PipelineToggleButton className="mr-2 hidden md:flex" />
         </div>
       </div>
+
+      {/* Mobile Pre-Meeting Summary Card — only visible on mobile */}
+      <MobileSummaryCard
+        deal={deal}
+        latestSnapshot={latestSnapshot}
+        nextActions={nextActions}
+        interactions={localInteractions}
+      />
 
       {/* Content area */}
       <div className="flex-1 flex overflow-hidden">
@@ -1672,9 +1782,166 @@ export default function DealDetail() {
             </motion.div>
           );
         })()}
+        </AnimatePresence>
+
+      {/* ── P0-1: Post-Action Done Prompt ── */}
+      <AnimatePresence>
+        {showDonePrompt && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowDonePrompt(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              transition={{ duration: 0.2 }}
+              onClick={e => e.stopPropagation()}
+              className="w-full sm:w-[440px] mx-4 mb-4 sm:mb-0 rounded-2xl bg-card border border-border/60 shadow-2xl p-5"
+            >
+              {/* Header */}
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/15 flex items-center justify-center shrink-0">
+                  <Check className="w-4.5 h-4.5 text-emerald-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-foreground mb-0.5">Action completed!</div>
+                  <div className="text-xs text-muted-foreground line-clamp-2">{donePromptActionText}</div>
+                </div>
+                <button
+                  onClick={() => setShowDonePrompt(false)}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground shrink-0"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
+                Want to log what happened? Recording the outcome will help AI generate better insights for your next steps.
+              </p>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setShowDonePrompt(false);
+                    setShowQuickLog(true);
+                    setQuickLogSummary('');
+                    setQuickLogType('Follow-up');
+                  }}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Log Interaction
+                </button>
+                <button
+                  onClick={() => setShowDonePrompt(false)}
+                  className="px-3 py-2 rounded-lg border border-border/50 text-xs text-muted-foreground hover:bg-muted transition-colors"
+                >
+                  Skip
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
 
+      {/* ── Quick Log Interaction Modal (from Done Prompt) ── */}
+      <AnimatePresence>
+        {showQuickLog && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowQuickLog(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              transition={{ duration: 0.2 }}
+              onClick={e => e.stopPropagation()}
+              className="w-full sm:w-[480px] mx-4 mb-4 sm:mb-0 rounded-2xl bg-card border border-border/60 shadow-2xl p-5"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-sm font-semibold">Log Interaction</div>
+                <button
+                  onClick={() => setShowQuickLog(false)}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
 
+              {/* Interaction type */}
+              <div className="mb-3">
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">Type</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {INTERACTION_TYPES.map(t => (
+                    <button
+                      key={t}
+                      onClick={() => setQuickLogType(t)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors ${
+                        quickLogType === t
+                          ? 'bg-primary/15 text-primary border-primary/30'
+                          : 'bg-muted/30 text-muted-foreground border-border/30 hover:bg-muted/60'
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Summary */}
+              <div className="mb-4">
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">What happened?</label>
+                <textarea
+                  value={quickLogSummary}
+                  onChange={e => setQuickLogSummary(e.target.value)}
+                  placeholder="Brief summary of the interaction..."
+                  className="w-full h-24 bg-muted/30 border border-border/40 rounded-lg px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none focus:border-primary/50"
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    createMeetingMutation.mutate({
+                      dealId,
+                      date: new Date().toISOString().slice(0, 10),
+                      type: quickLogType,
+                      keyParticipant: '',
+                      summary: quickLogSummary,
+                      duration: 30,
+                    }, {
+                      onSuccess: () => {
+                        setShowQuickLog(false);
+                        toast.success('Interaction logged');
+                      },
+                    });
+                  }}
+                  disabled={!quickLogSummary.trim()}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  Save Interaction
+                </button>
+                <button
+                  onClick={() => setShowQuickLog(false)}
+                  className="px-3 py-2 rounded-lg border border-border/50 text-xs text-muted-foreground hover:bg-muted transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

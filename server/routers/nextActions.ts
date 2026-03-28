@@ -4,6 +4,7 @@ import {
   createNextAction,
   deleteNextAction,
   getNextActions,
+  getOverdueNextActions,
   getOrCreateDefaultTenant,
   updateNextAction,
 } from "../db";
@@ -69,5 +70,11 @@ export const nextActionsRouter = router({
       const tenant = await getOrCreateDefaultTenant(ctx.user.id, ctx.user.name ?? "User");
       await deleteNextAction(input.id, tenant.id);
       return { success: true };
+    }),
+
+  listOverdue: protectedProcedure
+    .query(async ({ ctx }) => {
+      const tenant = await getOrCreateDefaultTenant(ctx.user.id, ctx.user.name ?? "User");
+      return getOverdueNextActions(tenant.id);
     }),
 });

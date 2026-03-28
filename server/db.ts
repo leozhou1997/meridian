@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, lt, isNotNull, ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   aiLogs,
@@ -302,6 +302,21 @@ export async function deleteNextAction(id: number, tenantId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.delete(nextActions).where(and(eq(nextActions.id, id), eq(nextActions.tenantId, tenantId)));
+}
+
+export async function getOverdueNextActions(tenantId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const now = new Date();
+  return db.select().from(nextActions)
+    .where(and(
+      eq(nextActions.tenantId, tenantId),
+      isNotNull(nextActions.dueDate),
+      lt(nextActions.dueDate, now),
+      ne(nextActions.status, 'done'),
+      ne(nextActions.status, 'rejected'),
+    ))
+    .orderBy(nextActions.dueDate);
 }
 
 // ─── Knowledge Base ───────────────────────────────────────────────────────────

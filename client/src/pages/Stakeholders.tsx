@@ -267,15 +267,21 @@ function StakeholderRow({ stakeholder, dealId }: { stakeholder: any; dealId: num
           <span className="text-sm font-medium">{stakeholder.name}</span>
           {stakeholder.title && <span className="text-xs text-muted-foreground ml-2">{stakeholder.title}</span>}
         </div>
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="hidden sm:flex items-center gap-1.5 shrink-0">
           {roles.slice(0, 2).map(r => (
+            <Badge key={r} variant="outline" className={`text-[9px] px-1.5 py-0 ${getRoleColor(r)}`}>{r}</Badge>
+          ))}
+        </div>
+        {/* On mobile, show just the primary role badge */}
+        <div className="flex sm:hidden items-center gap-1 shrink-0">
+          {roles.slice(0, 1).map(r => (
             <Badge key={r} variant="outline" className={`text-[9px] px-1.5 py-0 ${getRoleColor(r)}`}>{r}</Badge>
           ))}
         </div>
         <div className={`shrink-0 ${sentimentColor}`}>
           <SentimentIcon className="w-3.5 h-3.5" />
         </div>
-        <span className={`text-[10px] shrink-0 ${ENGAGEMENT_COLORS[stakeholder.engagement] ?? 'text-muted-foreground'}`}>
+        <span className={`hidden sm:inline text-[10px] shrink-0 ${ENGAGEMENT_COLORS[stakeholder.engagement] ?? 'text-muted-foreground'}`}>
           {stakeholder.engagement}
         </span>
         {expanded
@@ -368,7 +374,7 @@ export default function Stakeholders() {
   const totalStakeholders = allStakeholders.length;
 
   return (
-    <div className="p-6 max-w-[960px]">
+    <div className="p-4 md:p-6 max-w-[960px]">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
 
         {/* Header */}

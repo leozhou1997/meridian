@@ -409,20 +409,20 @@ export default function Transcripts() {
   const isLoading = dealsLoading || meetingsLoading;
 
   return (
-    <div className="p-6 max-w-[1040px]">
+    <div className="p-4 md:p-6 max-w-[1040px]">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
 
         {/* Header */}
-        <div className="flex items-start justify-between mb-5">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
           <div>
-            <h1 className="font-display text-2xl font-bold mb-1">Deal Room</h1>
-            <p className="text-muted-foreground text-sm">
+            <h1 className="font-display text-xl md:text-2xl font-bold mb-1">Deal Room</h1>
+            <p className="text-muted-foreground text-xs md:text-sm">
               Unified view of all deal activity, interactions, and data density across your pipeline.
             </p>
           </div>
           <Dialog open={showUpload} onOpenChange={setShowUpload}>
             <DialogTrigger asChild>
-              <Button className="font-display text-xs gap-2 shrink-0">
+              <Button className="font-display text-xs gap-2 shrink-0 w-full sm:w-auto">
                 <Plus className="w-3.5 h-3.5" />
                 Add Interaction
               </Button>

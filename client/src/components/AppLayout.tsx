@@ -470,6 +470,9 @@ function QuickCaptureFAB({ deals }: QuickCaptureFABProps) {
   const [, navigate] = useLocation();
 
   const addMeetingMutation = trpc.meetings.create.useMutation();
+  const transcribeAndCreateMutation = trpc.meetings.transcribeAndCreate.useMutation();
+  const [transcribeStatus, setTranscribeStatus] = useState<'idle' | 'uploading' | 'transcribing' | 'done' | 'error'>('idle');
+  const [transcribedText, setTranscribedText] = useState('');
 
   const reset = () => {
     setMode('menu');
@@ -479,6 +482,8 @@ function QuickCaptureFAB({ deals }: QuickCaptureFABProps) {
     setPhotoFile(null);
     setIsRecording(false);
     setIsSubmitting(false);
+    setTranscribeStatus('idle');
+    setTranscribedText('');
     audioChunksRef.current = [];
   };
 
@@ -552,20 +557,30 @@ function QuickCaptureFAB({ deals }: QuickCaptureFABProps) {
   const handleSubmitVoice = async () => {
     if (!selectedDealId || audioChunksRef.current.length === 0) return;
     setIsSubmitting(true);
+    setTranscribeStatus('uploading');
     try {
       const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-      const summary = `Voice note recorded on ${new Date().toLocaleString()}`;
-      await addMeetingMutation.mutateAsync({
+      // Convert blob to base64 for server upload
+      const arrayBuffer = await blob.arrayBuffer();
+      const uint8 = new Uint8Array(arrayBuffer);
+      let binary = '';
+      uint8.forEach(b => binary += String.fromCharCode(b));
+      const audioBase64 = btoa(binary);
+
+      setTranscribeStatus('transcribing');
+      const result = await transcribeAndCreateMutation.mutateAsync({
         dealId: selectedDealId,
-        type: 'Voice Note',
-        summary,
-        date: new Date(),
-        keyParticipant: undefined,
-        duration: 0,
+        audioBase64,
+        mimeType: 'audio/webm',
       });
+      setTranscribedText(result.transcriptText);
+      setTranscribeStatus('done');
+      // Brief pause so user can see the transcript
+      await new Promise(r => setTimeout(r, 1500));
       close();
       navigate(`/deal/${selectedDealId}`);
     } catch {
+      setTranscribeStatus('error');
       setIsSubmitting(false);
     }
   };
@@ -762,20 +777,68 @@ function QuickCaptureFAB({ deals }: QuickCaptureFABProps) {
                         </>
                       ) : audioChunksRef.current.length > 0 ? (
                         <>
-                          <div className="w-16 h-16 rounded-full bg-green-500/20 border-2 border-green-500 flex items-center justify-center">
-                            <Check className="w-7 h-7 text-green-400" />
-                          </div>
-                          <p className="text-sm text-muted-foreground">Recording ready</p>
-                          <button
-                            onClick={handleSubmitVoice}
-                            disabled={!selectedDealId || isSubmitting}
-                            className="w-full h-11 rounded-xl bg-primary text-primary-foreground text-sm font-medium disabled:opacity-40 active:scale-[0.98] transition-all"
-                          >
-                            {isSubmitting ? 'Saving...' : 'Save Voice Note'}
-                          </button>
-                          <button onClick={() => { audioChunksRef.current = []; }} className="text-xs text-muted-foreground underline">
-                            Re-record
-                          </button>
+                          {/* Transcription status */}
+                          {transcribeStatus === 'uploading' && (
+                            <>
+                              <div className="w-16 h-16 rounded-full bg-blue-500/20 border-2 border-blue-500/50 flex items-center justify-center animate-pulse">
+                                <Upload className="w-7 h-7 text-blue-400" />
+                              </div>
+                              <p className="text-sm text-muted-foreground">Uploading audio...</p>
+                            </>
+                          )}
+                          {transcribeStatus === 'transcribing' && (
+                            <>
+                              <div className="w-16 h-16 rounded-full bg-primary/20 border-2 border-primary/50 flex items-center justify-center animate-pulse">
+                                <Mic className="w-7 h-7 text-primary" />
+                              </div>
+                              <p className="text-sm text-muted-foreground">Transcribing with AI...</p>
+                            </>
+                          )}
+                          {transcribeStatus === 'done' && transcribedText && (
+                            <>
+                              <div className="w-16 h-16 rounded-full bg-green-500/20 border-2 border-green-500 flex items-center justify-center">
+                                <Check className="w-7 h-7 text-green-400" />
+                              </div>
+                              <div className="w-full bg-muted/40 rounded-lg p-3">
+                                <p className="text-[11px] text-muted-foreground/60 uppercase tracking-wider mb-1">Transcript</p>
+                                <p className="text-xs text-foreground/80 leading-relaxed line-clamp-4">{transcribedText}</p>
+                              </div>
+                              <p className="text-xs text-green-400">Saved! Redirecting to deal...</p>
+                            </>
+                          )}
+                          {transcribeStatus === 'error' && (
+                            <p className="text-sm text-red-400">Transcription failed. Please try again.</p>
+                          )}
+                          {transcribeStatus === 'idle' && (
+                            <>
+                              <div className="w-16 h-16 rounded-full bg-green-500/20 border-2 border-green-500 flex items-center justify-center">
+                                <Check className="w-7 h-7 text-green-400" />
+                              </div>
+                              <p className="text-sm text-muted-foreground">Recording ready</p>
+                            </>
+                          )}
+                          {transcribeStatus === 'idle' && (
+                            <button
+                              onClick={handleSubmitVoice}
+                              disabled={!selectedDealId || isSubmitting}
+                              className="w-full h-11 rounded-xl bg-primary text-primary-foreground text-sm font-medium disabled:opacity-40 active:scale-[0.98] transition-all"
+                            >
+                              Transcribe &amp; Save
+                            </button>
+                          )}
+                          {transcribeStatus === 'idle' && (
+                            <button onClick={() => { audioChunksRef.current = []; }} className="text-xs text-muted-foreground underline">
+                              Re-record
+                            </button>
+                          )}
+                          {transcribeStatus === 'error' && (
+                            <button
+                              onClick={() => { setTranscribeStatus('idle'); setIsSubmitting(false); }}
+                              className="w-full h-11 rounded-xl bg-muted text-foreground text-sm font-medium active:scale-[0.98] transition-all"
+                            >
+                              Try Again
+                            </button>
+                          )}
                         </>
                       ) : (
                         <>

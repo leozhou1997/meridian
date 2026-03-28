@@ -9,6 +9,8 @@ import {
   updateMeeting,
 } from "../db";
 import type { InsertMeeting } from "../../drizzle/schema";
+import { transcribeAudio } from "../_core/voiceTranscription";
+import { storagePut } from "../storage";
 
 const MEETING_TYPES = [
   "Discovery Call", "Demo", "Technical Review", "POC Check-in",
@@ -81,5 +83,48 @@ export const meetingsRouter = router({
       const tenant = await getOrCreateDefaultTenant(ctx.user.id, ctx.user.name ?? "User");
       await deleteMeeting(input.id, tenant.id);
       return { success: true };
+    }),
+
+  // Voice capture: upload audio, transcribe, create meeting, return transcript
+  transcribeAndCreate: protectedProcedure
+    .input(z.object({
+      dealId: z.number(),
+      audioBase64: z.string(), // base64-encoded audio blob
+      mimeType: z.string().default('audio/webm'),
+      keyParticipant: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const tenant = await getOrCreateDefaultTenant(ctx.user.id, ctx.user.name ?? "User");
+
+      // 1. Upload audio to S3
+      const audioBuffer = Buffer.from(input.audioBase64, 'base64');
+      const fileKey = `voice-notes/${tenant.id}/${Date.now()}.webm`;
+      const { url: audioUrl } = await storagePut(fileKey, audioBuffer, input.mimeType);
+
+      // 2. Transcribe with Whisper
+      let transcriptText = '';
+      try {
+        const result = await transcribeAudio({ audioUrl });
+        transcriptText = result.text ?? '';
+      } catch (err) {
+        console.warn('[transcribeAndCreate] Transcription failed, using placeholder:', err);
+        transcriptText = `Voice note recorded on ${new Date().toLocaleString()}`;
+      }
+
+      // 3. Create meeting with transcript as summary
+      const id = await createMeeting({
+        dealId: input.dealId,
+        tenantId: tenant.id,
+        date: new Date(),
+        type: 'Follow-up',
+        keyParticipant: input.keyParticipant,
+        summary: transcriptText,
+        duration: 0,
+        transcriptUrl: audioUrl,
+      });
+
+      const all = await getMeetings(input.dealId, tenant.id);
+      const meeting = all.find(m => m.id === id)!;
+      return { meeting, transcriptText };
     }),
 });

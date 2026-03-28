@@ -1,0 +1,8 @@
+{
+  "query": "\nDELETE FROM stakeholders WHERE deal_id IN (90001, 90002);\nDELETE FROM meetings WHERE deal_id IN (90001, 90002);\nDELETE FROM deal_snapshots WHERE deal_id IN (90001, 90002);\nDELETE FROM next_actions WHERE deal_id IN (90001, 90002);\nDELETE FROM deals WHERE id IN (90001, 90002);\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute \nDELETE FROM stakeholders WHERE deal_id IN (90001, 90002);\nDELETE FROM meetings WHERE deal_id IN (90001, 90002);\nDELETE FROM deal_snapshots WHERE deal_id IN (90001, 90002);\nDELETE FROM next_actions WHERE deal_id IN (90001, 90002);\nDELETE FROM deals WHERE id IN (90001, 90002);\n",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 2: Unknown column 'deal_id' in 'where clause'"
+  ]
+}

@@ -14,7 +14,7 @@ import type { Stakeholder, Deal, Interaction, Meeting } from '@/lib/data';
 import { getRoleColor } from '@/lib/data';
 import { StakeholderAvatar } from '@/components/Avatars';
 import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
   ZoomIn, ZoomOut, Maximize2, Edit2, Eye, Plus, Trash2,
@@ -274,6 +274,66 @@ const RING_COLORS = [
 ];
 
 // ── Auto-layout ─────────────────────────────────────────────────────────────────────────
+
+// Ring geometry — shared between card layout and SVG background rendering
+interface RingGeometry {
+  cx: number;   // center x (pixels)
+  cy: number;   // center y (pixels)
+  radii: number[];  // scaled radius for each ring [inner, middle, outer]
+}
+
+function computeRingGeometry(
+  stakeholders: Stakeholder[],
+  containerW: number,
+  compact: boolean,
+): RingGeometry {
+  const nodeW = compact ? COMPACT_NODE_W : NODE_W;
+  const nodeH = compact ? COMPACT_NODE_H : NODE_H;
+  const gap = compact ? COMPACT_CARD_GAP : CARD_GAP;
+
+  const rings: Stakeholder[][] = [[], [], []];
+  stakeholders.forEach(s => {
+    const ring = getRing(s.role);
+    rings[ring].push(s);
+  });
+
+  const minCardSpacing = nodeW + gap;
+  function minRadiusForCount(n: number): number {
+    if (n <= 1) return 0;
+    return (n * minCardSpacing) / (2 * Math.PI);
+  }
+
+  const BASE_INNER = compact ? 140 : 200;
+  const RING_GAP = compact ? 100 : 140;
+
+  const ringRadii: number[] = [];
+  let prevOuter = 0;
+  for (let i = 0; i < 3; i++) {
+    const n = rings[i].length;
+    if (n === 0) {
+      ringRadii.push(prevOuter + RING_GAP);
+      prevOuter = ringRadii[i];
+      continue;
+    }
+    const minR = minRadiusForCount(n);
+    const r = Math.max(i === 0 ? BASE_INNER : prevOuter + RING_GAP, minR);
+    ringRadii.push(r);
+    prevOuter = r;
+  }
+
+  const maxRadius = Math.max(...ringRadii.filter((_, i) => rings[i].length > 0));
+  const cx = containerW / 2;
+  const SIDE_MARGIN = compact ? 20 : 40;
+  const availableRadius = cx - nodeW / 2 - SIDE_MARGIN;
+  const scaleFactor = maxRadius > availableRadius ? availableRadius / maxRadius : 1;
+  const scaledRadii = ringRadii.map(r => r * scaleFactor);
+  const scaledMaxRadius = maxRadius * scaleFactor;
+  const TOP_MARGIN = compact ? 60 : 80;
+  const cy = scaledMaxRadius + nodeH / 2 + TOP_MARGIN;
+
+  return { cx, cy, radii: scaledRadii };
+}
+
 function computeConcentricPositions(
   stakeholders: Stakeholder[],
   containerW: number,
@@ -281,8 +341,6 @@ function computeConcentricPositions(
 ): NodePosition[] {
   const nodeW = compact ? COMPACT_NODE_W : NODE_W;
   const nodeH = compact ? COMPACT_NODE_H : NODE_H;
-  const centerX = containerW / 2 - nodeW / 2;
-  const centerY = compact ? 250 : 320;
 
   if (stakeholders.length === 0) return [];
 
@@ -292,36 +350,43 @@ function computeConcentricPositions(
     rings[ring].push(s);
   });
 
-  const baseRadius = compact
-    ? Math.min(containerW * 0.14, 120)
-    : Math.min(containerW * 0.18, 180);
-  const ringRadii = [
-    baseRadius,
-    baseRadius * 1.8,
-    baseRadius * 2.5,
-  ];
+  // Use shared geometry function
+  const { cx, cy, radii: scaledRadii } = computeRingGeometry(stakeholders, containerW, compact);
 
   const raw: NodePosition[] = [];
 
   rings.forEach((ringStakeholders, ringIdx) => {
     if (ringStakeholders.length === 0) return;
-    const radius = ringRadii[ringIdx];
-    const angleStep = (2 * Math.PI) / ringStakeholders.length;
-    const startAngle = -Math.PI / 2;
+    const radius = scaledRadii[ringIdx];
+    const n = ringStakeholders.length;
+    const angleStep = (2 * Math.PI) / n;
+
+    // Rotate start angle per ring to spread cards better:
+    // Ring 0 (inner): start at top (-π/2)
+    // Ring 1 (middle): offset by half step to interleave with inner ring
+    // Ring 2 (outer): offset by quarter step
+    const ringOffsets = [-Math.PI / 2, -Math.PI / 2 + angleStep / 2, -Math.PI / 2 + angleStep / 3];
+    const startAngle = ringOffsets[ringIdx] ?? -Math.PI / 2;
 
     ringStakeholders.forEach((s, i) => {
       const angle = startAngle + i * angleStep;
       raw.push({
         id: String(s.id),
-        x: centerX + radius * Math.cos(angle),
-        y: centerY + radius * Math.sin(angle),
+        x: cx + radius * Math.cos(angle) - nodeW / 2,
+        y: cy + radius * Math.sin(angle) - nodeH / 2,
       });
     });
   });
 
+  // Clamp to visible area (no negative y, no overflow right)
   const maxX = containerW - nodeW;
-  const gap = compact ? COMPACT_CARD_GAP : CARD_GAP;
-  return resolveCollisions(raw, null, 0, 0, maxX, nodeH);
+  const clamped = raw.map(p => ({
+    ...p,
+    x: Math.max(0, Math.min(p.x, maxX)),
+    y: Math.max(0, p.y),
+  }));
+
+  return resolveCollisions(clamped, null, 0, 0, maxX, nodeH);
 }
 
 // Map stakeholder roles to approximate buying journey stages
@@ -1216,13 +1281,8 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
           {/* Layout background: Concentric rings OR Stage columns */}
           {viewLayout === 'concentric' ? (() => {
             const nodeW = compactMode ? COMPACT_NODE_W : NODE_W;
-            const nodeH = compactMode ? COMPACT_NODE_H : NODE_H;
-            const cx = containerW / 2;
-            const cy = (compactMode ? 250 : 320) + nodeH / 2;
-            const baseR = compactMode
-              ? Math.min(containerW * 0.14, 120)
-              : Math.min(containerW * 0.18, 180);
-            const radii = [baseR, baseR * 1.8, baseR * 2.5];
+            // Use the same geometry as card layout for accurate ring alignment
+            const { cx, cy, radii } = computeRingGeometry(localStakeholders, containerW, compactMode);
             return (
               <svg className="absolute inset-0 w-full pointer-events-none" style={{ height: '100%', overflow: 'visible' }}>
                 {[...radii].reverse().map((r, revIdx) => {
@@ -1328,9 +1388,9 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
           )}
           {/* Stakeholder nodes — z-20 base, z-30 when dragging */}
           {localStakeholders.map((stakeholder, idx) => {
-            const pos = getPos(stakeholder.id);
+            const pos = getPos(String(stakeholder.id));
             if (!pos) return null;
-            const isDragging = dragging === stakeholder.id;
+            const isDragging = dragging === String(stakeholder.id);
             const isConnSrc = connectingFrom === String(stakeholder.id);
             const isPendingConn = connectingFrom === '__pending__';
             const isRerouting = !!reroutingConn;
@@ -1338,7 +1398,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
             const heatColor = getHeatColor(heat);
             const touchpoints = getTouchpointCount(stakeholder);
             const interactions = getStakeholderInteractions(stakeholder);
-            const isExpanded = expandedCardId === stakeholder.id;
+            const isExpanded = expandedCardId === String(stakeholder.id);
             const isHighlighted = highlightedStakeholderId != null && (
               String(highlightedStakeholderId) === String(stakeholder.id) ||
               Number(stakeholder.id) === highlightedStakeholderId
@@ -2125,23 +2185,51 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
 }
 
 // ── Default connections builder ───────────────────────────────────────────────
-function buildDefaultConnections(stakeholders: Stakeholder[], stages: string[]): Connection[] {
+function buildDefaultConnections(stakeholders: Stakeholder[], _stages: string[]): Connection[] {
   const result: Connection[] = [];
-  stakeholders.forEach(s1 => {
-    stakeholders.forEach(s2 => {
-      if (s1.id >= s2.id) return;
-      const idx1 = stages.indexOf(s1.stage || '');
-      const idx2 = stages.indexOf(s2.stage || '');
-      if (idx1 < 0 || idx2 < 0) return;
-      if (Math.abs(idx1 - idx2) <= 1) {
-        result.push({
-          id: nanoid(8),
-          from: String(s1.id),
-          to: String(s2.id),
-          type: s1.role === 'Blocker' || s2.role === 'Blocker' ? 'blocks' : 'reports_to',
-        });
-      }
-    });
+
+  // Build role-based default connections:
+  // Decision Makers are the hub — everyone connects to them
+  // Champions influence Decision Makers
+  // Influencers influence Decision Makers or Champions
+  // Blockers block Decision Makers
+  // Users report to Champions or Influencers
+
+  const byRole = (role: string) => stakeholders.filter(s => s.role === role);
+  const decisionMakers = byRole('Decision Maker');
+  const champions = byRole('Champion');
+  const influencers = byRole('Influencer');
+  const blockers = byRole('Blocker');
+  const users = byRole('User');
+
+  const addConn = (from: Stakeholder, to: Stakeholder, type: Connection['type']) => {
+    result.push({ id: nanoid(8), from: String(from.id), to: String(to.id), type });
+  };
+
+  // Champions influence Decision Makers
+  champions.forEach(c => decisionMakers.forEach(d => addConn(c, d, 'influences')));
+
+  // Influencers influence Champions (or Decision Makers if no Champions)
+  influencers.forEach(inf => {
+    const targets = champions.length > 0 ? champions : decisionMakers;
+    targets.forEach(t => addConn(inf, t, 'influences'));
   });
+
+  // Blockers block Decision Makers
+  blockers.forEach(b => decisionMakers.forEach(d => addConn(b, d, 'blocks')));
+
+  // Users report to Champions (or influencers if no champions)
+  users.forEach(u => {
+    const targets = champions.length > 0 ? champions : influencers;
+    targets.forEach(t => addConn(u, t, 'reports_to'));
+  });
+
+  // If no role-based connections were created (e.g., all same role), connect adjacent pairs
+  if (result.length === 0 && stakeholders.length > 1) {
+    for (let i = 0; i < stakeholders.length - 1; i++) {
+      addConn(stakeholders[i], stakeholders[i + 1], 'collaborates');
+    }
+  }
+
   return result;
 }

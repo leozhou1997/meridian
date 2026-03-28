@@ -1,0 +1,35 @@
+{
+  "query": "SELECT id, name, role FROM stakeholders WHERE dealId = 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute SELECT id, name, role FROM stakeholders WHERE dealId = 1;",
+  "rows": [
+    {
+      "id": "90001",
+      "name": "Jennifer Walsh",
+      "role": "Champion"
+    },
+    {
+      "id": "90002",
+      "name": "David Park",
+      "role": "Decision Maker"
+    },
+    {
+      "id": "90003",
+      "name": "Rachel Torres",
+      "role": "Influencer"
+    },
+    {
+      "id": "90004",
+      "name": "Michael Stern",
+      "role": "Blocker"
+    },
+    {
+      "id": "90005",
+      "name": "Tom Bradley",
+      "role": "User"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\trole\n90001\tJennifer Walsh\tChampion\n90002\tDavid Park\tDecision Maker\n90003\tRachel Torres\tInfluencer\n90004\tMichael Stern\tBlocker\n90005\tTom Bradley\tUser\n",
+  "stderr": "",
+  "execution_time_ms": 356
+}

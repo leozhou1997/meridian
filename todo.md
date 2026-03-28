@@ -254,3 +254,18 @@
 ## Bug Fixes (March 28 - Post Checkpoint)
 
 - [x] Fix all stakeholder cards invisible: validIds Set<number> vs p.id string mismatch — positions filtered to empty, all cards disappeared
+
+## Stakeholder Map + Data Cleanup (March 28)
+
+- [ ] Fix stakeholder cards still not visible (debug root cause in browser)
+- [ ] Delete MiraclePlus and Adidas AG deals from Leo's account
+- [ ] Stages view: auto-assign stakeholders to lanes based on role on first switch
+- [ ] Stages view: cross-lane connections only (hide same-lane connections or show as thin dashed)
+
+## Stakeholder Map Layout Fixes (March 28)
+
+- [x] Fix card overlap: dynamic ring radii based on card count and container width
+- [x] Fix cards going off-screen: scale ring radii to fit within container bounds
+- [x] Fix ring SVG background misalignment: use computeRingGeometry() for both card positions and SVG circles
+- [x] Fix connection lines not rendering: buildDefaultConnections now uses role-based logic instead of stage-based
+- [x] Delete stale demo deals (Adidas AG, MiraclePlus) from database

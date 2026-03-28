@@ -1,0 +1,20 @@
+{
+  "query": "\nSELECT id, name, stage FROM deals WHERE name IN ('MiraclePlus', 'Adidas AG');\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute \nSELECT id, name, stage FROM deals WHERE name IN ('MiraclePlus', 'Adidas AG');\n",
+  "rows": [
+    {
+      "id": "90001",
+      "name": "Adidas AG",
+      "stage": "Discovery"
+    },
+    {
+      "id": "90002",
+      "name": "MiraclePlus",
+      "stage": "Discovery"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tstage\n90001\tAdidas AG\tDiscovery\n90002\tMiraclePlus\tDiscovery\n",
+  "stderr": "",
+  "execution_time_ms": 391
+}

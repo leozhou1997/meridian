@@ -257,7 +257,7 @@ export default function NewDeal() {
         }
         setAgentStep(currentStep);
         setTimeout(() => {
-          setCompletedSteps(prev => new Set([...prev, currentStep]));
+          setCompletedSteps(prev => new Set(Array.from(prev).concat(currentStep)));
           currentStep++;
           setAgentStep(currentStep);
           resolve();

@@ -524,3 +524,9 @@
 - [x] Fix: duplicate Rachel Torres node in mobile map — deleted orphan stakeholder id=120001 (empty title, User role) from DB
 - [x] Fix: Circle→Stage layout switch now uses effNodeW/effNodeH (mobile dims) in handleLayoutSwitch
 - [x] Fix: connNodeW/connNodeH now use NODE_W_MOBILE/NODE_H_MOBILE when isMobile=true — arrows now start/end at correct node edges
+
+## Mobile Map Root Cause Fix (March 28 - Round 4)
+- [x] Deep diagnosis: root cause = localStorage caching desktop positions (800-900px wide) polluting mobile layout
+- [x] Fix 1: isMobile=true → skip loadState(), always compute fresh positions
+- [x] Fix 2: isMobile=true → use window.innerWidth as containerW fallback (not 800/900px default)
+- [x] Fix 3: handleLayoutSwitch isMobile=true → always compute fresh layout, never use cached desktop positions

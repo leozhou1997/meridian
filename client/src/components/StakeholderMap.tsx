@@ -539,11 +539,14 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     const stks = deal.stakeholders;
     setLocalStakeholders(stks);
 
-    const actualW = containerRef.current?.getBoundingClientRect().width || containerW || 900;
+    // On mobile, fall back to window.innerWidth (not 800/900) to avoid oversized layout
+    const fallbackW = isMobile ? (typeof window !== 'undefined' ? window.innerWidth : 390) : (containerW || 900);
+    const actualW = containerRef.current?.getBoundingClientRect().width || fallbackW;
     const effectiveNodeW = isMobile ? NODE_W_MOBILE : NODE_W;
     const effectiveNodeH = isMobile ? NODE_H_MOBILE : NODE_H;
     const maxX = actualW - effectiveNodeW;
-    const saved = loadState(deal.id);
+    // On mobile, always compute fresh positions — never restore desktop-sized saved positions
+    const saved = isMobile ? null : loadState(deal.id);
 
     if (saved && saved.positions.length > 0) {
       const validIds = new Set(stks.map(s => String(s.id)));
@@ -730,7 +733,8 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     else stagePositionsRef.current = positions;
 
     setViewLayout(newLayout);
-    const actualW = containerRef.current?.getBoundingClientRect().width || containerW;
+    const layoutFallbackW = isMobile ? (typeof window !== 'undefined' ? window.innerWidth : 390) : containerW;
+    const actualW = containerRef.current?.getBoundingClientRect().width || layoutFallbackW;
     const stages = Array.isArray(deal.buyingStages) ? deal.buyingStages : [];
 
     // Try to restore saved positions for the target layout
@@ -740,12 +744,13 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
 
     const effNodeW = isMobile ? NODE_W_MOBILE : NODE_W;
     const effNodeH = isMobile ? NODE_H_MOBILE : NODE_H;
-    if (validCached.length === localStakeholders.length) {
+    // On mobile, always compute fresh layout — cached positions may be from desktop
+    if (!isMobile && validCached.length === localStakeholders.length) {
       const cardGap = CARD_GAP;
       const maxX = actualW - effNodeW;
       setPositions(resolveCollisions(validCached, null, 0, 0, maxX, effNodeH, effNodeW, cardGap));
     } else {
-      // No cached positions — compute fresh layout
+      // No cached positions (or mobile) — compute fresh layout
       const fresh = computeInitialPositions(localStakeholders, stages, actualW, newLayout, effNodeW, effNodeH);
       setPositions(fresh);
       if (newLayout === 'concentric') circlePositionsRef.current = fresh;

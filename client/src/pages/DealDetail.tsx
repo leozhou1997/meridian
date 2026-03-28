@@ -2064,7 +2064,7 @@ function MobileMapSheet({
           onStakeholderClick={onStakeholderClick}
           onStakeholdersChange={onStakeholdersChange}
           onBuyingStagesChange={onBuyingStagesChange}
-          initialZoom={0.75}
+          initialZoom={0.9}
           isMobile={true}
         />
       </div>

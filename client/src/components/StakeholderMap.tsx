@@ -300,8 +300,9 @@ function computeRingGeometry(
     return (n * minCardSpacing) / (2 * Math.PI);
   }
 
-  const BASE_INNER = 200;
-  const RING_GAP = 140;
+  // On mobile (small nodeW), use tighter radii so the whole map fits on screen
+  const BASE_INNER = nodeW <= 80 ? 110 : 200;
+  const RING_GAP = nodeW <= 80 ? 90 : 140;
 
   const ringRadii: number[] = [];
   let prevOuter = 0;
@@ -325,7 +326,8 @@ function computeRingGeometry(
   const scaleFactor = maxRadius > availableRadius ? availableRadius / maxRadius : 1;
   const scaledRadii = ringRadii.map(r => r * scaleFactor);
   const scaledMaxRadius = maxRadius * scaleFactor;
-  const TOP_MARGIN = 80;
+  // On mobile use smaller top margin so bottom nodes don't go off-screen
+  const TOP_MARGIN = nodeW <= 80 ? 50 : 80;
   const cy = scaledMaxRadius + nodeH / 2 + TOP_MARGIN;
 
   return { cx, cy, radii: scaledRadii };
@@ -584,15 +586,18 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
   }, [deal.id]);
 
   // Observe container width — and trigger initial layout once we have real dimensions
+  const prevContainerWRef = useRef(0);
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const obs = new ResizeObserver(entries => {
       const w = entries[0].contentRect.width;
       if (w === 0) return;
+      const widthChanged = Math.abs(w - prevContainerWRef.current) > 20;
+      prevContainerWRef.current = w;
       setContainerW(w);
-      // On first measurement, compute layout if positions are empty or stale
-      if (!layoutComputedRef.current) {
+      // Recompute layout if: first time, or positions are empty, or width changed significantly
+      if (!layoutComputedRef.current || positions.length === 0 || widthChanged) {
         layoutComputedRef.current = true;
         const stks = deal.stakeholders;
         const effectiveNodeW = isMobile ? NODE_W_MOBILE : NODE_W;
@@ -752,8 +757,11 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     else stagePositionsRef.current = positions;
 
     setViewLayout(newLayout);
-    const layoutFallbackW = isMobile ? (typeof window !== 'undefined' ? window.innerWidth : 390) : containerW;
-    const actualW = containerRef.current?.getBoundingClientRect().width || layoutFallbackW;
+    // Always use the ResizeObserver-measured containerW (prevContainerWRef) for accuracy
+    // Fall back to containerRef.current measurement only if containerW is still 0
+    const measuredW = prevContainerWRef.current > 0
+      ? prevContainerWRef.current
+      : (containerRef.current?.getBoundingClientRect().width || (isMobile ? 390 : 900));
     const stages = Array.isArray(deal.buyingStages) ? deal.buyingStages : [];
 
     // Try to restore saved positions for the target layout
@@ -766,11 +774,11 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     // On mobile, always compute fresh layout — cached positions may be from desktop
     if (!isMobile && validCached.length === localStakeholders.length) {
       const cardGap = CARD_GAP;
-      const maxX = actualW - effNodeW;
+      const maxX = measuredW - effNodeW;
       setPositions(resolveCollisions(validCached, null, 0, 0, maxX, effNodeH, effNodeW, cardGap));
     } else {
-      // No cached positions (or mobile) — compute fresh layout
-      const fresh = computeInitialPositions(localStakeholders, stages, actualW, newLayout, effNodeW, effNodeH);
+      // No cached positions (or mobile) — compute fresh layout with accurate width
+      const fresh = computeInitialPositions(localStakeholders, stages, measuredW, newLayout, effNodeW, effNodeH);
       setPositions(fresh);
       if (newLayout === 'concentric') circlePositionsRef.current = fresh;
       else stagePositionsRef.current = fresh;
@@ -1062,85 +1070,118 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
         </div>
       )}
 
-      {/* Top-right controls — on mobile, show at bottom to avoid covering nodes */}
-      <div className={isMobile ? "absolute bottom-20 right-3 z-20 flex flex-col gap-1.5" : "absolute top-14 right-3 z-20 flex flex-col gap-1.5"}>
-        <div className="flex rounded-lg overflow-hidden border border-border/50 bg-muted/80 mb-1">
-          {(['L7D', 'L14D', 'L30D'] as HeatWindow[]).map(w => (
-            <button key={w} onClick={() => setHeatWindow(w)}
+      {/* Top-right controls */}
+      {isMobile ? (
+        /* Mobile: minimal controls — only layout switch + zoom reset, stacked compactly */
+        <div className="absolute top-2 right-2 z-20 flex flex-col gap-1">
+          {/* Layout switch */}
+          <div className="flex rounded-lg overflow-hidden border border-border/50 bg-muted/90 shadow-sm">
+            <button
+              onClick={() => handleLayoutSwitch('concentric')}
               className={`flex items-center gap-1 px-2 py-1.5 text-[10px] font-medium transition-colors ${
-                heatWindow === w ? 'bg-card text-foreground' : 'text-muted-foreground hover:text-foreground'
+                viewLayout === 'concentric' ? 'bg-card text-foreground' : 'text-muted-foreground'
               }`}
             >
-              {w === heatWindow && <Flame className="w-2.5 h-2.5 text-orange-400" />}
-              {w}
+              <Layers className="w-3 h-3" /> Circles
             </button>
-          ))}
+            <button
+              onClick={() => handleLayoutSwitch('stages')}
+              className={`flex items-center gap-1 px-2 py-1.5 text-[10px] font-medium transition-colors ${
+                viewLayout === 'stages' ? 'bg-card text-foreground' : 'text-muted-foreground'
+              }`}
+            >
+              <LayoutGrid className="w-3 h-3" /> Stages
+            </button>
+          </div>
+          {/* Zoom + Reset */}
+          <div className="flex gap-1">
+            <button onClick={() => setZoom(z => Math.min(z + 0.2, 2.0))}
+              className="w-7 h-7 rounded bg-muted/90 border border-border/50 flex items-center justify-center shadow-sm"
+            >
+              <ZoomIn className="w-3.5 h-3.5" />
+            </button>
+            <button onClick={() => setZoom(z => Math.max(z - 0.2, 0.3))}
+              className="w-7 h-7 rounded bg-muted/90 border border-border/50 flex items-center justify-center shadow-sm"
+            >
+              <ZoomOut className="w-3.5 h-3.5" />
+            </button>
+            <button onClick={handleReset}
+              className="w-7 h-7 rounded bg-muted/90 border border-border/50 flex items-center justify-center shadow-sm"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
-
-        {/* Layout switch: Concentric vs Stages */}
-        <div className="flex rounded-lg overflow-hidden border border-border/50 bg-muted/80">
-          <button
-            onClick={() => handleLayoutSwitch('concentric')}
-            className={`flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-medium transition-colors ${
-              viewLayout === 'concentric' ? 'bg-card text-foreground' : 'text-muted-foreground hover:text-foreground'
-            }`}
-            title="Concentric circle layout"
-          >
-            <Layers className="w-3 h-3" /> Circles
-          </button>
-          <button
-            onClick={() => handleLayoutSwitch('stages')}
-            className={`flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-medium transition-colors ${
-              viewLayout === 'stages' ? 'bg-card text-foreground' : 'text-muted-foreground hover:text-foreground'
-            }`}
-            title="Stage-based column layout"
-          >
-            <LayoutGrid className="w-3 h-3" /> Stages
-          </button>
+      ) : (
+        /* Desktop: full controls */
+        <div className="absolute top-14 right-3 z-20 flex flex-col gap-1.5">
+          <div className="flex rounded-lg overflow-hidden border border-border/50 bg-muted/80 mb-1">
+            {(['L7D', 'L14D', 'L30D'] as HeatWindow[]).map(w => (
+              <button key={w} onClick={() => setHeatWindow(w)}
+                className={`flex items-center gap-1 px-2 py-1.5 text-[10px] font-medium transition-colors ${
+                  heatWindow === w ? 'bg-card text-foreground' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {w === heatWindow && <Flame className="w-2.5 h-2.5 text-orange-400" />}
+                {w}
+              </button>
+            ))}
+          </div>
+          <div className="flex rounded-lg overflow-hidden border border-border/50 bg-muted/80">
+            <button
+              onClick={() => handleLayoutSwitch('concentric')}
+              className={`flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-medium transition-colors ${
+                viewLayout === 'concentric' ? 'bg-card text-foreground' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Layers className="w-3 h-3" /> Circles
+            </button>
+            <button
+              onClick={() => handleLayoutSwitch('stages')}
+              className={`flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-medium transition-colors ${
+                viewLayout === 'stages' ? 'bg-card text-foreground' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <LayoutGrid className="w-3 h-3" /> Stages
+            </button>
+          </div>
+          <div className="flex rounded-lg overflow-hidden border border-border/50 bg-muted/80">
+            <button
+              onClick={() => { setMode('view'); setConnectingFrom(null); setConnEditPopup(null); setReroutingConn(null); }}
+              className={`flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-medium transition-colors ${
+                mode === 'view' ? 'bg-card text-foreground' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Eye className="w-3 h-3" /> View
+            </button>
+            <button
+              onClick={() => setMode('edit')}
+              className={`flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-medium transition-colors ${
+                mode === 'edit' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Edit2 className="w-3 h-3" /> Edit
+            </button>
+          </div>
+          <div className="flex gap-1">
+            <button onClick={() => setZoom(z => Math.min(z + 0.15, 1.8))}
+              className="w-7 h-7 rounded bg-muted/80 border border-border/50 flex items-center justify-center hover:bg-muted transition-colors"
+            >
+              <ZoomIn className="w-3.5 h-3.5" />
+            </button>
+            <button onClick={() => setZoom(z => Math.max(z - 0.15, 0.4))}
+              className="w-7 h-7 rounded bg-muted/80 border border-border/50 flex items-center justify-center hover:bg-muted transition-colors"
+            >
+              <ZoomOut className="w-3.5 h-3.5" />
+            </button>
+            <button onClick={handleReset}
+              className="w-7 h-7 rounded bg-muted/80 border border-border/50 flex items-center justify-center hover:bg-muted transition-colors"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
-
-        {/* View / Edit mode */}
-        <div className="flex rounded-lg overflow-hidden border border-border/50 bg-muted/80">
-          <button
-            onClick={() => { setMode('view'); setConnectingFrom(null); setConnEditPopup(null); setReroutingConn(null); }}
-            className={`flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-medium transition-colors ${
-              mode === 'view' ? 'bg-card text-foreground' : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Eye className="w-3 h-3" /> View
-          </button>
-          <button
-            onClick={() => setMode('edit')}
-            className={`flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-medium transition-colors ${
-              mode === 'edit' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Edit2 className="w-3 h-3" /> Edit
-          </button>
-        </div>
-
-        {/* Zoom controls + Reset */}
-        <div className="flex gap-1">
-          <button onClick={() => setZoom(z => Math.min(z + 0.15, 1.8))}
-            className="w-7 h-7 rounded bg-muted/80 border border-border/50 flex items-center justify-center hover:bg-muted transition-colors"
-            title="Zoom in"
-          >
-            <ZoomIn className="w-3.5 h-3.5" />
-          </button>
-          <button onClick={() => setZoom(z => Math.max(z - 0.15, 0.4))}
-            className="w-7 h-7 rounded bg-muted/80 border border-border/50 flex items-center justify-center hover:bg-muted transition-colors"
-            title="Zoom out"
-          >
-            <ZoomOut className="w-3.5 h-3.5" />
-          </button>
-          <button onClick={handleReset}
-            className="w-7 h-7 rounded bg-muted/80 border border-border/50 flex items-center justify-center hover:bg-muted transition-colors"
-            title="Reset layout & zoom"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* Edit mode toolbar */}
       <AnimatePresence>

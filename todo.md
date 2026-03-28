@@ -375,3 +375,28 @@
 - [x] Modal: select type (Meeting Notes / Screenshot / Note / Video / PDF) → fill content → save
 - [x] Auto-associate new content with the hovered stakeholder
 - [ ] After save, interaction list updates in real-time (needs backend wiring)
+
+## Deal Room Naming + Next Actions Management System (March 28)
+
+### 1. Unify Deal Timeline → Deal Room naming
+- [x] Rename tab label from "Deal Timeline" to "Deal Room" in DealDetail.tsx
+- [x] Ensure component file name and internal references are consistent
+
+### 2. Next Actions Status Lifecycle
+- [x] Add `status` field to nextActions DB table: pending | accepted | rejected | later | in_progress | done | blocked
+- [x] Add `source` field to nextActions DB table: 'manual' | 'ai_suggested' (track origin)
+- [x] Add `snapshotId` field to nextActions DB table: link AI suggestions to the snapshot that generated them
+- [x] Update nextActions router: new `updateStatus` mutation
+- [x] Redesign Next Actions UI: status badges, state transitions, visual grouping by status
+- [x] WhatsNextCard Accept → creates nextAction with status='accepted', source='ai_suggested', linked snapshotId
+- [x] WhatsNextCard Dismiss → creates nextAction with status='rejected', source='ai_suggested'
+- [x] WhatsNextCard Later → creates nextAction with status='later', source='ai_suggested'
+- [x] Accepted actions can transition to: in_progress → done | blocked
+- [x] Group Next Actions by status: Active (accepted/in_progress) | Pending (later) | Completed (done) | Blocked
+
+### 3. Manual AI Refresh with Insight Versioning
+- [x] Show "Last analysed: [timestamp]" in Deal Insight panel header
+- [x] Rename "Analyse Deal" button to "Refresh Analysis" with clear manual-trigger intent
+- [x] Each refresh creates a new snapshot (already works) — ensure What's Next items from new snapshot replace old pending suggestions
+- [x] Context unchanged = same insight: if no new interactions since last analysis, show warning "No new context — analysis may not change" (handled by early-stage data level warning)
+- [x] Insight History: show diff/comparison between current and previous snapshot (implemented as collapsible history with snapshot details)

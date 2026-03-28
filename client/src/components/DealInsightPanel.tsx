@@ -4,10 +4,16 @@ import { formatCurrency, getConfidenceColor } from '@/lib/data';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   AlertTriangle, Check, Plus, Trash2, Calendar, Send, Loader2,
-  ChevronDown, ChevronUp, Sparkles, Settings2
+  ChevronDown, ChevronUp, Sparkles, Settings2, Play, Pause, Ban,
+  Clock, CircleCheck, CircleDot, RotateCcw, ArrowRight
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
+
+// ─── Types ──────────────────────────────────────────────────────────────────
+
+type ActionStatus = 'pending' | 'accepted' | 'rejected' | 'later' | 'in_progress' | 'done' | 'blocked';
+type ActionSource = 'manual' | 'ai_suggested';
 
 type NextAction = {
   id: number;
@@ -15,6 +21,9 @@ type NextAction = {
   dueDate: Date | string | null;
   priority: string;
   completed: boolean;
+  status?: ActionStatus;
+  source?: ActionSource;
+  snapshotId?: number | null;
 };
 
 type KeyRiskItem = { title: string; detail: string; stakeholders: string[] };
@@ -82,6 +91,8 @@ type Props = {
   addAction: () => void;
   toggleAction: (id: number) => void;
   deleteAction: (id: number) => void;
+  updateActionStatus?: (id: number, status: string) => void;
+  createAiAction?: (text: string, snapshotId?: number) => void;
   setActiveTab: (tab: string) => void;
   onStakeholderHover?: (id: number | null) => void;
   onStakeholderClick?: (id: number) => void;
@@ -90,10 +101,40 @@ type Props = {
 type SuggestedContact = { name: string; title: string; reason: string };
 type WhatsNextItem = string | { action: string; rationale: string; suggestedContacts?: SuggestedContact[] };
 
-/** Collapsible Insight History showing older snapshots */
+// ─── Status Config ──────────────────────────────────────────────────────────
+
+const STATUS_CONFIG: Record<ActionStatus, {
+  label: string;
+  icon: typeof Check;
+  color: string;
+  bg: string;
+  border: string;
+}> = {
+  pending: { label: 'Pending', icon: Clock, color: 'text-muted-foreground/70', bg: 'bg-muted/20', border: 'border-border/30' },
+  accepted: { label: 'To Do', icon: CircleDot, color: 'text-blue-400', bg: 'bg-blue-400/10', border: 'border-blue-400/30' },
+  in_progress: { label: 'In Progress', icon: Play, color: 'text-amber-400', bg: 'bg-amber-400/10', border: 'border-amber-400/30' },
+  done: { label: 'Done', icon: CircleCheck, color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/30' },
+  blocked: { label: 'Blocked', icon: Ban, color: 'text-red-400', bg: 'bg-red-400/10', border: 'border-red-400/30' },
+  later: { label: 'Later', icon: Pause, color: 'text-purple-400', bg: 'bg-purple-400/10', border: 'border-purple-400/30' },
+  rejected: { label: 'Dismissed', icon: Ban, color: 'text-muted-foreground/40', bg: 'bg-muted/10', border: 'border-border/20' },
+};
+
+// Valid transitions from each status
+const STATUS_TRANSITIONS: Record<ActionStatus, ActionStatus[]> = {
+  pending: ['accepted', 'rejected', 'later'],
+  accepted: ['in_progress', 'done', 'blocked', 'later'],
+  in_progress: ['done', 'blocked', 'accepted'],
+  done: ['accepted'], // reopen
+  blocked: ['accepted', 'in_progress'],
+  later: ['accepted', 'rejected'],
+  rejected: ['accepted'], // undo
+};
+
+// ─── Collapsible Insight History ────────────────────────────────────────────
+
 function InsightHistory({ snapshots }: { snapshots: Snapshot[] }) {
   const [showHistory, setShowHistory] = useState(false);
-  const olderSnapshots = snapshots.slice(1); // skip latest
+  const olderSnapshots = snapshots.slice(1);
   if (olderSnapshots.length === 0) return null;
   return (
     <div>
@@ -159,91 +200,105 @@ function InsightHistory({ snapshots }: { snapshots: Snapshot[] }) {
   );
 }
 
-/** Expandable action card for What's Next items */
+// ─── WhatsNextCard with status lifecycle ─────────────────────────────────────
+
 function WhatsNextCard({
   item,
   stakeholders,
   onStakeholderHover,
   onStakeholderClick,
   onAccept,
+  onDismiss,
+  onLater,
   onAddToMap,
   dealCompany,
+  existingActions,
 }: {
   item: WhatsNextItem;
   stakeholders: Stakeholder[];
   onStakeholderHover?: (id: number | null) => void;
   onStakeholderClick?: (id: number) => void;
   onAccept?: (actionText: string) => void;
+  onDismiss?: (actionText: string) => void;
+  onLater?: (actionText: string) => void;
   onAddToMap?: (contact: SuggestedContact) => void;
   dealCompany?: string;
+  existingActions?: NextAction[];
 }) {
   const [expanded, setExpanded] = useState(false);
-  const [feedback, setFeedback] = useState<'accepted' | 'dismissed' | 'later' | null>(null);
+  const [addedContacts, setAddedContacts] = useState<Set<string>>(new Set());
 
   const actionText = typeof item === 'string' ? item : item.action;
   const rationale = typeof item === 'string' ? null : item.rationale;
-  // Normalize suggestedContacts: DB may store string[] (names only) or SuggestedContact[] (full objects)
   const rawContacts = typeof item === 'string' ? [] : (item.suggestedContacts ?? []);
   const suggestedContacts: SuggestedContact[] = rawContacts.map((c: string | SuggestedContact) =>
     typeof c === 'string' ? { name: c, title: '', reason: '' } : c
   );
-  const [addedContacts, setAddedContacts] = useState<Set<string>>(new Set());
 
-  // Find stakeholders mentioned in this action item
+  // Check if this suggestion already has a corresponding action
+  const existingAction = existingActions?.find(a =>
+    a.source === 'ai_suggested' && a.text === actionText
+  );
+  const currentStatus = existingAction?.status as ActionStatus | undefined;
+
   const mentioned = stakeholders.filter(s => {
     const firstName = s.name.split(' ')[0];
     return actionText.includes(s.name) || (firstName.length > 2 && actionText.includes(firstName));
   });
 
-  // Every card is always expandable — rationale, stakeholders, and feedback buttons are always shown
-
   const handleAccept = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setFeedback('accepted');
     onAccept?.(actionText);
   };
 
   const handleDismiss = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setFeedback('dismissed');
+    onDismiss?.(actionText);
   };
 
   const handleLater = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setFeedback('later');
+    onLater?.(actionText);
   };
 
-  if (feedback === 'dismissed') {
+  // If dismissed, show muted
+  if (currentStatus === 'rejected') {
     return (
       <div className="rounded-lg border border-border/20 bg-muted/5 px-3 py-2 flex items-center gap-2 opacity-40">
         <div className="w-3 h-3 rounded-full border border-muted-foreground/30 shrink-0" />
         <span className="flex-1 text-[11px] text-muted-foreground/60 line-through leading-snug">{actionText}</span>
-        <button onClick={() => setFeedback(null)} className="text-[10px] text-muted-foreground/40 hover:text-muted-foreground/70">undo</button>
+        <span className="text-[9px] text-muted-foreground/40">Dismissed</span>
       </div>
     );
   }
 
+  const statusBadge = currentStatus && currentStatus !== 'pending' ? (
+    <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${STATUS_CONFIG[currentStatus].bg} ${STATUS_CONFIG[currentStatus].color} border ${STATUS_CONFIG[currentStatus].border}`}>
+      {STATUS_CONFIG[currentStatus].label}
+    </span>
+  ) : null;
+
   return (
     <div className={`rounded-lg border overflow-hidden transition-all ${
-      feedback === 'accepted' ? 'border-emerald-400/40 bg-emerald-400/5' :
-      feedback === 'later' ? 'border-amber-400/30 bg-amber-400/5' :
+      currentStatus === 'accepted' || currentStatus === 'in_progress' ? 'border-blue-400/30 bg-blue-400/5' :
+      currentStatus === 'done' ? 'border-emerald-400/30 bg-emerald-400/5' :
+      currentStatus === 'later' ? 'border-purple-400/20 bg-purple-400/5' :
       'border-border/30 bg-muted/10'
     }`}>
-      {/* Card header — always visible */}
       <button
         className="w-full flex items-start gap-2.5 px-3 py-2.5 text-left hover:bg-muted/20 transition-colors group"
         onClick={() => setExpanded(e => !e)}
       >
         <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 mt-0.5 ${
-          feedback === 'accepted' ? 'border-emerald-400 bg-emerald-400/20' :
-          feedback === 'later' ? 'border-amber-400/60 bg-amber-400/10' :
+          currentStatus === 'done' ? 'border-emerald-400 bg-emerald-400/20' :
+          currentStatus === 'accepted' || currentStatus === 'in_progress' ? 'border-blue-400/60 bg-blue-400/10' :
           'border-emerald-400/50 bg-emerald-400/10'
         }`}>
-          {feedback === 'accepted'
+          {currentStatus === 'done'
             ? <Check className="w-2.5 h-2.5 text-emerald-400" />
             : <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
         </div>
-        <span className="flex-1 text-[12px] text-foreground/85 leading-snug">
+        <span className={`flex-1 text-[12px] leading-snug ${currentStatus === 'done' ? 'text-foreground/50 line-through' : 'text-foreground/85'}`}>
           <StakeholderLinkedText
             text={actionText}
             stakeholders={stakeholders}
@@ -251,21 +306,22 @@ function WhatsNextCard({
             onClick={onStakeholderClick}
           />
         </span>
-        <div className="shrink-0 mt-0.5 text-muted-foreground/40 group-hover:text-muted-foreground/70 transition-colors">
+        <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
+          {statusBadge}
+          <div className="text-muted-foreground/40 group-hover:text-muted-foreground/70 transition-colors">
             {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
           </div>
+        </div>
       </button>
 
-      {/* Expanded content */}
       {expanded && (
         <div className="px-3 pb-3 pt-1 border-t border-border/20 space-y-3">
-
           {/* AI Rationale */}
           <div className="flex items-start gap-2">
             <Sparkles className="w-3 h-3 text-primary/60 shrink-0 mt-0.5" />
             {rationale
               ? <p className="text-[11.5px] text-foreground/70 leading-relaxed italic">{rationale}</p>
-              : <p className="text-[11.5px] text-muted-foreground/40 leading-relaxed italic">Hit “Refresh Insights” above to generate AI rationale for this action.</p>
+              : <p className="text-[11.5px] text-muted-foreground/40 leading-relaxed italic">Run Refresh Analysis to generate detailed rationale.</p>
             }
           </div>
 
@@ -300,7 +356,7 @@ function WhatsNextCard({
             </div>
           )}
 
-          {/* Suggested Contacts — AI-recommended people not yet on the map */}
+          {/* Suggested Contacts */}
           {suggestedContacts.length > 0 && (
             <div>
               <div className="text-[10px] text-muted-foreground/50 uppercase tracking-wider mb-1.5 flex items-center gap-1">
@@ -312,14 +368,7 @@ function WhatsNextCard({
                   const isAdded = addedContacts.has(contact.name);
                   const linkedInQuery = encodeURIComponent(`${contact.name} ${dealCompany ?? ''}`.trim());
                   return (
-                    <div
-                      key={contact.name}
-                      className={`rounded-lg border p-2.5 transition-all ${
-                        isAdded
-                          ? 'border-emerald-400/30 bg-emerald-400/5'
-                          : 'border-border/30 bg-muted/10'
-                      }`}
-                    >
+                    <div key={contact.name} className={`rounded-lg border p-2.5 transition-all ${isAdded ? 'border-emerald-400/30 bg-emerald-400/5' : 'border-border/30 bg-muted/10'}`}>
                       <div className="flex items-start gap-2">
                         <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
                           {contact.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
@@ -332,31 +381,14 @@ function WhatsNextCard({
                       </div>
                       <div className="flex items-center gap-1.5 mt-2 ml-9">
                         {isAdded ? (
-                          <span className="flex items-center gap-1 text-[10px] text-emerald-400">
-                            <Check className="w-3 h-3" /> Added to map
-                          </span>
+                          <span className="flex items-center gap-1 text-[10px] text-emerald-400"><Check className="w-3 h-3" /> Added to map</span>
                         ) : (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onAddToMap?.(contact);
-                              setAddedContacts(prev => new Set(Array.from(prev).concat(contact.name)));
-                            }}
-                            className="flex items-center gap-1 px-2 py-0.5 rounded bg-primary/15 text-primary text-[10px] font-medium hover:bg-primary/25 transition-colors"
-                          >
+                          <button onClick={(e) => { e.stopPropagation(); onAddToMap?.(contact); setAddedContacts(prev => new Set(Array.from(prev).concat(contact.name))); }} className="flex items-center gap-1 px-2 py-0.5 rounded bg-primary/15 text-primary text-[10px] font-medium hover:bg-primary/25 transition-colors">
                             <Plus className="w-2.5 h-2.5" /> Add to Map
                           </button>
                         )}
-                        <a
-                          href={`https://www.linkedin.com/search/results/people/?keywords=${linkedInQuery}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={e => e.stopPropagation()}
-                          className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#0077b5]/15 text-[#0077b5] text-[10px] font-medium hover:bg-[#0077b5]/25 transition-colors"
-                        >
-                          <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-                          </svg>
+                        <a href={`https://www.linkedin.com/search/results/people/?keywords=${linkedInQuery}`} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#0077b5]/15 text-[#0077b5] text-[10px] font-medium hover:bg-[#0077b5]/25 transition-colors">
+                          <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
                           LinkedIn
                         </a>
                       </div>
@@ -367,39 +399,18 @@ function WhatsNextCard({
             </div>
           )}
 
-          {/* Accept / Dismiss / Later */}
-          {feedback === null && (
+          {/* Accept / Dismiss / Later — only show if no action exists yet */}
+          {!currentStatus && (
             <div className="flex items-center gap-1.5 pt-1">
-              <button
-                onClick={handleAccept}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-400/10 hover:bg-emerald-400/20 text-emerald-400 text-[10.5px] font-medium transition-colors"
-              >
+              <button onClick={handleAccept} className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-400/10 hover:bg-emerald-400/20 text-emerald-400 text-[10.5px] font-medium transition-colors">
                 <Check className="w-3 h-3" /> Accept
               </button>
-              <button
-                onClick={handleDismiss}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-muted/30 hover:bg-muted/50 text-muted-foreground/70 text-[10.5px] font-medium transition-colors"
-              >
-                <span className="text-[11px]">✕</span> Dismiss
+              <button onClick={handleDismiss} className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-muted/30 hover:bg-muted/50 text-muted-foreground/70 text-[10.5px] font-medium transition-colors">
+                <span className="text-[11px]">{'\u2715'}</span> Dismiss
               </button>
-              <button
-                onClick={handleLater}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-400/10 hover:bg-amber-400/20 text-amber-400/80 text-[10.5px] font-medium transition-colors"
-              >
-                <span className="text-[11px]">=</span> Later
+              <button onClick={handleLater} className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-purple-400/10 hover:bg-purple-400/20 text-purple-400/80 text-[10.5px] font-medium transition-colors">
+                <Pause className="w-3 h-3" /> Later
               </button>
-            </div>
-          )}
-          {feedback === 'accepted' && (
-            <div className="flex items-center gap-1.5 text-[10.5px] text-emerald-400">
-              <Check className="w-3 h-3" /> Added to Next Actions
-              <button onClick={() => setFeedback(null)} className="ml-auto text-muted-foreground/40 hover:text-muted-foreground/70">undo</button>
-            </div>
-          )}
-          {feedback === 'later' && (
-            <div className="flex items-center gap-1.5 text-[10.5px] text-amber-400/80">
-              <span>= Saved for later</span>
-              <button onClick={() => setFeedback(null)} className="ml-auto text-muted-foreground/40 hover:text-muted-foreground/70">undo</button>
             </div>
           )}
         </div>
@@ -408,7 +419,8 @@ function WhatsNextCard({
   );
 }
 
-/** Renders text with stakeholder names highlighted as interactive links */
+// ─── StakeholderLinkedText ───────────────────────────────────────────────────
+
 function StakeholderLinkedText({
   text,
   stakeholders,
@@ -422,58 +434,38 @@ function StakeholderLinkedText({
 }) {
   if (!stakeholders.length) return <span>{text}</span>;
 
-  // Build a regex that matches stakeholder names, first names, and titles
-  // Title matching: only match specific role titles (not generic words)
-  // e.g. "CTO", "VP of Engineering", "CFO" — but not "Director" alone
   const titleTerms = stakeholders
     .filter(s => s.title)
     .flatMap(s => {
       const title = s.title!;
-      const terms: string[] = [];
-      // Match full title
-      terms.push(title);
-      // Match common abbreviations within the title (CTO, CFO, CIO, VP, CEO, COO)
+      const terms: string[] = [title];
       const abbrevMatch = title.match(/\b(C[A-Z]O|VP|SVP|EVP|CPO|CMO|CRO)\b/);
       if (abbrevMatch) terms.push(abbrevMatch[0]);
       return terms;
     });
 
-  const names = stakeholders
-    .flatMap(s => {
-      const parts = [s.name];
-      const firstName = s.name.split(' ')[0];
-      if (firstName && firstName.length > 2) parts.push(firstName);
-      return parts;
-    });
+  const names = stakeholders.flatMap(s => {
+    const parts = [s.name];
+    const firstName = s.name.split(' ')[0];
+    if (firstName && firstName.length > 2) parts.push(firstName);
+    return parts;
+  });
 
-  const allTerms = [...names, ...titleTerms]
-    .filter((v, i, a) => a.indexOf(v) === i) // dedupe
-    .sort((a, b) => b.length - a.length); // longest first to avoid partial matches
-
+  const allTerms = [...names, ...titleTerms].filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => b.length - a.length);
   const escaped = allTerms.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
   const regex = new RegExp(`\\b(${escaped.join('|')})\\b`, 'g');
-
   const parts = text.split(regex);
 
   return (
     <span>
       {parts.map((part, i) => {
         const stakeholder = stakeholders.find(
-          s =>
-            s.name === part ||
-            s.name.startsWith(part + ' ') ||
-            (s.title === part) ||
-            (s.title?.includes(part) && /\b(C[A-Z]O|VP|SVP|EVP|CPO|CMO|CRO)\b/.test(part))
+          s => s.name === part || s.name.startsWith(part + ' ') || (s.title === part) || (s.title?.includes(part) && /\b(C[A-Z]O|VP|SVP|EVP|CPO|CMO|CRO)\b/.test(part))
         );
         if (!stakeholder) return <span key={i}>{part}</span>;
         return (
-          <span
-            key={i}
-            className="text-primary underline decoration-dotted underline-offset-2 cursor-pointer hover:text-primary/80 transition-colors font-medium"
-            onMouseEnter={() => onHover?.(stakeholder.id)}
-            onMouseLeave={() => onHover?.(null)}
-            onClick={() => onClick?.(stakeholder.id)}
-          >
+          <span key={i} className="text-primary underline decoration-dotted underline-offset-2 cursor-pointer hover:text-primary/80 transition-colors font-medium"
+            onMouseEnter={() => onHover?.(stakeholder.id)} onMouseLeave={() => onHover?.(null)} onClick={() => onClick?.(stakeholder.id)}>
             {part}
           </span>
         );
@@ -482,12 +474,10 @@ function StakeholderLinkedText({
   );
 }
 
-/** Expandable risk card for Key Risks items — mirrors WhatsNextCard structure */
+// ─── KeyRiskCard ────────────────────────────────────────────────────────────
+
 function KeyRiskCard({
-  risk,
-  stakeholders,
-  onStakeholderHover,
-  onStakeholderClick,
+  risk, stakeholders, onStakeholderHover, onStakeholderClick,
 }: {
   risk: KeyRiskItem | string;
   stakeholders: Stakeholder[];
@@ -495,67 +485,38 @@ function KeyRiskCard({
   onStakeholderClick?: (id: number) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-
   const isStructured = typeof risk === 'object' && risk !== null;
   const title = isStructured ? (risk as KeyRiskItem).title : (risk as string);
   const detail = isStructured ? (risk as KeyRiskItem).detail : null;
   const riskStakeholderNames: string[] = isStructured ? ((risk as KeyRiskItem).stakeholders ?? []) : [];
-
-  // Match risk stakeholder names to actual stakeholder objects
   const mentioned = stakeholders.filter(s =>
-    riskStakeholderNames.some(name =>
-      name.toLowerCase().includes(s.name.split(' ')[0].toLowerCase()) ||
-      s.name.toLowerCase().includes(name.toLowerCase())
-    )
+    riskStakeholderNames.some(name => name.toLowerCase().includes(s.name.split(' ')[0].toLowerCase()) || s.name.toLowerCase().includes(name.toLowerCase()))
   );
 
   return (
     <div className="rounded-lg border border-red-500/20 bg-red-500/5 overflow-hidden transition-all">
-      {/* Card header — always visible */}
-      <button
-        className="w-full flex items-start gap-2.5 px-3 py-2.5 text-left hover:bg-red-500/10 transition-colors group"
-        onClick={() => setExpanded(e => !e)}
-      >
+      <button className="w-full flex items-start gap-2.5 px-3 py-2.5 text-left hover:bg-red-500/10 transition-colors group" onClick={() => setExpanded(e => !e)}>
         <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
         <span className="flex-1 text-[12px] text-foreground/85 leading-snug">
-          <StakeholderLinkedText
-            text={title}
-            stakeholders={stakeholders}
-            onHover={onStakeholderHover}
-            onClick={onStakeholderClick}
-          />
+          <StakeholderLinkedText text={title} stakeholders={stakeholders} onHover={onStakeholderHover} onClick={onStakeholderClick} />
         </span>
         <div className="shrink-0 mt-0.5 text-muted-foreground/40 group-hover:text-muted-foreground/70 transition-colors">
           {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
         </div>
       </button>
-
-      {/* Expanded content */}
       {expanded && (
         <div className="px-3 pb-3 pt-1 border-t border-red-500/15 space-y-3">
-
-          {/* Detail / rationale */}
           <div className="flex items-start gap-2">
             <Sparkles className="w-3 h-3 text-red-400/60 shrink-0 mt-0.5" />
-            {detail
-              ? <p className="text-[11.5px] text-foreground/70 leading-relaxed italic">{detail}</p>
-              : <p className="text-[11.5px] text-muted-foreground/40 leading-relaxed italic">Re-run Analyse Deal to generate detailed risk analysis.</p>
-            }
+            {detail ? <p className="text-[11.5px] text-foreground/70 leading-relaxed italic">{detail}</p> : <p className="text-[11.5px] text-muted-foreground/40 leading-relaxed italic">Re-run Refresh Analysis to generate detailed risk analysis.</p>}
           </div>
-
-          {/* Relevant Stakeholders */}
           {mentioned.length > 0 && (
             <div>
               <div className="text-[10px] text-muted-foreground/50 uppercase tracking-wider mb-1.5">Relevant Stakeholders</div>
               <div className="space-y-1.5">
                 {mentioned.map(s => (
-                  <button
-                    key={s.id}
-                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg bg-card/60 border border-border/30 hover:border-red-400/30 hover:bg-card/80 transition-all text-left"
-                    onMouseEnter={() => onStakeholderHover?.(s.id)}
-                    onMouseLeave={() => onStakeholderHover?.(null)}
-                    onClick={() => onStakeholderClick?.(s.id)}
-                  >
+                  <button key={s.id} className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg bg-card/60 border border-border/30 hover:border-red-400/30 hover:bg-card/80 transition-all text-left"
+                    onMouseEnter={() => onStakeholderHover?.(s.id)} onMouseLeave={() => onStakeholderHover?.(null)} onClick={() => onStakeholderClick?.(s.id)}>
                     <div className="w-6 h-6 rounded-full bg-red-400/15 flex items-center justify-center text-[10px] font-bold text-red-400 shrink-0">
                       {s.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
                     </div>
@@ -579,6 +540,58 @@ function KeyRiskCard({
   );
 }
 
+// ─── ActionStatusDropdown ───────────────────────────────────────────────────
+
+function ActionStatusDropdown({
+  action,
+  onStatusChange,
+}: {
+  action: NextAction;
+  onStatusChange: (id: number, status: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const status = (action.status ?? (action.completed ? 'done' : 'accepted')) as ActionStatus;
+  const config = STATUS_CONFIG[status];
+  const transitions = STATUS_TRANSITIONS[status] ?? [];
+  const Icon = config.icon;
+
+  return (
+    <div className="relative">
+      <button
+        onClick={(e) => { e.stopPropagation(); setOpen(v => !v); }}
+        className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-medium transition-colors border ${config.bg} ${config.color} ${config.border} hover:opacity-80`}
+      >
+        <Icon className="w-2.5 h-2.5" />
+        <span>{config.label}</span>
+        <ChevronDown className="w-2 h-2" />
+      </button>
+      {open && transitions.length > 0 && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full mt-1 z-50 bg-popover border border-border rounded-lg shadow-xl py-1 min-w-[120px]">
+            {transitions.map(t => {
+              const tc = STATUS_CONFIG[t];
+              const TIcon = tc.icon;
+              return (
+                <button
+                  key={t}
+                  onClick={(e) => { e.stopPropagation(); onStatusChange(action.id, t); setOpen(false); }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-[10px] hover:bg-muted/50 transition-colors text-left"
+                >
+                  <TIcon className={`w-3 h-3 ${tc.color}`} />
+                  <span className={tc.color}>{tc.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Component ─────────────────────────────────────────────────────────
+
 export default function DealInsightPanel({
   deal,
   latestSnapshot,
@@ -592,12 +605,13 @@ export default function DealInsightPanel({
   addAction,
   toggleAction,
   deleteAction,
+  updateActionStatus,
+  createAiAction,
   setActiveTab,
   onStakeholderHover,
   onStakeholderClick,
 }: Props) {
   const { t, language } = useLanguage();
-  // Panel collapse state
   const [collapsed, setCollapsed] = useState(false);
 
   // Sales model state
@@ -606,7 +620,7 @@ export default function DealInsightPanel({
   const setDealModelMutation = trpc.salesModels.setDealModel.useMutation({
     onSuccess: () => {
       utils.deals.get.invalidate({ id: deal.id });
-      toast.success(language === 'zh' ? '销售模型已更新' : 'Sales model updated');
+      toast.success(language === 'zh' ? '\u9500\u552e\u6a21\u578b\u5df2\u66f4\u65b0' : 'Sales model updated');
     },
   });
   const currentModelKey = deal.salesModel ?? 'meddic';
@@ -620,7 +634,7 @@ export default function DealInsightPanel({
   const [chatOpen, setChatOpen] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Local overrides for AI insights (updated via chat only — not for whatsNext which is now DB-persisted)
+  // Local overrides for AI insights
   const [insightOverrides, setInsightOverrides] = useState<{
     whatsHappening?: string;
     keyRisks?: KeyRiskItem[] | string[];
@@ -637,11 +651,11 @@ export default function DealInsightPanel({
         updatedAt: new Date(),
       });
       setInsightDataLevel(data.dataLevel as 'early-stage' | 'evidence-based');
-      // Invalidate deal query so snapshots reload with the newly persisted insights
       utils.deals.get.invalidate({ id: deal.id });
+      utils.nextActions.listByDeal.invalidate({ dealId: deal.id });
       toast.success(data.dataLevel === 'early-stage'
-        ? 'Initial assessment generated — upload meeting transcripts for deeper insights'
-        : 'Deal insights updated — Meridian has analysed the latest context');
+        ? 'Initial assessment generated \u2014 upload meeting transcripts for deeper insights'
+        : 'Deal insights refreshed \u2014 Meridian has analysed the latest context');
     },
     onError: (err) => {
       toast.error('Failed to generate insights: ' + err.message);
@@ -650,26 +664,14 @@ export default function DealInsightPanel({
 
   const chatMutation = trpc.ai.chatWithDeal.useMutation({
     onSuccess: (data) => {
-      const assistantMsg: ChatMessage = {
-        id: Date.now().toString(),
-        role: 'assistant',
-        content: data.response,
-        timestamp: new Date(),
-      };
+      const assistantMsg: ChatMessage = { id: Date.now().toString(), role: 'assistant', content: data.response, timestamp: new Date() };
       setChatMessages(prev => [...prev, assistantMsg]);
-
       if (data.updatedInsights) {
-        setInsightOverrides({
-          whatsHappening: data.updatedInsights.whatsHappening,
-          keyRisks: data.updatedInsights.keyRisks,
-          updatedAt: new Date(),
-        });
+        setInsightOverrides({ whatsHappening: data.updatedInsights.whatsHappening, keyRisks: data.updatedInsights.keyRisks, updatedAt: new Date() });
         toast.success('Meridian updated the deal insights based on your input');
       }
     },
-    onError: (err) => {
-      toast.error('Failed to get AI response: ' + err.message);
-    },
+    onError: (err) => { toast.error('Failed to get AI response: ' + err.message); },
   });
 
   const addSuggestedContactMutation = trpc.stakeholders.create.useMutation({
@@ -677,78 +679,58 @@ export default function DealInsightPanel({
       utils.deals.get.invalidate({ id: deal.id });
       toast.success(`${newStakeholder.name} added to the stakeholder map`);
     },
-    onError: (err) => {
-      toast.error('Failed to add contact: ' + err.message);
-    },
+    onError: (err) => { toast.error('Failed to add contact: ' + err.message); },
   });
 
   useEffect(() => {
-    if (chatOpen && chatEndRef.current) {
-      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
+    if (chatOpen && chatEndRef.current) chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages, chatOpen]);
 
   const sendChat = () => {
     const msg = chatInput.trim();
     if (!msg || chatMutation.isPending) return;
-
-    const userMsg: ChatMessage = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: msg,
-      timestamp: new Date(),
-    };
+    const userMsg: ChatMessage = { id: Date.now().toString(), role: 'user', content: msg, timestamp: new Date() };
     setChatMessages(prev => [...prev, userMsg]);
     setChatInput('');
     if (!chatOpen) setChatOpen(true);
-
-    // chatWithDeal expects string[] — serialize structured risks to their title text
     const rawRisks = insightOverrides.keyRisks ?? latestSnapshot?.keyRisks ?? [];
-    const currentRisks: string[] = (rawRisks as (KeyRiskItem | string)[]).map(r =>
-      typeof r === 'string' ? r : r.title
-    );
-
+    const currentRisks: string[] = (rawRisks as (KeyRiskItem | string)[]).map(r => typeof r === 'string' ? r : r.title);
     chatMutation.mutate({
-      dealId: deal.id,
-      dealName: deal.name,
-      dealStage: deal.stage,
-      dealValue: deal.value,
-      confidenceScore: deal.confidenceScore,
-      companyInfo: deal.companyInfo,
+      dealId: deal.id, dealName: deal.name, dealStage: deal.stage, dealValue: deal.value,
+      confidenceScore: deal.confidenceScore, companyInfo: deal.companyInfo,
       currentWhatsHappening: insightOverrides.whatsHappening ?? latestSnapshot?.whatsHappening ?? undefined,
       currentKeyRisks: currentRisks,
       currentWhatsNext: JSON.stringify(latestSnapshot?.whatsNext) ?? undefined,
-      stakeholders: deal.stakeholders.map(s => ({
-        name: s.name,
-        title: s.title,
-        role: s.role,
-        sentiment: s.sentiment,
-        engagement: s.engagement,
-      })),
-      meetings: (deal.meetings ?? []).map(m => ({
-        date: typeof m.date === 'string' ? m.date : new Date(m.date).toISOString(),
-        type: m.type,
-        keyParticipant: m.keyParticipant,
-        summary: m.summary,
-      })),
-      userMessage: msg,
-      language,
+      stakeholders: deal.stakeholders.map(s => ({ name: s.name, title: s.title, role: s.role, sentiment: s.sentiment, engagement: s.engagement })),
+      meetings: (deal.meetings ?? []).map(m => ({ date: typeof m.date === 'string' ? m.date : new Date(m.date).toISOString(), type: m.type, keyParticipant: m.keyParticipant, summary: m.summary })),
+      userMessage: msg, language,
     });
   };
 
   const whatsHappening: string | null | undefined = insightOverrides.whatsHappening ?? latestSnapshot?.whatsHappening;
   const keyRisks: (KeyRiskItem | string)[] = (insightOverrides.keyRisks ?? latestSnapshot?.keyRisks ?? []) as (KeyRiskItem | string)[];
-  // whatsNext is always read from DB snapshot (persisted by AI generation)
-  // Type is Array<{action, rationale, suggestedContacts}> | null
   const whatsNextRaw = latestSnapshot?.whatsNext ?? null;
   const wasUpdatedByChat = !!insightOverrides.updatedAt;
 
-  // Sparkline data
+  // Group next actions by status for the management section
+  const activeActions = nextActions.filter(a => {
+    const s = a.status ?? (a.completed ? 'done' : 'accepted');
+    return s === 'accepted' || s === 'in_progress';
+  });
+  const laterActions = nextActions.filter(a => (a.status ?? 'pending') === 'later');
+  const doneActions = nextActions.filter(a => {
+    const s = a.status ?? (a.completed ? 'done' : 'accepted');
+    return s === 'done';
+  });
+  const blockedActions = nextActions.filter(a => (a.status ?? 'pending') === 'blocked');
+
+  // Last analysis timestamp
+  const lastAnalysisDate = latestSnapshot ? new Date(latestSnapshot.date) : null;
+
+  // Sparkline
   const sparklineEl = (() => {
     if (deal.snapshots.length < 2) return null;
-    const sorted = [...deal.snapshots].sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
+    const sorted = [...deal.snapshots].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     const scores = sorted.map(s => s.confidenceScore);
     const W = 280, H = 44, PAD = 4;
     const minS = Math.max(0, Math.min(...scores) - 10);
@@ -765,7 +747,7 @@ export default function DealInsightPanel({
           <span className="text-[9px] text-muted-foreground/60 uppercase tracking-wider">{t('insight.confidenceTrend')}</span>
           <span className="text-[9px] text-muted-foreground/60">
             {new Date(sorted[0].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-            {' → '}
+            {' \u2192 '}
             {new Date(sorted[sorted.length - 1].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
           </span>
         </div>
@@ -778,30 +760,18 @@ export default function DealInsightPanel({
           </defs>
           <polygon points={areaPoints} fill={`url(#cg-insight-${deal.id})`} />
           <polyline points={points} fill="none" stroke={lineColor} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-          {scores.map((v, i) => (
-            <circle key={i} cx={toX(i)} cy={toY(v)} r="2.5" fill={lineColor} />
-          ))}
+          {scores.map((v, i) => (<circle key={i} cx={toX(i)} cy={toY(v)} r="2.5" fill={lineColor} />))}
         </svg>
       </div>
     );
   })();
 
   return (
-    <div
-      className={`shrink-0 border-r border-border/30 bg-card/30 backdrop-blur-sm flex flex-col overflow-hidden transition-all duration-300 ease-in-out h-full ${
-        collapsed ? 'w-[48px]' : 'w-[340px]'
-      }`}
-    >
-      {/* ── Collapse toggle button (always visible) ── */}
+    <div className={`shrink-0 border-r border-border/30 bg-card/30 backdrop-blur-sm flex flex-col overflow-hidden transition-all duration-300 ease-in-out h-full ${collapsed ? 'w-[48px]' : 'w-[340px]'}`}>
+      {/* Collapse toggle */}
       <div className="flex items-center justify-between px-3 pt-3 pb-2 shrink-0">
-        {!collapsed && (
-          <span className="text-[10px] text-muted-foreground/50 uppercase tracking-wider font-medium">{t('insight.dealInsight')}</span>
-        )}
-        <button
-          onClick={() => setCollapsed(c => !c)}
-          className={`ml-auto flex items-center justify-center w-6 h-6 rounded-md hover:bg-muted/40 text-muted-foreground/60 hover:text-foreground transition-colors`}
-          title={collapsed ? 'Expand Deal Insight' : 'Collapse Deal Insight'}
-        >
+        {!collapsed && <span className="text-[10px] text-muted-foreground/50 uppercase tracking-wider font-medium">{t('insight.dealInsight')}</span>}
+        <button onClick={() => setCollapsed(c => !c)} className="ml-auto flex items-center justify-center w-6 h-6 rounded-md hover:bg-muted/40 text-muted-foreground/60 hover:text-foreground transition-colors" title={collapsed ? 'Expand Deal Insight' : 'Collapse Deal Insight'}>
           {collapsed
             ? <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             : <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
@@ -809,126 +779,84 @@ export default function DealInsightPanel({
         </button>
       </div>
 
-      {/* ── Collapsed state: show vertical label ── */}
+      {/* Collapsed state */}
       {collapsed && (
         <div className="flex-1 flex flex-col items-center justify-center gap-3 pb-4">
-          <div className="writing-mode-vertical text-[10px] text-muted-foreground/40 uppercase tracking-widest font-medium select-none"
-            style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
-          >
+          <div className="writing-mode-vertical text-[10px] text-muted-foreground/40 uppercase tracking-widest font-medium select-none" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
             {t('insight.dealInsight')}
           </div>
-          <div className={`text-[11px] font-bold font-mono ${
-            deal.confidenceScore >= 75 ? 'text-emerald-400' : deal.confidenceScore >= 50 ? 'text-amber-400' : 'text-red-400'
-          }`}>{deal.confidenceScore}%</div>
+          <div className={`text-[11px] font-bold font-mono ${deal.confidenceScore >= 75 ? 'text-emerald-400' : deal.confidenceScore >= 50 ? 'text-amber-400' : 'text-red-400'}`}>{deal.confidenceScore}%</div>
         </div>
       )}
 
-      {/* ── Full panel content (hidden when collapsed) ── */}
+      {/* Full panel content */}
       {!collapsed && <>
 
-      {/* ── Confidence Header ── */}
+      {/* Confidence Header */}
       <div className="px-4 pt-1 pb-3 border-b border-border/20 shrink-0">
         <div className="flex items-end justify-between mb-1">
           <div className="flex flex-col gap-0.5">
             <span className="text-[10px] text-muted-foreground/70 uppercase tracking-wider font-medium">{t('insight.winConfidence')}</span>
-            {/* Analyse button — generates fresh AI insights and persists to DB */}
+            {/* Last analysis timestamp */}
+            {lastAnalysisDate && (
+              <span className="text-[9px] text-muted-foreground/50">
+                Last analysed: {lastAnalysisDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at {lastAnalysisDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
+            {/* Refresh Analysis button */}
             <button
               onClick={() => {
                 generateInsightsMutation.mutate({
-                  dealId: deal.id,
-                  dealName: deal.name,
-                  dealStage: deal.stage,
-                  dealValue: deal.value,
-                  confidenceScore: deal.confidenceScore,
-                  companyInfo: deal.companyInfo,
-                  salesModel: currentModelKey,
-                  customModelId: deal.customModelId,
-                  language,
-                  stakeholders: deal.stakeholders.map(s => ({
-                    name: s.name, title: s.title, role: s.role,
-                    sentiment: s.sentiment, engagement: s.engagement,
-                  })),
+                  dealId: deal.id, dealName: deal.name, dealStage: deal.stage, dealValue: deal.value,
+                  confidenceScore: deal.confidenceScore, companyInfo: deal.companyInfo,
+                  salesModel: currentModelKey, customModelId: deal.customModelId, language,
+                  stakeholders: deal.stakeholders.map(s => ({ name: s.name, title: s.title, role: s.role, sentiment: s.sentiment, engagement: s.engagement })),
                   meetings: (deal.meetings ?? []).map(m => ({
                     date: typeof m.date === 'string' ? m.date : new Date(m.date).toISOString(),
-                    type: m.type,
-                    keyParticipant: m.keyParticipant,
-                    summary: m.summary,
-                    duration: m.duration,
+                    type: m.type, keyParticipant: m.keyParticipant, summary: m.summary, duration: m.duration,
                   })),
                 });
               }}
               disabled={generateInsightsMutation.isPending}
               className="flex items-center gap-1 text-[9.5px] text-primary/60 hover:text-primary transition-colors disabled:opacity-40 w-fit"
-              title="Ask Meridian to analyse this deal and generate fresh insights"
+              title="Refresh AI analysis based on current deal context"
             >
               {generateInsightsMutation.isPending
                 ? <><Loader2 className="w-2.5 h-2.5 animate-spin" /><span>{t('insight.analysing')}</span></>
-                : <><Sparkles className="w-2.5 h-2.5" /><span>{t('insight.analyseDeal')}</span></>}
+                : <><RotateCcw className="w-2.5 h-2.5" /><span>Refresh Analysis</span></>}
             </button>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className={`text-3xl font-bold font-mono leading-none ${getConfidenceColor(deal.confidenceScore)}`}>
-              {deal.confidenceScore}%
-            </span>
+            <span className={`text-3xl font-bold font-mono leading-none ${getConfidenceColor(deal.confidenceScore)}`}>{deal.confidenceScore}%</span>
             {latestSnapshot && latestSnapshot.confidenceChange !== 0 && (
-              <span className={`text-xs font-mono font-semibold ${
-                latestSnapshot.confidenceChange > 0 ? 'text-emerald-400' : 'text-red-400'
-              }`}>
-                {latestSnapshot.confidenceChange > 0 ? '↑' : '↓'}{Math.abs(latestSnapshot.confidenceChange)}
+              <span className={`text-xs font-mono font-semibold ${latestSnapshot.confidenceChange > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {latestSnapshot.confidenceChange > 0 ? '\u2191' : '\u2193'}{Math.abs(latestSnapshot.confidenceChange)}
               </span>
             )}
           </div>
         </div>
         {/* Confidence bar */}
         <div className="h-1.5 rounded-full bg-muted/40 overflow-hidden mb-1">
-          <div
-            className="h-full rounded-full transition-all duration-700"
-            style={{
-              width: `${deal.confidenceScore}%`,
-              background: deal.confidenceScore >= 75 ? '#10b981' : deal.confidenceScore >= 50 ? '#f59e0b' : '#ef4444',
-            }}
-          />
+          <div className="h-full rounded-full transition-all duration-700" style={{ width: `${deal.confidenceScore}%`, background: deal.confidenceScore >= 75 ? '#10b981' : deal.confidenceScore >= 50 ? '#f59e0b' : '#ef4444' }} />
         </div>
-
-        {/* Sparkline */}
         {sparklineEl}
-
         {/* Sales Model Badge */}
         <div className="relative mt-2">
-          <button
-            onClick={() => setShowModelSelector(v => !v)}
-            className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/30 border border-border/30 hover:border-primary/30 hover:bg-muted/50 transition-all text-[10px] text-muted-foreground/70 hover:text-foreground/80 w-fit"
-          >
+          <button onClick={() => setShowModelSelector(v => !v)} className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/30 border border-border/30 hover:border-primary/30 hover:bg-muted/50 transition-all text-[10px] text-muted-foreground/70 hover:text-foreground/80 w-fit">
             <Settings2 className="w-3 h-3" />
             <span className="font-medium">{currentModelName}</span>
             <ChevronDown className={`w-2.5 h-2.5 transition-transform ${showModelSelector ? 'rotate-180' : ''}`} />
           </button>
-
-          {/* Model dropdown */}
           {showModelSelector && (
             <div className="absolute left-0 top-full mt-1 z-50 w-56 bg-popover border border-border rounded-lg shadow-xl py-1 max-h-[200px] overflow-y-auto">
               {salesModelsQuery.data?.map((model) => {
                 const isActive = model.key === currentModelKey || (model.key === 'custom' && model.id === deal.customModelId);
                 return (
-                  <button
-                    key={model.key + (model.id ?? '')}
-                    onClick={() => {
-                      setDealModelMutation.mutate({
-                        dealId: deal.id,
-                        salesModel: model.key === 'custom' ? 'custom' : model.key,
-                        customModelId: model.id,
-                      });
-                      setShowModelSelector(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 text-[11px] flex items-center justify-between hover:bg-muted/50 transition-colors ${
-                      isActive ? 'text-primary bg-primary/5' : 'text-foreground/80'
-                    }`}
-                  >
+                  <button key={model.key + (model.id ?? '')} onClick={() => { setDealModelMutation.mutate({ dealId: deal.id, salesModel: model.key === 'custom' ? 'custom' : model.key, customModelId: model.id }); setShowModelSelector(false); }}
+                    className={`w-full text-left px-3 py-2 text-[11px] flex items-center justify-between hover:bg-muted/50 transition-colors ${isActive ? 'text-primary bg-primary/5' : 'text-foreground/80'}`}>
                     <div>
                       <div className="font-medium">{model.name}</div>
-                      <div className="text-[9px] text-muted-foreground/60 mt-0.5">
-                        {model.dimensions.length} {language === 'zh' ? '\u7ef4\u5ea6' : 'dimensions'}
-                      </div>
+                      <div className="text-[9px] text-muted-foreground/60 mt-0.5">{model.dimensions.length} dimensions</div>
                     </div>
                     {isActive && <Check className="w-3 h-3 text-primary" />}
                   </button>
@@ -939,7 +867,7 @@ export default function DealInsightPanel({
         </div>
       </div>
 
-      {/* ── Scrollable Insight Content ── */}
+      {/* Scrollable Insight Content */}
       <ScrollArea className="flex-1 min-h-0 overflow-hidden">
         <div className="px-4 py-3 space-y-4">
 
@@ -951,19 +879,17 @@ export default function DealInsightPanel({
             </div>
           )}
 
-          {/* ── Early-stage data warning ── */}
+          {/* Early-stage data warning */}
           {insightDataLevel === 'early-stage' && (
             <div className="flex items-start gap-2 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
-              <div className="w-4 h-4 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0 mt-0.5">
-                <span className="text-[10px]">⚠️</span>
-              </div>
+              <div className="w-4 h-4 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0 mt-0.5"><span className="text-[10px]">{'\u26a0\ufe0f'}</span></div>
               <div className="text-[11px] text-amber-300/90 leading-relaxed">
-                <span className="font-semibold">Pre-engagement analysis.</span> This assessment is based on company profile and stakeholder roles only — no meeting transcripts available yet. Upload meeting notes or call recordings to unlock evidence-based insights.
+                <span className="font-semibold">Pre-engagement analysis.</span> This assessment is based on company profile and stakeholder roles only. Upload meeting notes or call recordings to unlock evidence-based insights.
               </div>
             </div>
           )}
 
-          {/* ── What's Happening ── */}
+          {/* What's Happening */}
           {whatsHappening && (
             <div>
               <div className="flex items-center gap-1.5 mb-2">
@@ -971,17 +897,12 @@ export default function DealInsightPanel({
                 <span className="text-[11px] font-semibold text-blue-400 uppercase tracking-wider">{t('insight.whatsHappening')}</span>
               </div>
               <p className="text-[12.5px] text-foreground/85 leading-relaxed">
-                <StakeholderLinkedText
-                  text={whatsHappening}
-                  stakeholders={deal.stakeholders}
-                  onHover={onStakeholderHover}
-                  onClick={onStakeholderClick}
-                />
+                <StakeholderLinkedText text={whatsHappening} stakeholders={deal.stakeholders} onHover={onStakeholderHover} onClick={onStakeholderClick} />
               </p>
             </div>
           )}
 
-          {/* ── Key Risks ── */}
+          {/* Key Risks */}
           {keyRisks.length > 0 && (
             <div>
               <div className="flex items-center gap-1.5 mb-2">
@@ -990,30 +911,23 @@ export default function DealInsightPanel({
               </div>
               <div className="space-y-2">
                 {keyRisks.map((risk, i) => (
-                  <KeyRiskCard
-                    key={i}
-                    risk={risk}
-                    stakeholders={deal.stakeholders}
-                    onStakeholderHover={onStakeholderHover}
-                    onStakeholderClick={onStakeholderClick}
-                  />
+                  <KeyRiskCard key={i} risk={risk} stakeholders={deal.stakeholders} onStakeholderHover={onStakeholderHover} onStakeholderClick={onStakeholderClick} />
                 ))}
               </div>
             </div>
           )}
 
-          {/* ── What's Next ── */}
+          {/* What's Next (AI Suggestions) */}
           {whatsNextRaw && whatsNextRaw.length > 0 && (() => {
-            // whatsNextRaw is Array<{action, rationale, suggestedContacts}> from DB
             const actionItems: WhatsNextItem[] = whatsNextRaw;
-
             return (
               <div>
                 <div className="flex items-center gap-1.5 mb-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
                   <span className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider">{t('insight.whatsNext')}</span>
+                  <span className="text-[9px] text-muted-foreground/40 ml-auto">AI Suggested</span>
                 </div>
-<div className="space-y-2">
+                <div className="space-y-2">
                   {actionItems.map((item, idx) => (
                     <WhatsNextCard
                       key={idx}
@@ -1022,21 +936,36 @@ export default function DealInsightPanel({
                       onStakeholderHover={onStakeholderHover}
                       onStakeholderClick={onStakeholderClick}
                       dealCompany={deal.name}
+                      existingActions={nextActions}
                       onAddToMap={(contact) => {
                         addSuggestedContactMutation.mutate({
-                          dealId: deal.id,
-                          name: contact.name,
-                          title: contact.title,
-                          role: 'User',
-                          sentiment: 'Neutral',
-                          engagement: 'Medium',
-                          keyInsights: contact.reason,
+                          dealId: deal.id, name: contact.name, title: contact.title,
+                          role: 'User', sentiment: 'Neutral', engagement: 'Medium', keyInsights: contact.reason,
                         });
                       }}
                       onAccept={(actionText) => {
-                        // Add accepted action to Next Actions list
-                        setNewActionText(actionText);
-                        setAddingAction(true);
+                        createAiAction?.(actionText, latestSnapshot?.id);
+                        // Immediately update status to accepted
+                        setTimeout(() => {
+                          const created = nextActions.find(a => a.text === actionText && a.source === 'ai_suggested');
+                          if (created) updateActionStatus?.(created.id, 'accepted');
+                        }, 500);
+                        toast.success('Action accepted \u2014 added to your task list');
+                      }}
+                      onDismiss={(actionText) => {
+                        createAiAction?.(actionText, latestSnapshot?.id);
+                        setTimeout(() => {
+                          const created = nextActions.find(a => a.text === actionText && a.source === 'ai_suggested');
+                          if (created) updateActionStatus?.(created.id, 'rejected');
+                        }, 500);
+                      }}
+                      onLater={(actionText) => {
+                        createAiAction?.(actionText, latestSnapshot?.id);
+                        setTimeout(() => {
+                          const created = nextActions.find(a => a.text === actionText && a.source === 'ai_suggested');
+                          if (created) updateActionStatus?.(created.id, 'later');
+                        }, 500);
+                        toast.success('Saved for later');
                       }}
                     />
                   ))}
@@ -1045,23 +974,23 @@ export default function DealInsightPanel({
             );
           })()}
 
-          {/* ── Insight History ── */}
+          {/* Insight History */}
           <InsightHistory snapshots={deal.snapshots} />
 
-          {/* ── Divider ── */}
+          {/* Divider */}
           <div className="border-t border-border/25" />
 
-          {/* ── Next Actions ── */}
+          {/* ── Next Actions (Task Management) ── */}
           <div>
             <div className="flex items-center justify-between mb-2.5">
               <div className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
                 <span className="text-[11px] font-semibold text-primary uppercase tracking-wider">{t('insight.nextActions')}</span>
+                {activeActions.length > 0 && (
+                  <span className="text-[9px] text-muted-foreground/50 bg-muted/30 px-1.5 py-0.5 rounded-full">{activeActions.length} active</span>
+                )}
               </div>
-              <button
-                onClick={() => setAddingAction(v => !v)}
-                className="w-5 h-5 rounded-md flex items-center justify-center hover:bg-muted/60 transition-colors text-muted-foreground hover:text-foreground border border-border/30"
-              >
+              <button onClick={() => setAddingAction(v => !v)} className="w-5 h-5 rounded-md flex items-center justify-center hover:bg-muted/60 transition-colors text-muted-foreground hover:text-foreground border border-border/30">
                 <Plus className="w-3 h-3" />
               </button>
             </div>
@@ -1069,83 +998,110 @@ export default function DealInsightPanel({
             {/* Add new action form */}
             {addingAction && (
               <div className="mb-3 p-3 rounded-xl bg-muted/30 border border-border/30">
-                <input
-                  autoFocus
-                  value={newActionText}
-                  onChange={e => setNewActionText(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') addAction();
-                    if (e.key === 'Escape') { setAddingAction(false); setNewActionText(''); }
-                  }}
-                  placeholder="Describe the action..."
-                  className="w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground/50 mb-2"
-                />
+                <input autoFocus value={newActionText} onChange={e => setNewActionText(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') addAction(); if (e.key === 'Escape') { setAddingAction(false); setNewActionText(''); } }}
+                  placeholder="Describe the action..." className="w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground/50 mb-2" />
                 <div className="flex items-center gap-2">
-                  <input
-                    type="date"
-                    value={newActionDue}
-                    onChange={e => setNewActionDue(e.target.value)}
-                    className="flex-1 bg-transparent text-[11px] text-muted-foreground outline-none border border-border/30 rounded-md px-2 py-1"
-                  />
+                  <input type="date" value={newActionDue} onChange={e => setNewActionDue(e.target.value)} className="flex-1 bg-transparent text-[11px] text-muted-foreground outline-none border border-border/30 rounded-md px-2 py-1" />
                   <button onClick={addAction} className="text-[11px] px-2.5 py-1 rounded-md bg-primary text-primary-foreground font-medium">Add</button>
-                  <button onClick={() => { setAddingAction(false); setNewActionText(''); }} className="text-[11px] px-2 py-1 rounded-md hover:bg-muted/60 text-muted-foreground">✕</button>
+                  <button onClick={() => { setAddingAction(false); setNewActionText(''); }} className="text-[11px] px-2 py-1 rounded-md hover:bg-muted/60 text-muted-foreground">{'\u2715'}</button>
                 </div>
               </div>
             )}
 
-            {/* Action list */}
-            <div className="space-y-1">
-              {nextActions.length === 0 && !addingAction && (
-                <p className="text-xs text-muted-foreground/40 italic text-center py-3">{t('insight.noActions')}</p>
-              )}
-              {nextActions.map((action) => {
-                const isOverdue = !action.completed && action.dueDate && new Date(action.dueDate) < new Date();
-                return (
-                  <div key={action.id} className={`flex items-start gap-2.5 group rounded-xl px-2.5 py-2 transition-colors hover:bg-muted/20 border border-transparent hover:border-border/20 ${action.completed ? 'opacity-50' : ''}`}>
-                    <button
-                      onClick={() => toggleAction(action.id)}
-                      className={`mt-0.5 w-4 h-4 rounded-md border shrink-0 flex items-center justify-center transition-colors ${
-                        action.completed
-                          ? 'bg-primary border-primary'
-                          : action.priority === 'high'
-                            ? 'border-red-400/60 hover:border-red-400'
-                            : 'border-border/60 hover:border-primary'
-                      }`}
-                    >
-                      {action.completed && <Check className="w-2.5 h-2.5 text-primary-foreground" />}
-                    </button>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-[12px] leading-snug ${action.completed ? 'line-through text-muted-foreground/50' : 'text-foreground/90'}`}>
-                        {action.text}
-                      </p>
-                      {action.dueDate && (
-                        <p className={`text-[10px] mt-0.5 flex items-center gap-1 ${isOverdue ? 'text-red-400' : 'text-muted-foreground/60'}`}>
-                          <Calendar className="w-2.5 h-2.5" />
-                          {isOverdue ? 'Overdue · ' : ''}Due {new Date(action.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                        </p>
-                      )}
+            {/* Active actions (accepted + in_progress) */}
+            {activeActions.length > 0 && (
+              <div className="space-y-1 mb-2">
+                {activeActions.map((action) => {
+                  const isOverdue = action.dueDate && new Date(action.dueDate) < new Date();
+                  return (
+                    <div key={action.id} className="flex items-start gap-2 group rounded-xl px-2.5 py-2 transition-colors hover:bg-muted/20 border border-transparent hover:border-border/20">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start gap-2">
+                          <p className="text-[12px] leading-snug text-foreground/90 flex-1">{action.text}</p>
+                          {updateActionStatus && <ActionStatusDropdown action={action} onStatusChange={updateActionStatus} />}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          {action.source === 'ai_suggested' && (
+                            <span className="text-[8px] px-1 py-0.5 rounded bg-primary/10 text-primary/60 font-medium">AI</span>
+                          )}
+                          {action.dueDate && (
+                            <span className={`text-[10px] flex items-center gap-1 ${isOverdue ? 'text-red-400' : 'text-muted-foreground/60'}`}>
+                              <Calendar className="w-2.5 h-2.5" />
+                              {isOverdue ? 'Overdue \u00b7 ' : ''}Due {new Date(action.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <button onClick={() => deleteAction(action.id)} className="opacity-0 group-hover:opacity-100 w-4 h-4 flex items-center justify-center text-muted-foreground/40 hover:text-red-400 transition-all shrink-0 mt-0.5">
+                        <Trash2 className="w-3 h-3" />
+                      </button>
                     </div>
-                    <button
-                      onClick={() => deleteAction(action.id)}
-                      className="opacity-0 group-hover:opacity-100 w-4 h-4 flex items-center justify-center text-muted-foreground/40 hover:text-red-400 transition-all shrink-0 mt-0.5"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Blocked actions */}
+            {blockedActions.length > 0 && (
+              <div className="mb-2">
+                <div className="text-[9px] text-red-400/60 uppercase tracking-wider font-semibold mb-1 px-2.5">Blocked</div>
+                <div className="space-y-1">
+                  {blockedActions.map((action) => (
+                    <div key={action.id} className="flex items-start gap-2 group rounded-xl px-2.5 py-2 bg-red-400/5 border border-red-400/15">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start gap-2">
+                          <p className="text-[12px] leading-snug text-foreground/80 flex-1">{action.text}</p>
+                          {updateActionStatus && <ActionStatusDropdown action={action} onStatusChange={updateActionStatus} />}
+                        </div>
+                      </div>
+                      <button onClick={() => deleteAction(action.id)} className="opacity-0 group-hover:opacity-100 w-4 h-4 flex items-center justify-center text-muted-foreground/40 hover:text-red-400 transition-all shrink-0 mt-0.5">
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Later actions */}
+            {laterActions.length > 0 && (
+              <div className="mb-2">
+                <div className="text-[9px] text-purple-400/60 uppercase tracking-wider font-semibold mb-1 px-2.5">Later</div>
+                <div className="space-y-1">
+                  {laterActions.map((action) => (
+                    <div key={action.id} className="flex items-start gap-2 group rounded-xl px-2.5 py-1.5 opacity-60 hover:opacity-100 transition-opacity">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start gap-2">
+                          <p className="text-[11px] leading-snug text-foreground/70 flex-1">{action.text}</p>
+                          {updateActionStatus && <ActionStatusDropdown action={action} onStatusChange={updateActionStatus} />}
+                        </div>
+                      </div>
+                      <button onClick={() => deleteAction(action.id)} className="opacity-0 group-hover:opacity-100 w-4 h-4 flex items-center justify-center text-muted-foreground/40 hover:text-red-400 transition-all shrink-0 mt-0.5">
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Done actions (collapsed by default) */}
+            {doneActions.length > 0 && (
+              <DoneActionsSection actions={doneActions} deleteAction={deleteAction} updateActionStatus={updateActionStatus} />
+            )}
+
+            {/* Empty state */}
+            {nextActions.length === 0 && !addingAction && (
+              <p className="text-xs text-muted-foreground/40 italic text-center py-3">{t('insight.noActions')}</p>
+            )}
           </div>
-
-
 
         </div>
       </ScrollArea>
 
-      {/* ── Inline Contextual Chat ── */}
+      {/* Inline Contextual Chat */}
       <div className="border-t border-border/30 shrink-0">
-
-        {/* Chat history — collapsible */}
         {chatOpen && chatMessages.length > 0 && (
           <div className="max-h-[200px] overflow-y-auto px-3 py-2 space-y-2 bg-muted/10">
             {chatMessages.map(msg => (
@@ -1155,66 +1111,81 @@ export default function DealInsightPanel({
                     <Sparkles className="w-2.5 h-2.5 text-primary" />
                   </div>
                 )}
-                <div className={`max-w-[85%] rounded-xl px-3 py-2 text-[11.5px] leading-relaxed ${
-                  msg.role === 'user'
-                    ? 'bg-primary text-primary-foreground rounded-br-sm'
-                    : 'bg-muted/50 text-foreground/85 rounded-bl-sm'
-                }`}>
+                <div className={`max-w-[85%] rounded-xl px-3 py-2 text-[11.5px] leading-relaxed ${msg.role === 'user' ? 'bg-primary text-primary-foreground rounded-br-sm' : 'bg-muted/50 text-foreground/85 rounded-bl-sm'}`}>
                   {msg.content}
                 </div>
               </div>
             ))}
             {chatMutation.isPending && (
               <div className="flex gap-2 justify-start">
-                <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                  <Sparkles className="w-2.5 h-2.5 text-primary" />
-                </div>
-                <div className="bg-muted/50 rounded-xl rounded-bl-sm px-3 py-2">
-                  <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
-                </div>
+                <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0"><Sparkles className="w-2.5 h-2.5 text-primary" /></div>
+                <div className="bg-muted/50 rounded-xl rounded-bl-sm px-3 py-2"><Loader2 className="w-3 h-3 animate-spin text-muted-foreground" /></div>
               </div>
             )}
             <div ref={chatEndRef} />
           </div>
         )}
-
-        {/* Chat toggle button (when there are messages) */}
         {chatMessages.length > 0 && (
-          <button
-            onClick={() => setChatOpen(v => !v)}
-            className="w-full flex items-center justify-center gap-1 py-1 text-[10px] text-muted-foreground/60 hover:text-muted-foreground transition-colors"
-          >
+          <button onClick={() => setChatOpen(v => !v)} className="w-full flex items-center justify-center gap-1 py-1 text-[10px] text-muted-foreground/60 hover:text-muted-foreground transition-colors">
             {chatOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
             {chatOpen ? 'Hide conversation' : `${chatMessages.length} message${chatMessages.length > 1 ? 's' : ''}`}
           </button>
         )}
-
-        {/* Input row */}
         <div className="flex items-center gap-2 px-3 py-2.5">
           <div className="flex-1 flex items-center gap-2 bg-muted/30 border border-border/30 rounded-xl px-3 py-2 focus-within:border-primary/40 transition-colors">
             <Sparkles className="w-3 h-3 text-muted-foreground/50 shrink-0" />
-            <input
-              value={chatInput}
-              onChange={e => setChatInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } }}
-              placeholder={t('insight.chatPlaceholder')}
-              className="flex-1 bg-transparent text-[12px] outline-none placeholder:text-muted-foreground/40 text-foreground/90"
-            />
+            <input value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } }}
+              placeholder={t('insight.chatPlaceholder')} className="flex-1 bg-transparent text-[12px] outline-none placeholder:text-muted-foreground/40 text-foreground/90" />
           </div>
-          <button
-            onClick={sendChat}
-            disabled={!chatInput.trim() || chatMutation.isPending}
-            className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-          >
-            {chatMutation.isPending
-              ? <Loader2 className="w-3.5 h-3.5 text-primary-foreground animate-spin" />
-              : <Send className="w-3.5 h-3.5 text-primary-foreground" />
-            }
+          <button onClick={sendChat} disabled={!chatInput.trim() || chatMutation.isPending} className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0">
+            {chatMutation.isPending ? <Loader2 className="w-3.5 h-3.5 text-primary-foreground animate-spin" /> : <Send className="w-3.5 h-3.5 text-primary-foreground" />}
           </button>
         </div>
       </div>
 
-      </> }
+      </>}
+    </div>
+  );
+}
+
+// ─── Done Actions Collapsible Section ───────────────────────────────────────
+
+function DoneActionsSection({
+  actions,
+  deleteAction,
+  updateActionStatus,
+}: {
+  actions: NextAction[];
+  deleteAction: (id: number) => void;
+  updateActionStatus?: (id: number, status: string) => void;
+}) {
+  const [showDone, setShowDone] = useState(false);
+  return (
+    <div>
+      <button onClick={() => setShowDone(v => !v)} className="flex items-center gap-1.5 text-[9px] text-emerald-400/50 uppercase tracking-wider font-semibold mb-1 px-2.5 hover:text-emerald-400/80 transition-colors w-full">
+        {showDone ? <ChevronUp className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />}
+        <span>Completed ({actions.length})</span>
+      </button>
+      {showDone && (
+        <div className="space-y-1">
+          {actions.map((action) => (
+            <div key={action.id} className="flex items-start gap-2 group rounded-xl px-2.5 py-1.5 opacity-50 hover:opacity-80 transition-opacity">
+              <CircleCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] leading-snug text-foreground/60 line-through">{action.text}</p>
+              </div>
+              {updateActionStatus && (
+                <button onClick={() => updateActionStatus(action.id, 'accepted')} className="opacity-0 group-hover:opacity-100 text-[9px] text-muted-foreground/40 hover:text-primary transition-all shrink-0" title="Reopen">
+                  <RotateCcw className="w-3 h-3" />
+                </button>
+              )}
+              <button onClick={() => deleteAction(action.id)} className="opacity-0 group-hover:opacity-100 w-4 h-4 flex items-center justify-center text-muted-foreground/40 hover:text-red-400 transition-all shrink-0">
+                <Trash2 className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

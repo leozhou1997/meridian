@@ -160,6 +160,9 @@ export default function DealDetail() {
   const deleteActionMutation = trpc.nextActions.delete.useMutation({
     onSuccess: () => utils.nextActions.listByDeal.invalidate({ dealId }),
   });
+  const updateActionStatusMutation = trpc.nextActions.updateStatus.useMutation({
+    onSuccess: () => utils.nextActions.listByDeal.invalidate({ dealId }),
+  });
   const updateStakeholderMutation = trpc.stakeholders.update.useMutation({
     onSuccess: () => utils.stakeholders.listByDeal.invalidate({ dealId }),
   });
@@ -262,10 +265,15 @@ export default function DealDetail() {
       text: newActionText.trim(),
       dueDate: newActionDue || undefined,
       priority: 'medium',
+      source: 'manual',
+      status: 'accepted',
     });
     setNewActionText('');
     setNewActionDue('');
     setAddingAction(false);
+  };
+  const updateActionStatus = (id: number, status: string) => {
+    updateActionStatusMutation.mutate({ id, status: status as any });
   };
 
   // Deal Strategy notes
@@ -694,7 +702,7 @@ export default function DealDetail() {
                 </TabsTrigger>
                 <TabsTrigger value="timeline" className="data-[state=active]:bg-muted/50 data-[state=active]:shadow-none rounded-lg text-xs font-display gap-1.5 px-3 h-8">
                   <Activity className="w-3.5 h-3.5" />
-                  Deal Timeline
+                  Deal Room
                 </TabsTrigger>
                 <TabsTrigger value="strategy" className="data-[state=active]:bg-muted/50 data-[state=active]:shadow-none rounded-lg text-xs font-display gap-1.5 px-3 h-8">
                   <Target className="w-3.5 h-3.5" />
@@ -720,6 +728,16 @@ export default function DealDetail() {
                   addAction={addAction}
                   toggleAction={toggleAction}
                   deleteAction={deleteAction}
+                  updateActionStatus={updateActionStatus}
+                  createAiAction={(text: string, snapshotId?: number) => {
+                    createActionMutation.mutate({
+                      dealId,
+                      text,
+                      source: 'ai_suggested',
+                      status: 'pending',
+                      snapshotId,
+                    });
+                  }}
                   setActiveTab={setActiveTab}
                   onStakeholderHover={setHoveredStakeholderId}
                   onStakeholderClick={(id) => {

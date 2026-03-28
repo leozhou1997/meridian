@@ -50,14 +50,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   // Sidebar collapsed state
   const [isCollapsed, setIsCollapsed] = useState(() => {
-    if (isDealPage) return true;
+    if (isDealPage) return false; // Deal pages: default to expanded for quick deal switching
     const saved = localStorage.getItem(PIPELINE_COLLAPSED_KEY);
     return saved === 'true';
   });
 
   useEffect(() => {
     if (isDealPage) {
-      setIsCollapsed(true);
+      setIsCollapsed(false); // Deal pages: always start expanded
     } else if (isDashboard) {
       const saved = localStorage.getItem(PIPELINE_COLLAPSED_KEY);
       setIsCollapsed(saved === 'true');

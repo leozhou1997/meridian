@@ -59,7 +59,7 @@ import {
   ArrowLeft, Globe, Clock, TrendingUp, TrendingDown, AlertTriangle,
   ChevronRight, User, MessageSquare, FileText, Map, BarChart3, X, ExternalLink,
   Mic, Check, Edit2, Save, Camera, GripHorizontal, ChevronDown, ChevronUp,
-  Plus, Trash2, Pencil, Calendar, Lightbulb, Lock, Target, Sparkles, Heart, StickyNote, UserCircle, Activity
+  Plus, Trash2, Pencil, Calendar, Lightbulb, Lock, Target, Sparkles, Heart, StickyNote, UserCircle, Activity, Users
 } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -1955,6 +1955,15 @@ export default function DealDetail() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ── Mobile floating Stakeholder Map button (Deal pages only, above QuickCapture FAB) ── */}
+      <button
+        onClick={() => setMapSheetOpen(true)}
+        className="md:hidden fixed bottom-[136px] right-4 z-50 w-12 h-12 rounded-full bg-card border border-border/60 text-foreground shadow-lg flex items-center justify-center hover:bg-muted active:scale-95 transition-all"
+        aria-label="Open Stakeholder Map"
+      >
+        <Users className="w-5 h-5" />
+      </button>
     </div>
   );
 }
@@ -2020,53 +2029,43 @@ function MobileMapSheet({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
-
-      {/* Sheet */}
+    <div
+      className="fixed inset-0 z-[80] flex flex-col bg-background"
+      style={{
+        transform: `translateY(${dragOffset}px)`,
+        transition: dragOffset === 0 ? 'transform 0.3s cubic-bezier(0.32,0.72,0,1)' : 'none',
+      }}
+    >
+      {/* Header bar — drag handle + title + close */}
       <div
         ref={sheetRef}
-        className="relative flex flex-col rounded-t-2xl bg-background border-t border-border/40 shadow-2xl"
-        style={{
-          height: '72vh',
-          transform: `translateY(${dragOffset}px)`,
-          transition: dragOffset === 0 ? 'transform 0.3s cubic-bezier(0.32,0.72,0,1)' : 'none',
-        }}
+        className="shrink-0 flex items-center justify-between px-4 pt-3 pb-2 border-b border-border/30 bg-background/95 backdrop-blur-sm"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
-        {/* Drag handle + header */}
-        <div
-          className="shrink-0 flex flex-col items-center pt-2 pb-1 cursor-grab active:cursor-grabbing select-none"
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
+        {/* Drag handle centered above */}
+        <div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-muted-foreground/30" />
+        <span className="text-sm font-semibold text-foreground mt-1">Stakeholder Map</span>
+        <button
+          onClick={onClose}
+          className="mt-1 w-7 h-7 rounded-full flex items-center justify-center bg-muted/60 hover:bg-muted transition-colors"
         >
-          <div className="w-10 h-1 rounded-full bg-muted-foreground/30 mb-2" />
-          <div className="w-full flex items-center justify-between px-4 pb-2">
-            <span className="text-sm font-semibold text-foreground">Stakeholder Map</span>
-            <button
-              onClick={onClose}
-              className="w-7 h-7 rounded-full flex items-center justify-center bg-muted/60 hover:bg-muted transition-colors"
-            >
-              <X className="w-4 h-4 text-muted-foreground" />
-            </button>
-          </div>
-        </div>
+          <X className="w-4 h-4 text-muted-foreground" />
+        </button>
+      </div>
 
-        {/* Map canvas */}
-        <div className="flex-1 min-h-0 overflow-hidden">
-          <StakeholderMap
-            key={`mobile-sheet-${deal.id}`}
-            deal={deal}
-            highlightedStakeholderId={hoveredStakeholderId}
-            onStakeholderClick={onStakeholderClick}
-            onStakeholdersChange={onStakeholdersChange}
-            onBuyingStagesChange={onBuyingStagesChange}
-          />
-        </div>
+      {/* Full-screen map canvas */}
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <StakeholderMap
+          key={`mobile-sheet-${deal.id}`}
+          deal={deal}
+          highlightedStakeholderId={hoveredStakeholderId}
+          onStakeholderClick={onStakeholderClick}
+          onStakeholdersChange={onStakeholdersChange}
+          onBuyingStagesChange={onBuyingStagesChange}
+          initialZoom={0.55}
+        />
       </div>
     </div>
   );

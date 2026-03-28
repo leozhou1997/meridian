@@ -506,3 +506,9 @@
 
 ## Mobile Bug Fixes (March 28)
 - [x] Fix: DealInsightPanel collapsed by default on mobile — content area blank, only shows ">" arrow and "DEAL INSIGHT" sideways text; fixed by hiding collapse toggle on mobile (md:hidden) and using hidden md:flex for collapsed state so it never collapses on mobile
+
+## Mobile Stakeholder Map Redesign (March 28)
+- [x] Full-screen bottom sheet (100vh) instead of 72vh — map needs full real estate on mobile
+- [x] Zoom out map canvas on mobile open: set initial zoom to ~0.55 so all nodes visible at once (added initialZoom prop to StakeholderMap)
+- [x] Replace hidden trigger bar with always-visible floating "Map" button on Deal page (bottom-right, above FAB at bottom-[136px])
+- [x] Remove old trigger bar from DealInsightPanel bottom (no longer needed)

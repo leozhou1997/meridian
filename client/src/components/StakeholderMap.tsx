@@ -31,6 +31,7 @@ interface StakeholderMapProps {
   onStakeholdersChange?: (stakeholders: Stakeholder[]) => void;
   onBuyingStagesChange?: (stages: string[]) => void;
   highlightedStakeholderId?: number | null;
+  initialZoom?: number;
 }
 
 interface NodePosition { id: string; x: number; y: number; }
@@ -462,7 +463,7 @@ const sentimentLabel = (s: string) =>
   s === 'Positive' ? 'text-emerald-400' : s === 'Neutral' ? 'text-amber-400' : 'text-red-400';
 
 // ── Component ─────────────────────────────────────────────────────────────────
-export default function StakeholderMap({ deal, onStakeholderClick, onStakeholdersChange, onBuyingStagesChange, highlightedStakeholderId }: StakeholderMapProps) {
+export default function StakeholderMap({ deal, onStakeholderClick, onStakeholdersChange, onBuyingStagesChange, highlightedStakeholderId, initialZoom }: StakeholderMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerW, setContainerW] = useState(800);
   const [mode, setMode] = useState<'view' | 'edit'>('view');
@@ -622,7 +623,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
   const [dragging, setDragging] = useState<string | null>(null);
   const [dragStart, setDragStart] = useState({ mx: 0, my: 0, nx: 0, ny: 0 });
   const [dragMoved, setDragMoved] = useState(false);
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(initialZoom ?? 1);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   // ── Pan state ─────────────────────────────────────────────────────────────

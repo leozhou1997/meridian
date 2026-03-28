@@ -1174,24 +1174,6 @@ export default function DealInsightPanel({
       </>
       }
 
-      {/* ── Mobile Stakeholder Map trigger bar (hidden on desktop) ── */}
-      {!collapsed && (
-        <button
-          onClick={onOpenMapSheet}
-          className="md:hidden shrink-0 flex items-center justify-between px-4 py-3 border-t border-border/20 bg-card/20 hover:bg-card/40 transition-colors group"
-        >
-          <div className="flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground/50"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0 1 12 0v2"/></svg>
-            <span className="text-[11px] text-muted-foreground/60 font-medium">
-              Stakeholder Map
-              {deal.stakeholders.length > 0 && (
-                <span className="ml-1.5 text-[10px] text-muted-foreground/40">· {deal.stakeholders.length} people</span>
-              )}
-            </span>
-          </div>
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground/40 group-hover:text-muted-foreground/70 transition-colors"><polyline points="18 15 12 9 6 15"/></svg>
-        </button>
-      )}
     </div>
   );
 }

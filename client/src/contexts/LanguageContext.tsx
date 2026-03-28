@@ -13,7 +13,7 @@ const translations: Record<Language, Record<string, string>> = {
     // Navigation
     "nav.dashboard": "Dashboard",
     "nav.stakeholders": "Stakeholders",
-    "nav.transcripts": "Transcripts",
+    "nav.transcripts": "Deal Room",
     "nav.knowledge": "Knowledge Base",
     "nav.ask": "Ask Meridian",
     "nav.settings": "Settings",
@@ -228,7 +228,7 @@ const translations: Record<Language, Record<string, string>> = {
     // Navigation
     "nav.dashboard": "仪表盘",
     "nav.stakeholders": "利益相关方",
-    "nav.transcripts": "会议记录",
+    "nav.transcripts": "Deal Room",
     "nav.knowledge": "知识库",
     "nav.ask": "问 Meridian",
     "nav.settings": "设置",

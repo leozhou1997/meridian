@@ -804,7 +804,7 @@ export default function DealInsightPanel({
   })();
 
   return (
-    <div className={`shrink-0 border-r border-border/30 bg-card/30 backdrop-blur-sm flex flex-col overflow-hidden transition-all duration-300 ease-in-out h-full ${collapsed ? 'w-[48px]' : 'w-[340px]'}`}>
+    <div className={`shrink-0 border-r border-border/30 bg-card/30 backdrop-blur-sm flex flex-col overflow-hidden transition-all duration-300 ease-in-out h-full ${collapsed ? 'w-[48px]' : 'w-full md:w-[45%] md:min-w-[340px] md:max-w-[560px]'}`}>
       {/* Collapse toggle */}
       <div className="flex items-center justify-between px-3 pt-3 pb-2 shrink-0">
         {!collapsed && <span className="text-[10px] text-muted-foreground/50 uppercase tracking-wider font-medium">{t('insight.dealInsight')}</span>}

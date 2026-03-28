@@ -406,3 +406,52 @@
 - [x] BUG: Accept/Later/Dismiss buttons in What's Next cards not working — no action created
 - [x] BUG: After Accept/Later/Dismiss, no way to change status or undo the action
 - [x] BUG: Pipeline deal selection should navigate directly to deal page, not stay on expanded pipeline overlay
+
+## Layout & Navigation Redesign (March 28 - User Feedback Round 2)
+
+- [x] BUG: Pipeline panel auto-expands when entering deal from Nav sidebar — should only expand on manual toggle
+- [x] Redesign Deal Detail layout ratio: Deal Insight panel should be wider (~45-50%), Stakeholder Map as secondary/collapsible
+- [x] Make Stakeholder Map collapsible/minimizable so Deal Insight can take full width when needed
+- [x] Rebuild Stakeholder page as data management interface: table + inline editing, no deal navigation on click
+- [x] Stakeholder page: support inline profile editing (personal notes, role, sentiment, etc.)
+- [x] Stakeholder page: support add/remove stakeholders
+- [x] Rename Transcript nav item to "Deal Room" (global management view)
+- [x] Deal Room global view: show all deals with information density metrics (interaction count, file count, formats)
+- [x] Deal Room global view: CRUD operations for deal content
+- [x] Deal Room global view: provide unified view of all deal data across the system
+
+## Mobile Responsive Design (March 28 - Path A)
+
+### Phase 1: Mobile Navigation
+- [x] Hide desktop icon sidebar on mobile (hidden md:flex)
+- [x] Add mobile bottom navigation bar: Dashboard / Deals / Stakeholders / Ask (4 tabs)
+- [x] Bottom nav highlights active route
+- [x] Add safe-area padding-bottom on mobile to avoid content hidden behind bottom nav (pb-[60px] md:pb-0)
+
+### Phase 2: Deal Detail Mobile
+- [x] Single column layout on mobile: hide Stakeholder Map, show only Deal Insight panel
+- [x] Deal Insight panel full-width on mobile (w-full md:w-[45%])
+- [x] Pipeline toggle button hidden on mobile (hidden md:flex)
+- [x] Deal header simplified on mobile (compact single-line layout)
+- [x] Tab labels shortened on mobile (Insight / Room / Strategy)
+
+### Phase 3: Quick Capture FAB
+- [x] Floating Action Button (bottom-right, above bottom nav) on all pages on mobile
+- [x] FAB opens modal: Note / Photo / Voice options
+- [x] Note flow: select deal → type note → submit as new meeting interaction
+- [x] Photo flow: camera/file picker → select deal → caption → submit
+- [x] Voice flow: record audio → select deal → confirm → submit
+- [x] FAB hidden on desktop (md:hidden)
+
+### Phase 4: Other Pages Mobile
+- [x] Dashboard: responsive grid (1-col mobile, 2-col sm, 4-col lg)
+- [x] Deals list: mobile card view (compact row with company + stage + value + confidence)
+- [x] Deals list header: compact on mobile (shorter subtitle, icon-only New Deal button)
+- [ ] Stakeholders page: full-width list on mobile
+- [ ] Deal Room page: simplified card list on mobile
+
+### Phase 5: General Mobile Polish
+- [ ] All modals: full-screen or bottom-sheet on mobile
+- [ ] Min 44px tap targets throughout
+- [ ] No horizontal scroll on any page
+- [ ] Test at 390px width (iPhone 14) — to be verified by user on real device

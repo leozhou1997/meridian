@@ -49,7 +49,7 @@ export default function Dashboard() {
 
   if (isLoading) {
     return (
-      <div className="p-6 max-w-[1200px]">
+      <div className="p-4 md:p-6 max-w-[1200px]">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-muted rounded w-64" />
           <div className="grid grid-cols-4 gap-4">
@@ -128,24 +128,24 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="p-6 max-w-[1200px]">
+    <div className="p-4 md:p-6 max-w-[1200px]">
       <motion.div variants={container} initial="hidden" animate="show">
         {/* Header */}
-        <motion.div variants={item} className="mb-8 flex items-start justify-between">
+        <motion.div variants={item} className="mb-6 md:mb-8 flex items-start justify-between">
           <div>
-            <h1 className="font-display text-2xl font-bold mb-1">{t('dashboard.greeting')}, {firstName}</h1>
-            <p className="text-muted-foreground text-sm">
+            <h1 className="font-display text-xl md:text-2xl font-bold mb-1">{t('dashboard.greeting')}, {firstName}</h1>
+            <p className="text-muted-foreground text-sm hidden md:block">
               {t('dashboard.attention')}
             </p>
           </div>
-          <Button onClick={() => navigate('/deal/new')} size="sm" className="gap-1.5">
+          <Button onClick={() => navigate('/deal/new')} size="sm" className="gap-1.5 shrink-0">
             <Plus className="w-4 h-4" />
-            {language === 'zh' ? '新建 Deal' : 'New Deal'}
+            <span className="hidden sm:inline">{language === 'zh' ? '新建 Deal' : 'New Deal'}</span>
           </Button>
         </motion.div>
 
         {/* KPI Cards */}
-        <motion.div variants={item} className="grid grid-cols-4 gap-4 mb-8">
+        <motion.div variants={item} className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
           {[
             { label: t('dashboard.totalPipeline'), value: formatCurrency(totalPipeline), icon: BarChart3, color: 'text-primary' },
             { label: t('dashboard.predictableRevenue'), value: formatCurrency(predictableRevenue), icon: Target, color: 'text-status-success' },
@@ -164,9 +164,9 @@ export default function Dashboard() {
           ))}
         </motion.div>
 
-        <div className="grid grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-6">
           {/* Left column — At Risk + Pipeline */}
-          <div className="col-span-3 space-y-6">
+          <div className="md:col-span-3 space-y-4 md:space-y-6">
             {/* At Risk Deals */}
             <motion.div variants={item}>
               <Card className="bg-card border-border/50">
@@ -245,7 +245,7 @@ export default function Dashboard() {
           </div>
 
           {/* Right column — All Deals */}
-          <div className="col-span-2">
+          <div className="md:col-span-2">
             <motion.div variants={item}>
               <Card className="bg-card border-border/50">
                 <CardHeader className="pb-3">

@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext } from 'react';
+import { useState, useEffect, createContext, useContext, useRef } from 'react';
 import { useLocation, Link } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Compass, LayoutDashboard, Users, FileText, MessageSquare,
   Search, LogOut, ChevronDown, ChevronRight, Settings, Sun, Moon, BookOpen, Plus,
-  PanelLeftClose, ChevronLeft, Briefcase
+  PanelLeftClose, ChevronLeft, Briefcase, Camera, Mic, StickyNote, X, Upload, Check
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -44,14 +44,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const isDealPage = /^\/deal\/\d+/.test(location);
   const hasPipeline = isDealPage;
 
-  // Sidebar state: default expanded on deal pages
-  const [isCollapsed, setIsCollapsed] = useState(false);
-
-  useEffect(() => {
-    if (isDealPage) {
-      setIsCollapsed(false);
-    }
-  }, [isDealPage]);
+  // Sidebar state: default collapsed — user opens manually via toggle button
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
   const toggle = () => setIsCollapsed(prev => !prev);
 
@@ -91,9 +85,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <PipelineContext.Provider value={{ isCollapsed, toggle, hasPipeline }}>
-      <div className="h-screen flex overflow-hidden bg-background">
-        {/* ── Icon sidebar (Layer 1 — highest z-index) ── */}
-        <div className="w-[60px] bg-sidebar border-r border-sidebar-border flex flex-col items-center py-4 shrink-0 z-40 relative">
+      <div className="h-screen flex overflow-hidden bg-background pb-0 md:pb-0">
+        {/* ── Icon sidebar (Layer 1 — highest z-index, desktop only) ── */}
+        <div className="hidden md:flex w-[60px] bg-sidebar border-r border-sidebar-border flex-col items-center py-4 shrink-0 z-40 relative">
           <Link href="/">
             <div className="w-9 h-9 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center mb-6 hover:bg-primary/30 transition-colors">
               <Compass className="w-5 h-5 text-primary" />
@@ -369,9 +363,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
         )}
 
         {/* ── Main content (Layer 3) ── */}
-        <main className="flex-1 overflow-auto min-w-0">
+        <main className="flex-1 overflow-auto min-w-0 pb-[60px] md:pb-0">
           {children}
         </main>
+
+        {/* ── Mobile Bottom Navigation ── */}
+        <MobileBottomNav navItems={navItems} location={location} />
+
+        {/* ── Quick Capture FAB (mobile only) ── */}
+        <QuickCaptureFAB deals={deals} />
       </div>
     </PipelineContext.Provider>
   );
@@ -403,5 +403,402 @@ export function PipelineToggleButton({ className = '' }: { className?: string })
         {isCollapsed ? t('pipeline.show') || 'Show pipeline sidebar' : t('pipeline.hide') || 'Hide pipeline sidebar'}
       </TooltipContent>
     </Tooltip>
+  );
+}
+
+// ── Mobile Bottom Navigation ──────────────────────────────────────────────────
+interface MobileBottomNavProps {
+  navItems: { icon: React.ComponentType<{ className?: string }>; label: string; path: string }[];
+  location: string;
+}
+
+function MobileBottomNav({ navItems, location }: MobileBottomNavProps) {
+  // Only show 4 core items on mobile: Dashboard, Deals, Ask, Stakeholders
+  const mobileItems = [
+    navItems.find(n => n.path === '/'),
+    navItems.find(n => n.path === '/deals'),
+    navItems.find(n => n.path === '/stakeholders'),
+    navItems.find(n => n.path === '/ask'),
+  ].filter(Boolean) as typeof navItems;
+
+  return (
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-sidebar border-t border-sidebar-border">
+      <div className="flex items-center justify-around h-[60px] px-2">
+        {mobileItems.map((item) => {
+          const isActive = location === item.path || (item.path !== '/' && location.startsWith(item.path));
+          return (
+            <Link key={item.path} href={item.path}>
+              <div className={`flex flex-col items-center gap-0.5 px-4 py-2 rounded-lg transition-all ${
+                isActive
+                  ? 'text-primary'
+                  : 'text-sidebar-foreground/50'
+              }`}>
+                <item.icon className="w-5 h-5" />
+                <span className="text-[10px] font-medium">{item.label}</span>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
+
+// ── Quick Capture FAB (mobile only) ──────────────────────────────────────────
+interface Deal {
+  id: number;
+  name?: string | null;
+  company?: string | null;
+}
+
+interface QuickCaptureFABProps {
+  deals: Deal[];
+}
+
+function QuickCaptureFAB({ deals }: QuickCaptureFABProps) {
+  const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<'menu' | 'note' | 'photo' | 'voice'>('menu');
+  const [selectedDealId, setSelectedDealId] = useState<number | null>(null);
+  const [noteText, setNoteText] = useState('');
+  const [photoCaption, setPhotoCaption] = useState('');
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const [, navigate] = useLocation();
+
+  const addMeetingMutation = trpc.meetings.create.useMutation();
+
+  const reset = () => {
+    setMode('menu');
+    setSelectedDealId(null);
+    setNoteText('');
+    setPhotoCaption('');
+    setPhotoFile(null);
+    setIsRecording(false);
+    setIsSubmitting(false);
+    audioChunksRef.current = [];
+  };
+
+  const close = () => {
+    setOpen(false);
+    reset();
+  };
+
+  const handleSubmitNote = async () => {
+    if (!selectedDealId || !noteText.trim()) return;
+    setIsSubmitting(true);
+    try {
+      await addMeetingMutation.mutateAsync({
+        dealId: selectedDealId,
+        type: 'Note',
+        summary: noteText.trim(),
+        date: new Date(),
+        keyParticipant: undefined,
+        duration: 0,
+      });
+      close();
+      navigate(`/deal/${selectedDealId}`);
+    } catch {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) setPhotoFile(file);
+  };
+
+  const handleSubmitPhoto = async () => {
+    if (!selectedDealId || !photoFile) return;
+    setIsSubmitting(true);
+    try {
+      await addMeetingMutation.mutateAsync({
+        dealId: selectedDealId,
+        type: 'Screenshot',
+        summary: photoCaption || `Screenshot: ${photoFile.name}`,
+        date: new Date(),
+        keyParticipant: undefined,
+        duration: 0,
+      });
+      close();
+      navigate(`/deal/${selectedDealId}`);
+    } catch {
+      setIsSubmitting(false);
+    }
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mr = new MediaRecorder(stream);
+      mediaRecorderRef.current = mr;
+      audioChunksRef.current = [];
+      mr.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+      mr.start();
+      setIsRecording(true);
+    } catch {
+      alert('Microphone access denied');
+    }
+  };
+
+  const stopRecording = () => {
+    mediaRecorderRef.current?.stop();
+    setIsRecording(false);
+  };
+
+  const handleSubmitVoice = async () => {
+    if (!selectedDealId || audioChunksRef.current.length === 0) return;
+    setIsSubmitting(true);
+    try {
+      const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+      const summary = `Voice note recorded on ${new Date().toLocaleString()}`;
+      await addMeetingMutation.mutateAsync({
+        dealId: selectedDealId,
+        type: 'Voice Note',
+        summary,
+        date: new Date(),
+        keyParticipant: undefined,
+        duration: 0,
+      });
+      close();
+      navigate(`/deal/${selectedDealId}`);
+    } catch {
+      setIsSubmitting(false);
+    }
+  };
+
+  const DealSelector = () => (
+    <div className="mb-4">
+      <label className="text-xs text-muted-foreground mb-1.5 block">Select Deal</label>
+      <div className="space-y-1.5 max-h-40 overflow-y-auto">
+        {deals.map(d => (
+          <button
+            key={d.id}
+            onClick={() => setSelectedDealId(d.id)}
+            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
+              selectedDealId === d.id
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted/50 hover:bg-muted text-foreground'
+            }`}
+          >
+            <div className="font-medium">{d.company}</div>
+            {d.name && <div className="text-[11px] opacity-70 truncate">{d.name}</div>}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      {/* FAB button — mobile only, above bottom nav */}
+      <button
+        onClick={() => setOpen(true)}
+        className="md:hidden fixed bottom-[72px] right-4 z-50 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all"
+        aria-label="Quick capture"
+      >
+        <Plus className="w-5 h-5" />
+      </button>
+
+      {/* Bottom sheet */}
+      <AnimatePresence>
+        {open && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="md:hidden fixed inset-0 z-[60] bg-black/50"
+              onClick={close}
+            />
+
+            {/* Sheet */}
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="md:hidden fixed bottom-0 left-0 right-0 z-[70] bg-card rounded-t-2xl shadow-2xl"
+            >
+              {/* Handle */}
+              <div className="flex justify-center pt-3 pb-1">
+                <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+              </div>
+
+              <div className="px-5 pb-8 pt-2">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-display text-base font-semibold">
+                    {mode === 'menu' ? 'Quick Capture' :
+                     mode === 'note' ? 'Text Note' :
+                     mode === 'photo' ? 'Photo / Screenshot' :
+                     'Voice Note'}
+                  </h3>
+                  <button onClick={close} className="w-7 h-7 rounded-full bg-muted flex items-center justify-center">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Mode: menu */}
+                {mode === 'menu' && (
+                  <div className="grid grid-cols-3 gap-3">
+                    <button
+                      onClick={() => setMode('note')}
+                      className="flex flex-col items-center gap-2 p-4 rounded-xl bg-muted/50 hover:bg-muted active:scale-95 transition-all"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+                        <StickyNote className="w-5 h-5 text-blue-400" />
+                      </div>
+                      <span className="text-xs font-medium">Text Note</span>
+                    </button>
+                    <button
+                      onClick={() => { setMode('photo'); fileInputRef.current?.click(); }}
+                      className="flex flex-col items-center gap-2 p-4 rounded-xl bg-muted/50 hover:bg-muted active:scale-95 transition-all"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                        <Camera className="w-5 h-5 text-green-400" />
+                      </div>
+                      <span className="text-xs font-medium">Photo</span>
+                    </button>
+                    <button
+                      onClick={() => setMode('voice')}
+                      className="flex flex-col items-center gap-2 p-4 rounded-xl bg-muted/50 hover:bg-muted active:scale-95 transition-all"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                        <Mic className="w-5 h-5 text-red-400" />
+                      </div>
+                      <span className="text-xs font-medium">Voice</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Mode: note */}
+                {mode === 'note' && (
+                  <div>
+                    <DealSelector />
+                    <textarea
+                      value={noteText}
+                      onChange={e => setNoteText(e.target.value)}
+                      placeholder="What happened? Key takeaways, objections, next steps..."
+                      className="w-full h-28 px-3 py-2.5 rounded-xl bg-muted/50 border border-border/50 text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+                      autoFocus
+                    />
+                    <button
+                      onClick={handleSubmitNote}
+                      disabled={!selectedDealId || !noteText.trim() || isSubmitting}
+                      className="mt-3 w-full h-11 rounded-xl bg-primary text-primary-foreground text-sm font-medium disabled:opacity-40 active:scale-[0.98] transition-all"
+                    >
+                      {isSubmitting ? 'Saving...' : 'Save Note'}
+                    </button>
+                  </div>
+                )}
+
+                {/* Mode: photo */}
+                {mode === 'photo' && (
+                  <div>
+                    <DealSelector />
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      onChange={handlePhotoSelect}
+                    />
+                    {photoFile ? (
+                      <div className="mb-3 p-3 rounded-xl bg-muted/50 border border-border/50 flex items-center gap-3">
+                        <Camera className="w-5 h-5 text-green-400 shrink-0" />
+                        <span className="text-sm text-foreground truncate">{photoFile.name}</span>
+                        <button onClick={() => setPhotoFile(null)} className="ml-auto">
+                          <X className="w-4 h-4 text-muted-foreground" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full h-20 rounded-xl border-2 border-dashed border-border/50 flex flex-col items-center justify-center gap-2 text-muted-foreground mb-3"
+                      >
+                        <Upload className="w-5 h-5" />
+                        <span className="text-xs">Tap to select photo</span>
+                      </button>
+                    )}
+                    <input
+                      value={photoCaption}
+                      onChange={e => setPhotoCaption(e.target.value)}
+                      placeholder="Caption (optional)"
+                      className="w-full h-10 px-3 rounded-xl bg-muted/50 border border-border/50 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary mb-3"
+                    />
+                    <button
+                      onClick={handleSubmitPhoto}
+                      disabled={!selectedDealId || !photoFile || isSubmitting}
+                      className="w-full h-11 rounded-xl bg-primary text-primary-foreground text-sm font-medium disabled:opacity-40 active:scale-[0.98] transition-all"
+                    >
+                      {isSubmitting ? 'Saving...' : 'Save Photo'}
+                    </button>
+                  </div>
+                )}
+
+                {/* Mode: voice */}
+                {mode === 'voice' && (
+                  <div>
+                    <DealSelector />
+                    <div className="flex flex-col items-center gap-4 py-4">
+                      {isRecording ? (
+                        <>
+                          <div className="w-16 h-16 rounded-full bg-red-500/20 border-2 border-red-500 flex items-center justify-center animate-pulse">
+                            <Mic className="w-7 h-7 text-red-400" />
+                          </div>
+                          <p className="text-sm text-muted-foreground">Recording... tap to stop</p>
+                          <button
+                            onClick={stopRecording}
+                            className="w-full h-11 rounded-xl bg-red-500 text-white text-sm font-medium active:scale-[0.98] transition-all"
+                          >
+                            Stop Recording
+                          </button>
+                        </>
+                      ) : audioChunksRef.current.length > 0 ? (
+                        <>
+                          <div className="w-16 h-16 rounded-full bg-green-500/20 border-2 border-green-500 flex items-center justify-center">
+                            <Check className="w-7 h-7 text-green-400" />
+                          </div>
+                          <p className="text-sm text-muted-foreground">Recording ready</p>
+                          <button
+                            onClick={handleSubmitVoice}
+                            disabled={!selectedDealId || isSubmitting}
+                            className="w-full h-11 rounded-xl bg-primary text-primary-foreground text-sm font-medium disabled:opacity-40 active:scale-[0.98] transition-all"
+                          >
+                            {isSubmitting ? 'Saving...' : 'Save Voice Note'}
+                          </button>
+                          <button onClick={() => { audioChunksRef.current = []; }} className="text-xs text-muted-foreground underline">
+                            Re-record
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+                            <Mic className="w-7 h-7 text-muted-foreground" />
+                          </div>
+                          <p className="text-sm text-muted-foreground">Tap to start recording</p>
+                          <button
+                            onClick={startRecording}
+                            className="w-full h-11 rounded-xl bg-primary text-primary-foreground text-sm font-medium active:scale-[0.98] transition-all"
+                          >
+                            Start Recording
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

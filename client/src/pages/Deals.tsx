@@ -89,37 +89,40 @@ export default function Deals() {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="shrink-0 border-b border-border bg-card/30 px-6 py-4">
-        <div className="flex items-center justify-between mb-4">
+      <div className="shrink-0 border-b border-border bg-card/30 px-4 md:px-6 py-3 md:py-4">
+        <div className="flex items-center justify-between mb-3">
           <div>
             <h1 className="text-xl font-display font-bold text-foreground">Deals</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="text-xs text-muted-foreground mt-0.5 hidden sm:block">
               {activeDeals} active deals &middot; {formatCurrency(totalPipeline)} total pipeline &middot; {avgConfidence}% avg confidence
             </p>
+            <p className="text-xs text-muted-foreground mt-0.5 sm:hidden">
+              {activeDeals} active &middot; {avgConfidence}% avg
+            </p>
           </div>
-          <Button size="sm" onClick={() => navigate('/deal/new')} className="gap-1.5">
+          <Button size="sm" onClick={() => navigate('/deal/new')} className="gap-1.5 shrink-0">
             <Plus className="w-3.5 h-3.5" />
-            New Deal
+            <span className="hidden sm:inline">New Deal</span>
           </Button>
         </div>
 
         {/* Search & filters bar */}
-        <div className="flex items-center gap-3">
-          <div className="relative flex-1 max-w-sm">
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search deals by company or name..."
+              placeholder="Search deals..."
               className="h-8 pl-9 text-xs"
             />
           </div>
-          <div className="flex items-center gap-1 ml-auto">
+          <div className="flex items-center gap-1">
             <Button
               variant={viewMode === 'table' ? 'secondary' : 'ghost'}
               size="sm"
               onClick={() => setViewMode('table')}
-              className="h-7 text-xs px-2.5"
+              className="h-7 text-xs px-2"
             >
               Table
             </Button>
@@ -127,7 +130,7 @@ export default function Deals() {
               variant={viewMode === 'board' ? 'secondary' : 'ghost'}
               size="sm"
               onClick={() => setViewMode('board')}
-              className="h-7 text-xs px-2.5"
+              className="h-7 text-xs px-2"
             >
               Board
             </Button>
@@ -183,9 +186,9 @@ function TableView({
   );
 
   return (
-    <div className="px-6 py-3">
-      {/* Table header */}
-      <div className="grid grid-cols-[2fr_1fr_100px_100px_80px_40px] gap-4 px-3 py-2 border-b border-border/50">
+    <div className="px-3 md:px-6 py-3">
+      {/* Table header — hidden on mobile, shown on sm+ */}
+      <div className="hidden sm:grid grid-cols-[2fr_1fr_100px_100px_80px_40px] gap-4 px-3 py-2 border-b border-border/50">
         <SortHeader field="company">Company / Deal</SortHeader>
         <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Stage</div>
         <SortHeader field="value">Value</SortHeader>
@@ -207,9 +210,32 @@ function TableView({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.03 }}
           >
+            {/* Mobile card view */}
             <div
               onClick={() => navigate(`/deal/${deal.id}`)}
-              className="grid grid-cols-[2fr_1fr_100px_100px_80px_40px] gap-4 px-3 py-3 border-b border-border/30 hover:bg-card/50 cursor-pointer transition-colors rounded-md"
+              className="sm:hidden flex items-center gap-3 px-3 py-3 border-b border-border/30 hover:bg-card/50 cursor-pointer transition-colors"
+            >
+              <CompanyLogo name={deal.company ?? ''} logoUrl={deal.logo} size="sm" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-sm font-medium text-foreground truncate">{deal.company}</span>
+                  <Badge variant="outline" className={`text-[10px] shrink-0 ${getStageColor(deal.stage)}`}>
+                    {deal.stage}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono text-muted-foreground">{formatCurrency(deal.value ?? 0)}</span>
+                  <span className="text-muted-foreground/40">&middot;</span>
+                  <span className={`text-xs font-mono ${getConfidenceColor(deal.confidenceScore ?? 0)}`}>{deal.confidenceScore ?? 0}%</span>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground/40 shrink-0" />
+            </div>
+
+            {/* Desktop table row */}
+            <div
+              onClick={() => navigate(`/deal/${deal.id}`)}
+              className="hidden sm:grid grid-cols-[2fr_1fr_100px_100px_80px_40px] gap-4 px-3 py-3 border-b border-border/30 hover:bg-card/50 cursor-pointer transition-colors rounded-md"
             >
               {/* Company / Deal */}
               <div className="flex items-center gap-3 min-w-0">

@@ -203,6 +203,7 @@ export default function DealDetail() {
   const [activeTab, setActiveTab] = useState('map');
   const [showSummary, setShowSummary] = useState(true);
   const [hoveredStakeholderId, setHoveredStakeholderId] = useState<number | null>(null);
+  const [mapCollapsed, setMapCollapsed] = useState(false);
   // Draggable Deal Summary panel
   const [summaryPos, setSummaryPos] = useState({ x: 16, y: 16 });
   const summaryDragRef = useRef<{ mx: number; my: number; px: number; py: number } | null>(null);
@@ -608,16 +609,23 @@ export default function DealDetail() {
   return (
     <div className="h-full flex flex-col">
       {/* Deal header */}
-      <div className="border-b border-border/50 bg-card/50 backdrop-blur-sm px-6 py-3.5 shrink-0">
-        <div className="flex items-center gap-4">
+      <div className="border-b border-border/50 bg-card/50 backdrop-blur-sm px-3 md:px-6 py-3 md:py-3.5 shrink-0">
+        <div className="flex items-center gap-2 md:gap-4">
           <Link href="/deals">
-            <button className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors">
+            <button className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors shrink-0">
               <ArrowLeft className="w-4 h-4" />
             </button>
           </Link>
           <CompanyLogo name={deal.company} logoUrl={deal.logo} size="md" />
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3">
+            {/* Mobile: compact single-line header */}
+            <div className="flex items-center gap-2 md:hidden">
+              <span className="font-display text-base font-bold truncate">{editCompany}</span>
+              <Badge variant="outline" className={`text-[10px] shrink-0 ${getStageColor(deal.stage)}`}>{deal.stage}</Badge>
+              <span className={`font-mono text-sm font-medium shrink-0 ${getConfidenceColor(deal.confidenceScore)}`}>{deal.confidenceScore}%</span>
+            </div>
+            {/* Desktop: full header with inline edits */}
+            <div className="hidden md:flex items-center gap-3">
               <InlineEdit
                 field="company"
                 value={editCompany}
@@ -662,7 +670,7 @@ export default function DealDetail() {
                 </button>
               )}
             </div>
-            <div className="flex items-center gap-3 mt-1">
+            <div className="hidden md:flex items-center gap-3 mt-1">
               <Badge variant="outline" className={`text-[10px] ${getStageColor(deal.stage)}`}>{deal.stage}</Badge>
               <InlineEdit
                 field="value"
@@ -688,7 +696,7 @@ export default function DealDetail() {
               <Progress value={deal.confidenceScore} className="w-24 h-1.5" />
             </div>
           </div>
-          <PipelineToggleButton className="mr-2" />
+          <PipelineToggleButton className="mr-2 hidden md:flex" />
         </div>
       </div>
 
@@ -697,19 +705,22 @@ export default function DealDetail() {
         {/* Main content */}
         <div className="flex-1 flex flex-col overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-            <div className="border-b border-border/30 px-6">
-              <TabsList className="bg-transparent h-10 gap-1 p-0">
-                <TabsTrigger value="map" className="data-[state=active]:bg-muted/50 data-[state=active]:shadow-none rounded-lg text-xs font-display gap-1.5 px-3 h-8">
+            <div className="border-b border-border/30 px-3 md:px-6">
+              <TabsList className="bg-transparent h-10 gap-0.5 md:gap-1 p-0">
+                <TabsTrigger value="map" className="data-[state=active]:bg-muted/50 data-[state=active]:shadow-none rounded-lg text-xs font-display gap-1 md:gap-1.5 px-2 md:px-3 h-8">
                   <Map className="w-3.5 h-3.5" />
-                  {t('deal.buyingCommittee')}
+                  <span className="hidden sm:inline">{t('deal.buyingCommittee')}</span>
+                  <span className="sm:hidden">Insight</span>
                 </TabsTrigger>
-                <TabsTrigger value="timeline" className="data-[state=active]:bg-muted/50 data-[state=active]:shadow-none rounded-lg text-xs font-display gap-1.5 px-3 h-8">
+                <TabsTrigger value="timeline" className="data-[state=active]:bg-muted/50 data-[state=active]:shadow-none rounded-lg text-xs font-display gap-1 md:gap-1.5 px-2 md:px-3 h-8">
                   <Activity className="w-3.5 h-3.5" />
-                  Deal Room
+                  <span className="hidden sm:inline">Deal Room</span>
+                  <span className="sm:hidden">Room</span>
                 </TabsTrigger>
-                <TabsTrigger value="strategy" className="data-[state=active]:bg-muted/50 data-[state=active]:shadow-none rounded-lg text-xs font-display gap-1.5 px-3 h-8">
+                <TabsTrigger value="strategy" className="data-[state=active]:bg-muted/50 data-[state=active]:shadow-none rounded-lg text-xs font-display gap-1 md:gap-1.5 px-2 md:px-3 h-8">
                   <Target className="w-3.5 h-3.5" />
-                  {t('deal.dealStrategy')}
+                  <span className="hidden sm:inline">{t('deal.dealStrategy')}</span>
+                  <span className="sm:hidden">Strategy</span>
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -717,7 +728,7 @@ export default function DealDetail() {
             <TabsContent value="map" className="flex-1 m-0 overflow-hidden min-h-0">
               <div className="h-full flex overflow-hidden">
 
-                {/* ── Deal Insight Panel — left side ── */}
+                {/* ── Deal Insight Panel — full width on mobile, left side on desktop ── */}
                 <DealInsightPanel
                   deal={deal}
                   latestSnapshot={latestSnapshot}
@@ -749,16 +760,36 @@ export default function DealDetail() {
                   }}
                 />
 
-                {/* ── Stakeholder Map canvas — right side, takes remaining space ── */}
-                <div className="flex-1 relative overflow-hidden">
-                  <StakeholderMap
-                    key={deal.id}
-                    deal={deal as any}
-                    highlightedStakeholderId={hoveredStakeholderId}
-                    onStakeholderClick={(s: any) => handleStakeholderClick(s as Stakeholder)}
-                    onStakeholdersChange={() => utils.stakeholders.listByDeal.invalidate({ dealId })}
-                    onBuyingStagesChange={(stages) => updateDealMutation.mutate({ id: dealId, buyingStages: stages })}
-                  />
+                {/* ── Stakeholder Map canvas — hidden on mobile, right side on desktop ── */}
+                <div className={`hidden md:block relative overflow-hidden transition-all duration-300 ease-in-out ${mapCollapsed ? 'w-[48px] shrink-0' : 'flex-1'}`}>
+                  {/* Map collapse toggle */}
+                  <button
+                    onClick={() => setMapCollapsed(c => !c)}
+                    className="absolute top-2 left-2 z-20 flex items-center justify-center w-7 h-7 rounded-lg bg-card/80 backdrop-blur-sm border border-border/40 hover:bg-card text-muted-foreground/60 hover:text-foreground transition-all shadow-sm"
+                    title={mapCollapsed ? 'Expand Stakeholder Map' : 'Minimize Stakeholder Map'}
+                  >
+                    {mapCollapsed
+                      ? <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                      : <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                    }
+                  </button>
+                  {mapCollapsed ? (
+                    <div className="h-full flex flex-col items-center justify-center gap-2 bg-card/20">
+                      <Map className="w-4 h-4 text-muted-foreground/40" />
+                      <div className="text-[10px] text-muted-foreground/40 uppercase tracking-widest font-medium select-none" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+                        Stakeholder Map
+                      </div>
+                    </div>
+                  ) : (
+                    <StakeholderMap
+                      key={deal.id}
+                      deal={deal as any}
+                      highlightedStakeholderId={hoveredStakeholderId}
+                      onStakeholderClick={(s: any) => handleStakeholderClick(s as Stakeholder)}
+                      onStakeholdersChange={() => utils.stakeholders.listByDeal.invalidate({ dealId })}
+                      onBuyingStagesChange={(stages) => updateDealMutation.mutate({ id: dealId, buyingStages: stages })}
+                    />
+                  )}
                 </div>
 
 

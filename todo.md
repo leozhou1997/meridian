@@ -503,3 +503,6 @@
 - [x] Full interactive StakeholderMap inside bottom sheet with touch pan/zoom
 - [x] Body scroll lock when sheet is open
 - [x] Fixed pre-existing TypeScript errors in Transcripts.tsx and meetings.ts
+
+## Mobile Bug Fixes (March 28)
+- [x] Fix: DealInsightPanel collapsed by default on mobile — content area blank, only shows ">" arrow and "DEAL INSIGHT" sideways text; fixed by hiding collapse toggle on mobile (md:hidden) and using hidden md:flex for collapsed state so it never collapses on mobile

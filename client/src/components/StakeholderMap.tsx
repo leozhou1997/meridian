@@ -478,7 +478,7 @@ const NODE_H_MOBILE = 82;
 
 export default function StakeholderMap({ deal, onStakeholderClick, onStakeholdersChange, onBuyingStagesChange, highlightedStakeholderId, initialZoom, isMobile = false }: StakeholderMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [containerW, setContainerW] = useState(800);
+  const [containerW, setContainerW] = useState(0); // 0 = not yet measured
   const [mode, setMode] = useState<'view' | 'edit'>('view');
   const [heatWindow, setHeatWindow] = useState<HeatWindow>('L14D');
   const [viewLayout, setViewLayout] = useState<ViewLayout>('concentric');
@@ -492,6 +492,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
   const [editingStageName, setEditingStageName] = useState('');
   const [localStakeholders, setLocalStakeholders] = useState<Stakeholder[]>([]);
   const [positions, setPositions] = useState<NodePosition[]>([]);
+  const layoutComputedRef = useRef(false); // tracks whether initial layout has been computed for current deal
   const [connections, setConnections] = useState<Connection[]>([]);
   // Local meetings — editable copy of deal.meetings + user-added ones
   const [localInteractions, setLocalInteractions] = useState<Meeting[]>([]);
@@ -539,18 +540,15 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     const stks = deal.stakeholders;
     setLocalStakeholders(stks);
 
-    // On mobile, fall back to window.innerWidth (not 800/900) to avoid oversized layout
-    const fallbackW = isMobile ? (typeof window !== 'undefined' ? window.innerWidth : 390) : (containerW || 900);
-    const actualW = containerRef.current?.getBoundingClientRect().width || fallbackW;
-    const effectiveNodeW = isMobile ? NODE_W_MOBILE : NODE_W;
-    const effectiveNodeH = isMobile ? NODE_H_MOBILE : NODE_H;
-    const maxX = actualW - effectiveNodeW;
-    // On mobile, always compute fresh positions — never restore desktop-sized saved positions
+    // Reset layout computed flag so ResizeObserver will recompute on next measurement
+    layoutComputedRef.current = false;
+
+    // On mobile, NEVER load saved positions (they may be desktop-sized)
+    // On desktop, try to restore saved positions
     const saved = isMobile ? null : loadState(deal.id);
 
     if (saved && saved.positions.length > 0) {
       const validIds = new Set(stks.map(s => String(s.id)));
-      // Restore per-layout position caches
       if (saved.circlePositions && saved.circlePositions.length > 0) {
         circlePositionsRef.current = saved.circlePositions.filter(p => validIds.has(String(p.id)));
       }
@@ -559,34 +557,55 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
       }
       const validPositions = saved.positions.filter(p => validIds.has(String(p.id)));
       if (validPositions.length === stks.length) {
-        // Run collision pass on loaded positions too
-        setPositions(resolveCollisions(validPositions, null, 0, 0, maxX));
+        const effectiveNodeW = NODE_W;
+        const effectiveNodeH = NODE_H;
+        const actualW = containerRef.current?.getBoundingClientRect().width || 900;
+        const maxX = actualW - effectiveNodeW;
+        setPositions(resolveCollisions(validPositions, null, 0, 0, maxX, effectiveNodeH, effectiveNodeW));
         setConnections(saved.connections ?? []);
         setLocalInteractions(saved.localInteractions?.length
           ? saved.localInteractions
           : [...(deal.meetings ?? [])]);
+        layoutComputedRef.current = true; // mark as done so ResizeObserver won't overwrite
         return;
       }
     }
-    // Fresh start — compute initial positions for current layout
-    const freshPositions = computeInitialPositions(stks, deal.buyingStages ?? [], actualW, viewLayout, effectiveNodeW, effectiveNodeH);
-    setPositions(freshPositions);
-    if (viewLayout === 'concentric') circlePositionsRef.current = freshPositions;
-    else stagePositionsRef.current = freshPositions;
-    setZoom(1);
+
+    // Fresh start — positions will be computed by ResizeObserver once container is measured
+    // Set empty positions for now; ResizeObserver will fill them in
+    setPositions([]);
+    circlePositionsRef.current = [];
+    stagePositionsRef.current = [];
+    setZoom(initialZoom ?? 1);
     setPanOffset({ x: 0, y: 0 });
     setConnections(buildDefaultConnections(stks, deal.buyingStages ?? []));
     setLocalInteractions([...(deal.meetings ?? [])]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deal.id]);
 
-  // Observe container width
+  // Observe container width — and trigger initial layout once we have real dimensions
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const obs = new ResizeObserver(entries => setContainerW(entries[0].contentRect.width));
+    const obs = new ResizeObserver(entries => {
+      const w = entries[0].contentRect.width;
+      if (w === 0) return;
+      setContainerW(w);
+      // On first measurement, compute layout if positions are empty or stale
+      if (!layoutComputedRef.current) {
+        layoutComputedRef.current = true;
+        const stks = deal.stakeholders;
+        const effectiveNodeW = isMobile ? NODE_W_MOBILE : NODE_W;
+        const effectiveNodeH = isMobile ? NODE_H_MOBILE : NODE_H;
+        const fresh = computeInitialPositions(stks, deal.buyingStages ?? [], w, viewLayout, effectiveNodeW, effectiveNodeH);
+        setPositions(fresh);
+        if (viewLayout === 'concentric') circlePositionsRef.current = fresh;
+        else stagePositionsRef.current = fresh;
+      }
+    });
     obs.observe(el);
     return () => obs.disconnect();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Auto-pan to newly added stakeholder ────────────────────────────
@@ -1043,8 +1062,8 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
         </div>
       )}
 
-      {/* Top-right controls */}
-      <div className="absolute top-14 right-3 z-20 flex flex-col gap-1.5">
+      {/* Top-right controls — on mobile, show at bottom to avoid covering nodes */}
+      <div className={isMobile ? "absolute bottom-20 right-3 z-20 flex flex-col gap-1.5" : "absolute top-14 right-3 z-20 flex flex-col gap-1.5"}>
         <div className="flex rounded-lg overflow-hidden border border-border/50 bg-muted/80 mb-1">
           {(['L7D', 'L14D', 'L30D'] as HeatWindow[]).map(w => (
             <button key={w} onClick={() => setHeatWindow(w)}
@@ -1320,8 +1339,9 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
         <div style={{ transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})`, transformOrigin: 'top left', width: '100%', minHeight: '100%', position: 'relative' }}>
           {/* Layout background: Concentric rings OR Stage columns */}
           {viewLayout === 'concentric' ? (() => {
-            const nodeW = NODE_W;
-            const { cx, cy, radii } = computeRingGeometry(localStakeholders, containerW);
+            const nodeW = isMobile ? NODE_W_MOBILE : NODE_W;
+            const nodeH = isMobile ? NODE_H_MOBILE : NODE_H;
+            const { cx, cy, radii } = computeRingGeometry(localStakeholders, containerW, nodeW, nodeH);
             const ringBaseColors = ['#6382ff', '#10b981', '#ef4444'];
             return (
               <svg className="absolute inset-0 w-full pointer-events-none" style={{ height: '100%', overflow: 'visible' }}>
@@ -1337,7 +1357,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                   const idx = radii.length - 1 - revIdx;
                   const isRingHovered = hoveredRingIdx === idx;
                   const isOtherHovered = hoveredRingIdx !== null && hoveredRingIdx !== idx;
-                  const ringR = r + nodeW / 2 + 30;
+                  const ringR = r + nodeW / 2 + (isMobile ? 16 : 30);
                   return (
                     <g key={idx} style={{ transition: 'opacity 0.2s' }} opacity={isOtherHovered ? 0.3 : 1}>
                       {/* Base fill */}

@@ -530,3 +530,10 @@
 - [x] Fix 1: isMobile=true → skip loadState(), always compute fresh positions
 - [x] Fix 2: isMobile=true → use window.innerWidth as containerW fallback (not 800/900px default)
 - [x] Fix 3: handleLayoutSwitch isMobile=true → always compute fresh layout, never use cached desktop positions
+
+## Mobile Map Root Cause Fix (March 29 - Round 5)
+- [x] Root cause 1: containerW initialized to 0 (was 800), ResizeObserver now triggers layout after real width measured
+- [x] Root cause 2: deal.id useEffect defers layout to ResizeObserver (setPositions([])) instead of computing with wrong width
+- [x] Root cause 3: Toolbar moved to bottom-right on mobile (bottom-20) so it no longer overlaps nodes
+- [x] Root cause 4: Concentric ring SVG background now uses mobile node dimensions (NODE_W_MOBILE/NODE_H_MOBILE)
+- [x] TypeScript 0 errors, 65 tests passing

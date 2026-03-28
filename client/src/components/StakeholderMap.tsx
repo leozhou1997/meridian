@@ -1271,7 +1271,27 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
 
         <div style={{ transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})`, transformOrigin: 'top left', width: '100%', minHeight: '100%', position: 'relative' }}>
           {/* Layout background: Concentric rings OR Stage columns */}
-          {viewLayout === 'concentric' ? null : (
+          {viewLayout === 'concentric' ? (() => {
+            const nodeW = compactMode ? COMPACT_NODE_W : NODE_W;
+            const { cx, cy, radii } = computeRingGeometry(localStakeholders, containerW, compactMode);
+            return (
+              <svg className="absolute inset-0 w-full pointer-events-none" style={{ height: '100%', overflow: 'visible' }}>
+                {[...radii].reverse().map((r, revIdx) => {
+                  const idx = radii.length - 1 - revIdx;
+                  return (
+                    <g key={idx}>
+                      <circle cx={cx} cy={cy} r={r + nodeW / 2 + 30}
+                        fill={RING_COLORS[idx]}
+                        stroke={RING_COLORS[idx].replace(/[\d.]+\)$/, '0.3)')}
+                        strokeWidth="1"
+                        strokeDasharray="6 4"
+                      />
+                    </g>
+                  );
+                })}
+              </svg>
+            );
+          })() : (
             /* Stage column lanes — colored vertical rectangles with editable titles */
             <div className="absolute inset-0 w-full h-full" style={{ pointerEvents: 'none' }}>
               <div className="flex w-full h-full">

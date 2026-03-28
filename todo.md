@@ -284,3 +284,7 @@
 
 - [x] Remove concentric ring background circles and center DEAL label from Stakeholder Map
 - [x] Fix Stakeholder Profile modal: content not scrollable (replace ScrollArea with overflow-y-auto div)
+
+## Stakeholder Map Ring Fix (March 28)
+
+- [x] Restore concentric ring backgrounds (colored fills + dashed borders), remove only the center gray dot and DEAL label

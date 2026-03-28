@@ -519,3 +519,8 @@
 - [ ] Mobile node tap: show bottom detail card (name, role, sentiment, interactions, next action) — deferred
 - [x] Pass isMobile=true from MobileMapSheet
 - [x] initialZoom=0.75 for mobile (compact nodes are smaller so fit better); layout uses NODE_W_MOBILE=72 NODE_H_MOBILE=82
+
+## Mobile Map Bugs (March 28 - Round 3)
+- [x] Fix: duplicate Rachel Torres node in mobile map — deleted orphan stakeholder id=120001 (empty title, User role) from DB
+- [x] Fix: Circle→Stage layout switch now uses effNodeW/effNodeH (mobile dims) in handleLayoutSwitch
+- [x] Fix: connNodeW/connNodeH now use NODE_W_MOBILE/NODE_H_MOBILE when isMobile=true — arrows now start/end at correct node edges

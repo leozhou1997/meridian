@@ -1,0 +1,9 @@
+{
+  "query": "DELETE FROM stakeholders WHERE id = '120001' AND name = 'Rachel Torres' AND title = '' AND role = 'User';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute DELETE FROM stakeholders WHERE id = '120001' AND name = 'Rachel Torres' AND title = '' AND role = 'User';",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 396
+}

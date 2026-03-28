@@ -1,0 +1,24 @@
+{
+  "query": "SELECT id, dealId, name, title, role FROM stakeholders WHERE name LIKE '%Rachel Torres%' ORDER BY dealId, id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute SELECT id, dealId, name, title, role FROM stakeholders WHERE name LIKE '%Rachel Torres%' ORDER BY dealId, id;",
+  "rows": [
+    {
+      "id": "90003",
+      "dealId": "1",
+      "name": "Rachel Torres",
+      "title": "Director of Revenue Operations",
+      "role": "Influencer"
+    },
+    {
+      "id": "120001",
+      "dealId": "1",
+      "name": "Rachel Torres",
+      "title": "",
+      "role": "User"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tdealId\tname\ttitle\trole\n90003\t1\tRachel Torres\tDirector of Revenue Operations\tInfluencer\n120001\t1\tRachel Torres\t\tUser\n",
+  "stderr": "",
+  "execution_time_ms": 463
+}

@@ -1,0 +1,9 @@
+{
+  "query": "SELECT dealId, name, COUNT(*) as cnt FROM stakeholders GROUP BY dealId, name HAVING cnt > 1 ORDER BY dealId;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute SELECT dealId, name, COUNT(*) as cnt FROM stakeholders GROUP BY dealId, name HAVING cnt > 1 ORDER BY dealId;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 353
+}

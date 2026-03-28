@@ -738,15 +738,15 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     const validIds = new Set(localStakeholders.map(s => String(s.id)));
     const validCached = cached.filter(p => validIds.has(String(p.id)));
 
+    const effNodeW = isMobile ? NODE_W_MOBILE : NODE_W;
+    const effNodeH = isMobile ? NODE_H_MOBILE : NODE_H;
     if (validCached.length === localStakeholders.length) {
-      const nodeH = NODE_H;
-      const nodeW = NODE_W;
       const cardGap = CARD_GAP;
-      const maxX = actualW - nodeW;
-      setPositions(resolveCollisions(validCached, null, 0, 0, maxX, nodeH, nodeW, cardGap));
+      const maxX = actualW - effNodeW;
+      setPositions(resolveCollisions(validCached, null, 0, 0, maxX, effNodeH, effNodeW, cardGap));
     } else {
       // No cached positions — compute fresh layout
-      const fresh = computeInitialPositions(localStakeholders, stages, actualW, newLayout);
+      const fresh = computeInitialPositions(localStakeholders, stages, actualW, newLayout, effNodeW, effNodeH);
       setPositions(fresh);
       if (newLayout === 'concentric') circlePositionsRef.current = fresh;
       else stagePositionsRef.current = fresh;
@@ -1445,8 +1445,8 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
           {/* SVG connections — rendered BEFORE cards so lines stay BEHIND cards (z-10 < z-20) */}
           {(() => {
             const svgPE: React.CSSProperties['pointerEvents'] = mode === 'edit' ? 'all' : 'none';
-            const connNodeW = NODE_W;
-            const connNodeH = NODE_H;
+            const connNodeW = isMobile ? NODE_W_MOBILE : NODE_W;
+            const connNodeH = isMobile ? NODE_H_MOBILE : NODE_H;
 
             // Compute the point on the edge of a card rectangle that is closest to a target point
             const getEdgePoint = (cardX: number, cardY: number, targetX: number, targetY: number) => {

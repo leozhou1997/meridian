@@ -32,6 +32,7 @@ interface StakeholderMapProps {
   onBuyingStagesChange?: (stages: string[]) => void;
   highlightedStakeholderId?: number | null;
   initialZoom?: number;
+  isMobile?: boolean;
 }
 
 interface NodePosition { id: string; x: number; y: number; }
@@ -280,9 +281,11 @@ interface RingGeometry {
 function computeRingGeometry(
   stakeholders: Stakeholder[],
   containerW: number,
+  nodeWOverride?: number,
+  nodeHOverride?: number,
 ): RingGeometry {
-  const nodeW = NODE_W;
-  const nodeH = NODE_H;
+  const nodeW = nodeWOverride ?? NODE_W;
+  const nodeH = nodeHOverride ?? NODE_H;
   const gap = CARD_GAP;
 
   const rings: Stakeholder[][] = [[], [], []];
@@ -331,9 +334,11 @@ function computeRingGeometry(
 function computeConcentricPositions(
   stakeholders: Stakeholder[],
   containerW: number,
+  nodeWOverride?: number,
+  nodeHOverride?: number,
 ): NodePosition[] {
-  const nodeW = NODE_W;
-  const nodeH = NODE_H;
+  const nodeW = nodeWOverride ?? NODE_W;
+  const nodeH = nodeHOverride ?? NODE_H;
 
   if (stakeholders.length === 0) return [];
 
@@ -344,7 +349,7 @@ function computeConcentricPositions(
   });
 
   // Use shared geometry function
-  const { cx, cy, radii: scaledRadii } = computeRingGeometry(stakeholders, containerW);
+  const { cx, cy, radii: scaledRadii } = computeRingGeometry(stakeholders, containerW, nodeW, nodeH);
 
   const raw: NodePosition[] = [];
 
@@ -401,9 +406,11 @@ function computeStagePositions(
   stakeholders: Stakeholder[],
   stages: string[],
   containerW: number,
+  nodeWOverride?: number,
+  nodeHOverride?: number,
 ): NodePosition[] {
-  const nodeW = NODE_W;
-  const nodeH = NODE_H;
+  const nodeW = nodeWOverride ?? NODE_W;
+  const nodeH = nodeHOverride ?? NODE_H;
   const gap = CARD_GAP;
 
   if (stakeholders.length === 0 || stages.length === 0) return [];
@@ -448,11 +455,13 @@ function computeInitialPositions(
   stages: string[],
   containerW: number,
   layout: ViewLayout = 'concentric',
+  nodeWOverride?: number,
+  nodeHOverride?: number,
 ): NodePosition[] {
   if (layout === 'stages' && stages.length > 0) {
-    return computeStagePositions(stakeholders, stages, containerW);
+    return computeStagePositions(stakeholders, stages, containerW, nodeWOverride, nodeHOverride);
   }
-  return computeConcentricPositions(stakeholders, containerW);
+  return computeConcentricPositions(stakeholders, containerW, nodeWOverride, nodeHOverride);
 }
 
 // ── Sentiment helpers ─────────────────────────────────────────────────────────
@@ -463,7 +472,11 @@ const sentimentLabel = (s: string) =>
   s === 'Positive' ? 'text-emerald-400' : s === 'Neutral' ? 'text-amber-400' : 'text-red-400';
 
 // ── Component ─────────────────────────────────────────────────────────────────
-export default function StakeholderMap({ deal, onStakeholderClick, onStakeholdersChange, onBuyingStagesChange, highlightedStakeholderId, initialZoom }: StakeholderMapProps) {
+// Mobile-compact node dimensions
+const NODE_W_MOBILE = 72;
+const NODE_H_MOBILE = 82;
+
+export default function StakeholderMap({ deal, onStakeholderClick, onStakeholdersChange, onBuyingStagesChange, highlightedStakeholderId, initialZoom, isMobile = false }: StakeholderMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerW, setContainerW] = useState(800);
   const [mode, setMode] = useState<'view' | 'edit'>('view');
@@ -527,7 +540,9 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     setLocalStakeholders(stks);
 
     const actualW = containerRef.current?.getBoundingClientRect().width || containerW || 900;
-    const maxX = actualW - NODE_W;
+    const effectiveNodeW = isMobile ? NODE_W_MOBILE : NODE_W;
+    const effectiveNodeH = isMobile ? NODE_H_MOBILE : NODE_H;
+    const maxX = actualW - effectiveNodeW;
     const saved = loadState(deal.id);
 
     if (saved && saved.positions.length > 0) {
@@ -551,7 +566,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
       }
     }
     // Fresh start — compute initial positions for current layout
-    const freshPositions = computeInitialPositions(stks, deal.buyingStages ?? [], actualW, viewLayout);
+    const freshPositions = computeInitialPositions(stks, deal.buyingStages ?? [], actualW, viewLayout, effectiveNodeW, effectiveNodeH);
     setPositions(freshPositions);
     if (viewLayout === 'concentric') circlePositionsRef.current = freshPositions;
     else stagePositionsRef.current = freshPositions;
@@ -1652,6 +1667,59 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
             const cardId = String(stakeholder.id);
             const isCardHovered = hoveredCardId === cardId;
             const isCardExpanded = mode === 'edit' || isCardHovered;
+
+            // ── Mobile compact node ──────────────────────────────────────────
+            if (isMobile) {
+              const roleColorClass = getRoleColor(stakeholder.role as any);
+              // Extract border color from role color class for the ring
+              const ringColor = stakeholder.role?.toLowerCase().includes('decision') || stakeholder.role?.toLowerCase().includes('champion')
+                ? '#6382ff'
+                : stakeholder.role?.toLowerCase().includes('blocker')
+                  ? '#ef4444'
+                  : stakeholder.role?.toLowerCase().includes('influencer')
+                    ? '#10b981'
+                    : '#f59e0b';
+              return (
+                <motion.div
+                  key={stakeholder.id}
+                  className={`absolute select-none z-20 stakeholder-node flex flex-col items-center`}
+                  style={{ left: pos.x, top: pos.y, width: NODE_W_MOBILE }}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: isRingDimmed ? 0.2 : 1, scale: isHighlighted ? 1.1 : 1 }}
+                  transition={{ duration: 0.2, delay: idx * 0.04 }}
+                  onClick={(e) => { e.stopPropagation(); handleNodeClick(e, stakeholder); }}
+                >
+                  {/* Avatar ring */}
+                  <div
+                    className="relative"
+                    style={{
+                      width: 52, height: 52,
+                      borderRadius: '50%',
+                      border: `2.5px solid ${ringColor}`,
+                      boxShadow: isHighlighted ? `0 0 0 3px ${ringColor}40` : 'none',
+                      overflow: 'hidden',
+                      background: 'hsl(var(--card))',
+                    }}
+                  >
+                    <StakeholderAvatar name={stakeholder.name} avatarUrl={stakeholder.avatar} size="sm" className="w-full h-full" />
+                    {/* Sentiment dot */}
+                    <div
+                      className="absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full border-2"
+                      style={{ backgroundColor: sentimentDot(stakeholder.sentiment), borderColor: 'hsl(var(--card))' }}
+                    />
+                  </div>
+                  {/* Name */}
+                  <div className="mt-1 text-center" style={{ width: NODE_W_MOBILE }}>
+                    <div className="text-[10px] font-semibold leading-tight truncate px-1" style={{ color: 'hsl(var(--foreground))' }}>
+                      {stakeholder.name.split(' ')[0]}
+                    </div>
+                    <div className="text-[8px] leading-tight truncate px-1" style={{ color: ringColor, opacity: 0.9 }}>
+                      {stakeholder.role}
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            }
 
             return (
               <motion.div

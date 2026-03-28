@@ -2058,13 +2058,14 @@ function MobileMapSheet({
       {/* Full-screen map canvas */}
       <div className="flex-1 min-h-0 overflow-hidden">
         <StakeholderMap
-          key={`mobile-sheet-${deal.id}`}
+          key={`mobile-sheet-${deal.id}-mobile`}
           deal={deal}
           highlightedStakeholderId={hoveredStakeholderId}
           onStakeholderClick={onStakeholderClick}
           onStakeholdersChange={onStakeholdersChange}
           onBuyingStagesChange={onBuyingStagesChange}
-          initialZoom={0.55}
+          initialZoom={0.75}
+          isMobile={true}
         />
       </div>
     </div>

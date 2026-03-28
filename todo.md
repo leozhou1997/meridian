@@ -512,3 +512,10 @@
 - [x] Zoom out map canvas on mobile open: set initial zoom to ~0.55 so all nodes visible at once (added initialZoom prop to StakeholderMap)
 - [x] Replace hidden trigger bar with always-visible floating "Map" button on Deal page (bottom-right, above FAB at bottom-[136px])
 - [x] Remove old trigger bar from DealInsightPanel bottom (no longer needed)
+
+## Mobile Map Node Redesign (March 28 - Round 2)
+- [x] Add isMobile prop to StakeholderMap for compact node rendering
+- [x] Mobile nodes: avatar circle (52px) + first name + role label — no interaction count, no heat bar, no title
+- [ ] Mobile node tap: show bottom detail card (name, role, sentiment, interactions, next action) — deferred
+- [x] Pass isMobile=true from MobileMapSheet
+- [x] initialZoom=0.75 for mobile (compact nodes are smaller so fit better); layout uses NODE_W_MOBILE=72 NODE_H_MOBILE=82

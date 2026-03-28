@@ -269,3 +269,9 @@
 - [x] Fix ring SVG background misalignment: use computeRingGeometry() for both card positions and SVG circles
 - [x] Fix connection lines not rendering: buildDefaultConnections now uses role-based logic instead of stage-based
 - [x] Delete stale demo deals (Adidas AG, MiraclePlus) from database
+
+## Stakeholder Map UX Fixes (March 28 - Round 2)
+
+- [x] Fix duplicate profile modal: clicking a card opens two overlapping modals — root cause was duplicate onStakeholderClick call in handleMouseUp AND handleNodeClick; removed from handleMouseUp
+- [x] Fix connection lines overlapping cards: SVG moved before cards (z-10 < z-20), edge-to-edge routing from card border not center, hover-only labels
+- [x] Increase spacing between cards: ring radii scale dynamically, edge gap added to getEdgePoint()

@@ -497,6 +497,8 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
   // ── Hover tooltip state ───────────────────────────────────────────────────
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [hoverPos, setHoverPos] = useState({ x: 0, y: 0 });
+  // ── Hovered connection (for hover-only labels) ────────────────────────────
+  const [hoveredConnId, setHoveredConnId] = useState<string | null>(null);
 
   // ── Expanded interaction history on cards ─────────────────────────────────
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
@@ -773,19 +775,9 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
   }, [dragging, dragStart, zoom, containerW, dragMoved]);
 
   const handleMouseUp = useCallback(() => {
-    if (dragging && !dragMoved) {
-      const stakeholder = localStakeholders.find(s => String(s.id) === dragging);
-      if (stakeholder) {
-        setHoveredId(null);
-        setModalStakeholder(stakeholder);
-        setIsEditingModal(false);
-        setEditName(stakeholder.name);
-        setEditTitle(stakeholder.title);
-        setEditSentiment(stakeholder.sentiment);
-        setEditRoles(stakeholder.roles ?? [stakeholder.role]);
-        onStakeholderClick?.(stakeholder);
-      }
-    }
+    // Note: if !dragMoved (i.e. it was a click, not a drag), the click event
+    // will naturally fire on the node and be handled by handleNodeClick.
+    // We do NOT call onStakeholderClick here to avoid double-firing.
     setDragging(null);
     setDragMoved(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1386,6 +1378,120 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
               </div>
             </div>
           )}
+          {/* SVG connections — rendered BEFORE cards so lines stay BEHIND cards (z-10 < z-20) */}
+          {(() => {
+            const svgPE: React.CSSProperties['pointerEvents'] = mode === 'edit' ? 'all' : 'none';
+            const connNodeW = compactMode ? COMPACT_NODE_W : NODE_W;
+            const connNodeH = compactMode ? COMPACT_NODE_H : NODE_H;
+
+            // Compute the point on the edge of a card rectangle that is closest to a target point
+            const getEdgePoint = (cardX: number, cardY: number, targetX: number, targetY: number) => {
+              const cx = cardX + connNodeW / 2;
+              const cy = cardY + connNodeH / 2;
+              const dx = targetX - cx;
+              const dy = targetY - cy;
+              if (dx === 0 && dy === 0) return { x: cx, y: cy };
+              const halfW = connNodeW / 2 + 6; // +6px gap from card edge
+              const halfH = connNodeH / 2 + 6;
+              const scaleX = halfW / Math.abs(dx);
+              const scaleY = halfH / Math.abs(dy);
+              const scale = Math.min(scaleX, scaleY);
+              return { x: cx + dx * scale, y: cy + dy * scale };
+            };
+
+            return (
+              <svg className="absolute inset-0 w-full h-full" style={{ overflow: 'visible', pointerEvents: svgPE, zIndex: 10 }}>
+                <defs>
+                  {CONNECTION_TYPES.map(ct => (
+                    <marker
+                      key={ct.value}
+                      id={`arrow-${ct.value}`}
+                      markerWidth="10" markerHeight="8"
+                      refX="9" refY="4"
+                      orient="auto"
+                    >
+                      <polygon points="0 0, 10 4, 0 8" fill={ct.color} opacity="0.85" />
+                    </marker>
+                  ))}
+                </defs>
+                {connections.map(conn => {
+                  const fromPos = getPos(conn.from);
+                  const toPos = getPos(conn.to);
+                  if (!fromPos || !toPos) return null;
+
+                  // Card centers
+                  const fcx = fromPos.x + connNodeW / 2;
+                  const fcy = fromPos.y + connNodeH / 2;
+                  const tcx = toPos.x + connNodeW / 2;
+                  const tcy = toPos.y + connNodeH / 2;
+
+                  // Edge-to-edge: start from edge of source card toward target center,
+                  // end at edge of target card toward source center
+                  const from = getEdgePoint(fromPos.x, fromPos.y, tcx, tcy);
+                  const to   = getEdgePoint(toPos.x,   toPos.y,   fcx, fcy);
+
+                  // Cubic bezier control points — gentle curve
+                  const cpx1 = from.x + (to.x - from.x) * 0.4;
+                  const cpy1 = from.y + (to.y - from.y) * 0.15;
+                  const cpx2 = from.x + (to.x - from.x) * 0.6;
+                  const cpy2 = from.y + (to.y - from.y) * 0.85;
+
+                  // Midpoint on bezier at t=0.5 for label placement
+                  const t = 0.5;
+                  const mt = 1 - t;
+                  const mx = mt*mt*mt*from.x + 3*mt*mt*t*cpx1 + 3*mt*t*t*cpx2 + t*t*t*to.x;
+                  const my = mt*mt*mt*from.y + 3*mt*mt*t*cpy1 + 3*mt*t*t*cpy2 + t*t*t*to.y;
+
+                  const cfg = connConfig(conn.type);
+                  const isSelected = selectedConnId === conn.id;
+                  const isHovered = hoveredConnId === conn.id;
+                  const showLabel = isSelected || isHovered;
+
+                  return (
+                    <g key={conn.id}>
+                      {/* Wide invisible hit area for hover/click */}
+                      <path
+                        d={`M ${from.x} ${from.y} C ${cpx1} ${cpy1}, ${cpx2} ${cpy2}, ${to.x} ${to.y}`}
+                        fill="none" stroke="transparent" strokeWidth="16"
+                        style={{ cursor: mode === 'edit' ? 'pointer' : 'default', pointerEvents: 'stroke' }}
+                        onMouseEnter={() => setHoveredConnId(conn.id)}
+                        onMouseLeave={() => setHoveredConnId(null)}
+                        onClick={(e) => handleConnClick(e as unknown as React.MouseEvent, conn.id)}
+                      />
+                      {/* Visible line */}
+                      <path
+                        d={`M ${from.x} ${from.y} C ${cpx1} ${cpy1}, ${cpx2} ${cpy2}, ${to.x} ${to.y}`}
+                        fill="none"
+                        stroke={isSelected ? 'rgba(255,255,255,0.9)' : cfg.color}
+                        strokeWidth={isSelected ? 3 : isHovered ? 2.5 : 1.8}
+                        strokeDasharray={cfg.dash === 'none' ? undefined : cfg.dash}
+                        opacity={isSelected || isHovered ? 1 : 0.65}
+                        markerEnd={`url(#arrow-${conn.type})`}
+                        style={{ pointerEvents: 'none', transition: 'opacity 0.15s, stroke-width 0.15s' }}
+                      />
+                      {/* Label — only visible on hover or selection */}
+                      {showLabel && (
+                        <>
+                          <rect
+                            x={mx - 32} y={my - 14}
+                            width="64" height="18" rx="4"
+                            fill="hsl(var(--card))" opacity="0.92"
+                            style={{ pointerEvents: 'none' }}
+                          />
+                          <text x={mx} y={my - 2} textAnchor="middle" fontSize="10"
+                            fill={cfg.color} fontWeight="700"
+                            style={{ pointerEvents: 'none', userSelect: 'none', fontFamily: 'var(--font-mono, monospace)' }}
+                          >
+                            {cfg.label}
+                          </text>
+                        </>
+                      )}
+                    </g>
+                  );
+                })}
+              </svg>
+            );
+          })()}
           {/* Stakeholder nodes — z-20 base, z-30 when dragging */}
           {localStakeholders.map((stakeholder, idx) => {
             const pos = getPos(String(stakeholder.id));
@@ -1697,81 +1803,6 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
               </motion.div>
             );
           })}
-          {/* SVG connections — rendered AFTER cards so z-index 25 puts lines above z-20 cards */}
-          {(() => {
-            const svgPE: React.CSSProperties['pointerEvents'] = mode === 'edit' ? 'all' : 'none';
-            return (
-          <svg className="absolute inset-0 w-full h-full" style={{ overflow: 'visible', pointerEvents: svgPE, zIndex: 25 }}>
-            <defs>
-              {CONNECTION_TYPES.map(ct => (
-                <marker
-                  key={ct.value}
-                  id={`arrow-${ct.value}`}
-                  markerWidth="12" markerHeight="10"
-                  refX="11" refY="5"
-                  orient="auto"
-                >
-                  <polygon points="0 0, 12 5, 0 10" fill={ct.color} />
-                </marker>
-              ))}
-            </defs>
-            {connections.map(conn => {
-              const fromPos = getPos(conn.from);
-              const toPos = getPos(conn.to);
-              if (!fromPos || !toPos) return null;
-              const connNodeW = compactMode ? COMPACT_NODE_W : NODE_W;
-              const connNodeH = compactMode ? COMPACT_NODE_H : NODE_H;
-              const fx = fromPos.x + connNodeW / 2;
-              const fy = fromPos.y + connNodeH / 2;
-              const tx = toPos.x + connNodeW / 2;
-              const ty = toPos.y + connNodeH / 2;
-              const cpx1 = fx + (tx - fx) * 0.4;
-              const cpx2 = fx + (tx - fx) * 0.6;
-              const cfg = connConfig(conn.type);
-              const isSelected = selectedConnId === conn.id;
-              const t = 0.5;
-              const mt = 1 - t;
-              const mx = mt*mt*mt*fx + 3*mt*mt*t*cpx1 + 3*mt*t*t*cpx2 + t*t*t*tx;
-              const my = mt*mt*mt*fy + 3*mt*mt*t*fy  + 3*mt*t*t*ty  + t*t*t*ty;
-              const dxdt = 3*mt*mt*(cpx1-fx) + 6*mt*t*(cpx2-cpx1) + 3*t*t*(tx-cpx2);
-              const dydt = 3*mt*mt*(fy-fy)   + 6*mt*t*(ty-fy)     + 3*t*t*(ty-ty);
-              const angle = Math.atan2(dydt, dxdt) * 180 / Math.PI;
-              return (
-                <g key={conn.id}>
-                  <path d={`M ${fx} ${fy} C ${cpx1} ${fy}, ${cpx2} ${ty}, ${tx} ${ty}`}
-                    fill="none" stroke="transparent" strokeWidth="14"
-                    style={{ cursor: mode === 'edit' ? 'pointer' : 'default' }}
-                    onClick={(e) => handleConnClick(e as unknown as React.MouseEvent, conn.id)}
-                  />
-                  <path d={`M ${fx} ${fy} C ${cpx1} ${fy}, ${cpx2} ${ty}, ${tx} ${ty}`}
-                    fill="none"
-                    stroke={isSelected ? 'rgba(255,255,255,0.9)' : cfg.color}
-                    strokeWidth={isSelected ? 4 : 2.5}
-                    strokeDasharray={cfg.dash === 'none' ? undefined : cfg.dash}
-                    style={{ pointerEvents: 'none' }}
-                  />
-                  <circle cx={fx} cy={fy} r={isSelected ? 6 : 4}
-                    fill={isSelected ? 'rgba(255,255,255,0.9)' : cfg.color}
-                    style={{ pointerEvents: 'none' }}
-                  />
-                  <polygon
-                    points="-8,-5 7,0 -8,5"
-                    fill={isSelected ? 'rgba(255,255,255,0.9)' : cfg.color}
-                    transform={`translate(${mx},${my}) rotate(${angle})`}
-                    style={{ pointerEvents: 'none' }}
-                  />
-                  <text x={mx} y={my - 12} textAnchor="middle" fontSize="10"
-                    fill={cfg.color} fontWeight="700" opacity="0.9"
-                    style={{ pointerEvents: 'none', userSelect: 'none', fontFamily: 'var(--font-mono, monospace)' }}
-                  >
-                    {cfg.label}
-                  </text>
-                </g>
-              );
-            })}
-          </svg>
-          );
-          })()}
         </div>
       </div>
 
@@ -1884,302 +1915,11 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
           </div>
         ))}
         <div className="w-px h-3 bg-border/40 mx-0.5" />
-        <div className="flex items-center gap-1.5">
+         <div className="flex items-center gap-1.5">
           <Flame className="w-3 h-3 text-orange-400" />
           <span>Heat = {heatWindow} touchpoints</span>
         </div>
       </div>
-
-      {/* ── Stakeholder Modal ─────────────────────────────────────────────── */}
-      <AnimatePresence>
-        {modalStakeholder && (() => {
-          const s = modalStakeholder;
-          const heat = getHeat(s);
-          const touchpoints = getTouchpointCount(s);
-          const allInteractions = localInteractions
-            .filter(i => i.keyParticipant.toLowerCase().includes(s.name.split(' ')[0].toLowerCase()))
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-          return (
-            <>
-              <motion.div
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="fixed inset-0 z-40 bg-background/60 backdrop-blur-md"
-                onClick={() => { setModalStakeholder(null); setIsEditingModal(false); }}
-              />
-              <motion.div
-                initial={{ opacity: 0, scale: 0.94, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.94, y: 20 }}
-                transition={{ duration: 0.2, ease: 'easeOut' }}
-                className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[580px] max-h-[82vh] overflow-hidden rounded-2xl bg-card border border-border/60 shadow-2xl flex flex-col"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {/* Modal header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-border/40">
-                  <div className="flex items-center gap-3">
-                    <div className="relative">
-                      <StakeholderAvatar name={s.name} avatarUrl={s.avatar} size="lg" className="w-14 h-14 border-2 border-background" />
-                      {isEditingModal && (
-                        <>
-                          <button onClick={() => fileInputRef.current?.click()}
-                            className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
-                          >
-                            <Camera className="w-4 h-4 text-white" />
-                          </button>
-                          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
-                        </>
-                      )}
-                      <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-card"
-                        style={{ backgroundColor: sentimentDot(s.sentiment) }}
-                      />
-                    </div>
-                    <div>
-                      {isEditingModal ? (
-                        <Input value={editName} onChange={e => setEditName(e.target.value)}
-                          className="h-7 text-sm font-semibold mb-1 bg-muted/50 border-border/50"
-                        />
-                      ) : (
-                        <div className="text-[15px] font-semibold">{s.name}</div>
-                      )}
-                      {isEditingModal ? (
-                        <Input value={editTitle} onChange={e => setEditTitle(e.target.value)}
-                          className="h-6 text-xs bg-muted/50 border-border/50"
-                        />
-                      ) : (
-                        <div className="text-[12px] text-muted-foreground">{s.title}</div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {isEditingModal ? (
-                      <>
-                        <button onClick={handleModalSave}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
-                        >
-                          <Check className="w-3 h-3" /> Save
-                        </button>
-                        <button onClick={() => setIsEditingModal(false)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted text-muted-foreground text-xs font-medium hover:bg-muted/80 transition-colors"
-                        >
-                          Cancel
-                        </button>
-                      </>
-                    ) : (
-                      <button onClick={() => setIsEditingModal(true)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted text-foreground text-xs font-medium hover:bg-muted/80 transition-colors"
-                      >
-                        <Edit2 className="w-3 h-3" /> Edit
-                      </button>
-                    )}
-                    <button onClick={() => { setModalStakeholder(null); setIsEditingModal(false); }}
-                      className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Modal body */}
-                <div className="overflow-y-auto flex-1 px-6 py-4 space-y-5">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Decision Stance</div>
-                      {isEditingModal ? (
-                        <div className="flex gap-2">
-                          {(['Positive', 'Neutral', 'Negative'] as const).map(sent => (
-                            <button key={sent} onClick={() => setEditSentiment(sent)}
-                              className={`flex-1 py-1.5 rounded-lg text-[11px] font-medium transition-colors border ${
-                                editSentiment === sent
-                                  ? sent === 'Positive' ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
-                                    : sent === 'Neutral' ? 'bg-amber-500/20 border-amber-500/50 text-amber-400'
-                                    : 'bg-red-500/20 border-red-500/50 text-red-400'
-                                  : 'bg-muted/40 border-border/30 text-muted-foreground hover:bg-muted/60'
-                              }`}
-                            >
-                              {sent}
-                            </button>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: sentimentDot(s.sentiment) }} />
-                          <span className={`text-[13px] font-medium ${sentimentLabel(s.sentiment)}`}>{s.sentiment}</span>
-                        </div>
-                      )}
-                    </div>
-                    {s.email && (
-                      <div>
-                        <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Contact</div>
-                        <a href={`mailto:${s.email}`} className="flex items-center gap-1.5 text-[11px] text-primary hover:underline">
-                          <Mail className="w-3 h-3" /> {s.email}
-                        </a>
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Roles</div>
-                    {isEditingModal ? (
-                      <div className="flex flex-wrap gap-2">
-                        {ALL_ROLES.map(r => {
-                          const active = editRoles.includes(r);
-                          return (
-                            <button key={r}
-                              onClick={() => setEditRoles(prev => active ? prev.filter(x => x !== r) : [...prev, r])}
-                              className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors border ${
-                                active ? 'bg-primary/20 border-primary/50 text-primary' : 'bg-muted/40 border-border/30 text-muted-foreground hover:bg-muted/60'
-                              }`}
-                            >
-                              {r}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="flex flex-wrap gap-1.5">
-                        {(s.roles ?? [s.role]).map(r => (
-                          <Badge key={r} variant="outline" className={`text-[11px] px-2 py-0.5 ${getRoleColor(r as Stakeholder['role'])}`}>{r}</Badge>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="p-3 rounded-xl bg-muted/30 border border-border/30">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-1.5">
-                        <Flame className="w-3.5 h-3.5" style={{ color: getHeatColor(heat) }} />
-                        <span className="text-[11px] font-semibold">Engagement Heat ({heatWindow})</span>
-                      </div>
-                      <span className="text-[11px] font-medium" style={{ color: getHeatColor(heat) }}>
-                        {touchpoints} touchpoints · {getHeatLabel(heat)}
-                      </span>
-                    </div>
-                    <div className="h-2.5 rounded-full bg-muted overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${heat * 100}%`, background: getHeatColor(heat) }} />
-                    </div>
-                  </div>
-
-                  {s.keyInsights && (
-                    <div>
-                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Key Insights</div>
-                      <p className="text-[12px] text-foreground/80 leading-relaxed">{s.keyInsights}</p>
-                    </div>
-                  )}
-
-                  {/* Full interaction history in modal — also editable */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                        Interaction History ({allInteractions.length})
-                      </div>
-                      <button
-                        onClick={() => addInteraction(s.name)}
-                        className="flex items-center gap-1 text-[10px] text-primary hover:text-primary/80 transition-colors"
-                      >
-                        <Plus className="w-3 h-3" /> Add
-                      </button>
-                    </div>
-                    <div className="space-y-2">
-                      {allInteractions.map(interaction => {
-                        const isEditingThis = editingInteraction === interaction.id;
-                        return (
-                          <div key={interaction.id}
-                            className={`rounded-lg border transition-colors ${
-                              isEditingThis
-                                ? 'bg-muted/50 border-primary/30 p-3'
-                                : 'bg-muted/20 border-border/20 p-2.5'
-                            }`}
-                          >
-                            {isEditingThis ? (
-                              <div className="space-y-2">
-                                <div className="flex gap-2">
-                                  <select
-                                    value={interaction.type}
-                                    onChange={(e) => updateInteraction(interaction.id, { type: e.target.value as Interaction['type'] })}
-                                    className="flex-1 text-[11px] bg-background border border-border/50 rounded px-2 py-1.5 text-foreground"
-                                  >
-                                    {INTERACTION_TYPES.map(t => (
-                                      <option key={t} value={t}>{t}</option>
-                                    ))}
-                                  </select>
-                                  <input
-                                    type="date"
-                                    value={typeof interaction.date === 'string' ? interaction.date : new Date(interaction.date).toISOString().slice(0, 10)}
-                                    onChange={(e) => updateInteraction(interaction.id, { date: e.target.value })}
-                                    className="text-[11px] bg-background border border-border/50 rounded px-2 py-1.5 text-foreground"
-                                  />
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <Clock className="w-3 h-3 text-muted-foreground shrink-0" />
-                                  <input
-                                    type="number"
-                                    value={interaction.duration}
-                                    onChange={(e) => updateInteraction(interaction.id, { duration: Number(e.target.value) })}
-                                    className="w-16 text-[11px] bg-background border border-border/50 rounded px-2 py-1.5 text-foreground"
-                                    min={1}
-                                  />
-                                  <span className="text-[11px] text-muted-foreground">minutes</span>
-                                </div>
-                                <textarea
-                                  value={interaction.summary}
-                                  onChange={(e) => updateInteraction(interaction.id, { summary: e.target.value })}
-                                  placeholder="Meeting notes..."
-                                  rows={3}
-                                  className="w-full text-[11px] bg-background border border-border/50 rounded px-2 py-1.5 text-foreground resize-none leading-relaxed"
-                                />
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={() => setEditingInteraction(null)}
-                                    className="flex-1 flex items-center justify-center gap-1.5 text-[11px] py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                                  >
-                                    <Check className="w-3 h-3" /> Save
-                                  </button>
-                                  <button
-                                    onClick={() => deleteInteraction(interaction.id)}
-                                    className="px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors text-[11px]"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="flex items-start gap-3">
-                                <div className="w-1.5 h-1.5 rounded-full bg-primary/60 mt-1.5 shrink-0" />
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-0.5">
-                                    <span className="text-[11px] font-medium">{interaction.type}</span>
-                                    <span className="text-[10px] text-muted-foreground">{(typeof interaction.date === 'string' ? interaction.date : new Date(interaction.date).toISOString().slice(0, 10)).slice(5)}</span>
-                                    <span className="text-[10px] text-muted-foreground ml-auto">{interaction.duration}m</span>
-                                    <button
-                                      onClick={() => setEditingInteraction(interaction.id)}
-                                      className="w-5 h-5 rounded flex items-center justify-center hover:bg-muted/60 transition-colors"
-                                    >
-                                      <Pencil className="w-3 h-3 text-muted-foreground/60" />
-                                    </button>
-                                  </div>
-                                  {interaction.summary && (
-                                    <p className="text-[11px] text-muted-foreground leading-relaxed">{interaction.summary}</p>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                      {allInteractions.length === 0 && (
-                        <div className="text-[11px] text-muted-foreground/60 text-center py-4">
-                          No interactions yet — click Add to record one
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            </>
-          );
-        })()}
-      </AnimatePresence>
     </div>
   );
 }

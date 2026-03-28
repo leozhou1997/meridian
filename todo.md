@@ -301,3 +301,12 @@
 - [x] Ring legend hover: highlight corresponding ring SVG circle + dim cards of other roles
 - [x] Auto-pan/zoom to newly added stakeholder after creation
 - [x] Redesign connection lines for non-compact mode: adaptive bow (80px+ for short connections), always-visible type dot at midpoint, glow effect on hover, larger arrow markers
+
+## Stakeholder Card Hover-Expand Redesign (March 28)
+
+- [x] Merge Compact/Full card modes into single hover-expand card (~148×76px collapsed, full detail on hover)
+- [x] Collapsed state: avatar + name + role badge, enough to identify the person without clutter
+- [x] Expanded state (hover): full card with title, sentiment, interaction count, last contact, notes
+- [x] Update ring radii and layout geometry for new smaller default card dimensions
+- [x] Update connection line routing to use collapsed card dimensions as base
+- [x] Remove the Compact/Full mode toggle button from the toolbar (no longer needed)

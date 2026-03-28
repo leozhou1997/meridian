@@ -20,7 +20,7 @@ import {
   ZoomIn, ZoomOut, Maximize2, Edit2, Eye, Plus, Trash2,
   Link2, Link2Off, Save, X, Check, Camera, Mail, Flame,
   GripVertical, ChevronDown, ChevronUp, Pencil, Clock, Calendar,
-  Layers, LayoutGrid, Minimize2, RotateCcw
+  Layers, LayoutGrid, RotateCcw
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { nanoid } from 'nanoid';
@@ -53,16 +53,10 @@ const CONNECTION_TYPES: { value: ConnectionType; label: string; color: string; d
   { value: 'blocks',       label: 'Blocks',       color: 'rgba(239,68,68,0.9)',    dash: '4 3' },
 ];
 
-const NODE_W = 200;
-// Realistic card height including avatar row, badges, heat bar, interaction toggle
-// Used ONLY for collision math — must be >= actual rendered height
-const NODE_H = 230;
-const CARD_GAP = 24; // minimum gap between card edges
-
-// Compact mode dimensions
-const COMPACT_NODE_W = 80;
-const COMPACT_NODE_H = 80;
-const COMPACT_CARD_GAP = 12;
+// Collapsed card dimensions (used for layout math — the default resting size)
+const NODE_W = 148;
+const NODE_H = 76;
+const CARD_GAP = 32; // minimum gap between card edges (more room for connection lines)
 
 type ViewLayout = 'concentric' | 'stages';
 
@@ -285,11 +279,10 @@ interface RingGeometry {
 function computeRingGeometry(
   stakeholders: Stakeholder[],
   containerW: number,
-  compact: boolean,
 ): RingGeometry {
-  const nodeW = compact ? COMPACT_NODE_W : NODE_W;
-  const nodeH = compact ? COMPACT_NODE_H : NODE_H;
-  const gap = compact ? COMPACT_CARD_GAP : CARD_GAP;
+  const nodeW = NODE_W;
+  const nodeH = NODE_H;
+  const gap = CARD_GAP;
 
   const rings: Stakeholder[][] = [[], [], []];
   stakeholders.forEach(s => {
@@ -303,8 +296,8 @@ function computeRingGeometry(
     return (n * minCardSpacing) / (2 * Math.PI);
   }
 
-  const BASE_INNER = compact ? 140 : 200;
-  const RING_GAP = compact ? 100 : 140;
+  const BASE_INNER = 200;
+  const RING_GAP = 140;
 
   const ringRadii: number[] = [];
   let prevOuter = 0;
@@ -323,12 +316,12 @@ function computeRingGeometry(
 
   const maxRadius = Math.max(...ringRadii.filter((_, i) => rings[i].length > 0));
   const cx = containerW / 2;
-  const SIDE_MARGIN = compact ? 20 : 40;
+  const SIDE_MARGIN = 40;
   const availableRadius = cx - nodeW / 2 - SIDE_MARGIN;
   const scaleFactor = maxRadius > availableRadius ? availableRadius / maxRadius : 1;
   const scaledRadii = ringRadii.map(r => r * scaleFactor);
   const scaledMaxRadius = maxRadius * scaleFactor;
-  const TOP_MARGIN = compact ? 60 : 80;
+  const TOP_MARGIN = 80;
   const cy = scaledMaxRadius + nodeH / 2 + TOP_MARGIN;
 
   return { cx, cy, radii: scaledRadii };
@@ -337,10 +330,9 @@ function computeRingGeometry(
 function computeConcentricPositions(
   stakeholders: Stakeholder[],
   containerW: number,
-  compact: boolean,
 ): NodePosition[] {
-  const nodeW = compact ? COMPACT_NODE_W : NODE_W;
-  const nodeH = compact ? COMPACT_NODE_H : NODE_H;
+  const nodeW = NODE_W;
+  const nodeH = NODE_H;
 
   if (stakeholders.length === 0) return [];
 
@@ -351,7 +343,7 @@ function computeConcentricPositions(
   });
 
   // Use shared geometry function
-  const { cx, cy, radii: scaledRadii } = computeRingGeometry(stakeholders, containerW, compact);
+  const { cx, cy, radii: scaledRadii } = computeRingGeometry(stakeholders, containerW);
 
   const raw: NodePosition[] = [];
 
@@ -408,11 +400,10 @@ function computeStagePositions(
   stakeholders: Stakeholder[],
   stages: string[],
   containerW: number,
-  compact: boolean,
 ): NodePosition[] {
-  const nodeW = compact ? COMPACT_NODE_W : NODE_W;
-  const nodeH = compact ? COMPACT_NODE_H : NODE_H;
-  const gap = compact ? COMPACT_CARD_GAP : CARD_GAP;
+  const nodeW = NODE_W;
+  const nodeH = NODE_H;
+  const gap = CARD_GAP;
 
   if (stakeholders.length === 0 || stages.length === 0) return [];
 
@@ -456,12 +447,11 @@ function computeInitialPositions(
   stages: string[],
   containerW: number,
   layout: ViewLayout = 'concentric',
-  compact: boolean = false,
 ): NodePosition[] {
   if (layout === 'stages' && stages.length > 0) {
-    return computeStagePositions(stakeholders, stages, containerW, compact);
+    return computeStagePositions(stakeholders, stages, containerW);
   }
-  return computeConcentricPositions(stakeholders, containerW, compact);
+  return computeConcentricPositions(stakeholders, containerW);
 }
 
 // ── Sentiment helpers ─────────────────────────────────────────────────────────
@@ -478,8 +468,6 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
   const [mode, setMode] = useState<'view' | 'edit'>('view');
   const [heatWindow, setHeatWindow] = useState<HeatWindow>('L14D');
   const [viewLayout, setViewLayout] = useState<ViewLayout>('concentric');
-  const [compactMode, setCompactMode] = useState(false);
-
   // ── Per-deal state ────────────────────────────────────────────────────────
   const [currentDealId, setCurrentDealId] = useState(deal.id);
   // Independent position caches for each layout
@@ -496,7 +484,8 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
 
   // ── Hover tooltip state ───────────────────────────────────────────────────
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const [hoverPos, setHoverPos] = useState({ x: 0, y: 0 });
+  // ── Hovered card ID (for hover-expand card design) ────────────────────────
+  const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
   // ── Hovered connection (for hover-only labels) ────────────────────────────
   const [hoveredConnId, setHoveredConnId] = useState<string | null>(null);
   // ── Hovered ring index (for legend highlight) ────────────────────────────
@@ -558,7 +547,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
       }
     }
     // Fresh start — compute initial positions for current layout
-    const freshPositions = computeInitialPositions(stks, deal.buyingStages ?? [], actualW, viewLayout, compactMode);
+    const freshPositions = computeInitialPositions(stks, deal.buyingStages ?? [], actualW, viewLayout);
     setPositions(freshPositions);
     if (viewLayout === 'concentric') circlePositionsRef.current = freshPositions;
     else stagePositionsRef.current = freshPositions;
@@ -587,8 +576,8 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     const containerEl = containerRef.current;
     const viewportW = containerEl?.clientWidth ?? containerW;
     const viewportH = containerEl?.clientHeight ?? 500;
-    const nodeW = compactMode ? COMPACT_NODE_W : NODE_W;
-    const nodeH = compactMode ? COMPACT_NODE_H : NODE_H;
+    const nodeW = NODE_W;
+    const nodeH = NODE_H;
     // Center the new card in the viewport
     const targetPanX = viewportW / 2 - (pos.x + nodeW / 2) * zoom;
     const targetPanY = viewportH / 2 - (pos.y + nodeH / 2) * zoom;
@@ -686,9 +675,9 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
 
   const handleRestoreVersion = (version: MapVersion) => {
     const { positions: p, connections: c, localInteractions: li } = version.state;
-    const nodeW = compactMode ? COMPACT_NODE_W : NODE_W;
-    const nodeH = compactMode ? COMPACT_NODE_H : NODE_H;
-    const cardGap = compactMode ? COMPACT_CARD_GAP : CARD_GAP;
+    const nodeW = NODE_W;
+    const nodeH = NODE_H;
+    const cardGap = CARD_GAP;
     const maxX = containerW - nodeW;
     setPositions(resolveCollisions(p, null, 0, 0, maxX, nodeH, nodeW, cardGap));
     setConnections(c);
@@ -706,7 +695,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     // Also clear the in-memory layout caches
     circlePositionsRef.current = [];
     stagePositionsRef.current = [];
-    const freshPositions = computeInitialPositions(localStakeholders, Array.isArray(deal.buyingStages) ? deal.buyingStages : [], containerW, viewLayout, compactMode);
+    const freshPositions = computeInitialPositions(localStakeholders, Array.isArray(deal.buyingStages) ? deal.buyingStages : [], containerW, viewLayout);
     setPositions(freshPositions);
     setConnections(buildDefaultConnections(localStakeholders, Array.isArray(deal.buyingStages) ? deal.buyingStages : []));
     setZoom(1);
@@ -731,28 +720,18 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     const validCached = cached.filter(p => validIds.has(String(p.id)));
 
     if (validCached.length === localStakeholders.length) {
-      const nodeH = compactMode ? COMPACT_NODE_H : NODE_H;
-      const nodeW = compactMode ? COMPACT_NODE_W : NODE_W;
-      const cardGap = compactMode ? COMPACT_CARD_GAP : CARD_GAP;
+      const nodeH = NODE_H;
+      const nodeW = NODE_W;
+      const cardGap = CARD_GAP;
       const maxX = actualW - nodeW;
       setPositions(resolveCollisions(validCached, null, 0, 0, maxX, nodeH, nodeW, cardGap));
     } else {
       // No cached positions — compute fresh layout
-      const fresh = computeInitialPositions(localStakeholders, stages, actualW, newLayout, compactMode);
+      const fresh = computeInitialPositions(localStakeholders, stages, actualW, newLayout);
       setPositions(fresh);
       if (newLayout === 'concentric') circlePositionsRef.current = fresh;
       else stagePositionsRef.current = fresh;
     }
-    setZoom(1);
-    setPanOffset({ x: 0, y: 0 });
-  };
-
-  // Toggle compact/expanded mode
-  const handleCompactToggle = () => {
-    const newCompact = !compactMode;
-    setCompactMode(newCompact);
-    const actualW = containerRef.current?.getBoundingClientRect().width || containerW;
-    setPositions(computeInitialPositions(localStakeholders, Array.isArray(deal.buyingStages) ? deal.buyingStages : [], actualW, viewLayout, newCompact));
     setZoom(1);
     setPanOffset({ x: 0, y: 0 });
   };
@@ -798,9 +777,9 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
 
     const rawX = dragStart.nx + dx;
     const rawY = dragStart.ny + dy;
-    const nodeW = compactMode ? COMPACT_NODE_W : NODE_W;
-    const nodeH = compactMode ? COMPACT_NODE_H : NODE_H;
-    const cardGap = compactMode ? COMPACT_CARD_GAP : CARD_GAP;
+    const nodeW = NODE_W;
+    const nodeH = NODE_H;
+    const cardGap = CARD_GAP;
     const maxX = (containerW / zoom) - nodeW;
     const clampedX = Math.max(0, Math.min(rawX, maxX));
     const clampedY = Math.max(0, rawY);
@@ -1077,18 +1056,6 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
           </button>
         </div>
 
-        {/* Compact / Expand toggle */}
-        <button
-          onClick={handleCompactToggle}
-          className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-medium transition-colors border border-border/50 ${
-            compactMode ? 'bg-primary text-primary-foreground' : 'bg-muted/80 text-muted-foreground hover:text-foreground'
-          }`}
-          title={compactMode ? 'Expand cards' : 'Compact view'}
-        >
-          {compactMode ? <Maximize2 className="w-3 h-3" /> : <Minimize2 className="w-3 h-3" />}
-          {compactMode ? 'Expand' : 'Compact'}
-        </button>
-
         {/* View / Edit mode */}
         <div className="flex rounded-lg overflow-hidden border border-border/50 bg-muted/80">
           <button
@@ -1329,8 +1296,8 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
         <div style={{ transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})`, transformOrigin: 'top left', width: '100%', minHeight: '100%', position: 'relative' }}>
           {/* Layout background: Concentric rings OR Stage columns */}
           {viewLayout === 'concentric' ? (() => {
-            const nodeW = compactMode ? COMPACT_NODE_W : NODE_W;
-            const { cx, cy, radii } = computeRingGeometry(localStakeholders, containerW, compactMode);
+            const nodeW = NODE_W;
+            const { cx, cy, radii } = computeRingGeometry(localStakeholders, containerW);
             const ringBaseColors = ['#6382ff', '#10b981', '#ef4444'];
             return (
               <svg className="absolute inset-0 w-full pointer-events-none" style={{ height: '100%', overflow: 'visible' }}>
@@ -1459,8 +1426,8 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
           {/* SVG connections — rendered BEFORE cards so lines stay BEHIND cards (z-10 < z-20) */}
           {(() => {
             const svgPE: React.CSSProperties['pointerEvents'] = mode === 'edit' ? 'all' : 'none';
-            const connNodeW = compactMode ? COMPACT_NODE_W : NODE_W;
-            const connNodeH = compactMode ? COMPACT_NODE_H : NODE_H;
+            const connNodeW = NODE_W;
+            const connNodeH = NODE_H;
 
             // Compute the point on the edge of a card rectangle that is closest to a target point
             const getEdgePoint = (cardX: number, cardY: number, targetX: number, targetY: number) => {
@@ -1675,294 +1642,288 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
             const cardRingIdx = getRing(stakeholder.role ?? '');
             const isRingDimmed = hoveredRingIdx !== null && hoveredRingIdx !== cardRingIdx;
 
-            // ── Compact mode: small avatar dot + name ──
-            if (compactMode) {
-              return (
-                <motion.div
-                  key={stakeholder.id}
-                  className={`absolute select-none z-20 flex flex-col items-center cursor-pointer stakeholder-node`}
-                  style={{ left: pos.x, top: pos.y, width: COMPACT_NODE_W, opacity: isRingDimmed ? 0.2 : undefined, transition: 'opacity 0.2s' }}
-                  initial={{ opacity: 0, scale: 0.5 }}
-                  animate={{ opacity: isRingDimmed ? 0.2 : 1, scale: isHighlighted ? 1.2 : 1 }}
-                  transition={{ duration: 0.25, delay: idx * 0.03 }}
-                  onMouseDown={(e) => handleMouseDown(e, String(stakeholder.id))}
-                  onMouseEnter={(e) => { setHoveredId(String(stakeholder.id)); setHoverPos({ x: e.clientX, y: e.clientY }); }}
-                  onMouseLeave={() => setHoveredId(null)}
-                  onClick={(e) => {
-                    if (reroutingConn) { handleRerouteTarget(e, String(stakeholder.id)); return; }
-                    if (connectingFrom === '__pending__') { setConnectingFrom(String(stakeholder.id)); return; }
-                    handleNodeClick(e, stakeholder);
-                  }}
-                >
-                  <div className={`relative w-10 h-10 rounded-full border-2 overflow-hidden transition-all ${
-                    isHighlighted ? 'border-primary shadow-lg shadow-primary/30 ring-2 ring-primary/40'
-                    : isConnSrc ? 'border-amber-400 shadow-lg'
-                    : 'border-border/60 hover:border-primary/50 hover:shadow-md'
-                  }`}>
-                    <StakeholderAvatar name={stakeholder.name} avatarUrl={stakeholder.avatar} size="sm" className="w-full h-full" />
-                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-card"
-                      style={{ backgroundColor: sentimentDot(stakeholder.sentiment) }}
-                    />
-                  </div>
-                  <div className="text-[9px] font-medium text-foreground/80 mt-1 text-center leading-tight max-w-[80px] truncate">
-                    {stakeholder.name.split(' ')[0]}
-                  </div>
-                  <div className="text-[8px] text-muted-foreground/60 truncate max-w-[80px]">
-                    {(stakeholder.roles ?? [stakeholder.role])[0]}
-                  </div>
-                </motion.div>
-              );
-            }
+            // ── Hover-expand card design ──
+            // In view mode: collapsed by default, expands on hover
+            // In edit mode: always expanded for drag/drop usability
+            const cardId = String(stakeholder.id);
+            const isCardHovered = hoveredCardId === cardId;
+            const isCardExpanded = mode === 'edit' || isCardHovered;
 
-            // ── Full card mode ──
             return (
               <motion.div
                 key={stakeholder.id}
-                className={`absolute select-none ${isDragging ? 'z-30' : 'z-20'} stakeholder-node`}
+                className={`absolute select-none ${isDragging ? 'z-30' : isCardHovered ? 'z-25' : 'z-20'} stakeholder-node`}
                 style={{ left: pos.x, top: pos.y, width: NODE_W }}
                 initial={{ opacity: 0, scale: 0.85 }}
-                animate={{ opacity: isRingDimmed ? 0.15 : 1, scale: isDragging ? 1.04 : 1 }}
+                animate={{ opacity: isRingDimmed ? 0.15 : 1, scale: isDragging ? 1.04 : isHighlighted ? 1.05 : 1 }}
                 transition={{ duration: 0.2, delay: idx * 0.04 }}
-                onMouseDown={(e) => handleMouseDown(e, String(stakeholder.id))}
-                onMouseEnter={(e) => {
+                onMouseDown={(e) => handleMouseDown(e, cardId)}
+                onMouseEnter={() => {
                   if (mode === 'edit' && dragging) return;
-                  setHoveredId(String(stakeholder.id));
-                  setHoverPos({ x: e.clientX, y: e.clientY });
+                  setHoveredCardId(cardId);
+                  setHoveredId(cardId);
                 }}
-                onMouseLeave={() => setHoveredId(null)}
+                onMouseLeave={() => {
+                  setHoveredCardId(null);
+                  setHoveredId(null);
+                }}
               >
                 <Card
                   className={`bg-card border transition-all duration-150 ${
                     mode === 'edit' ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
                   } ${
                     isHighlighted
-                      ? 'border-primary/80 shadow-xl shadow-primary/25 ring-2 ring-primary/40 scale-105'
+                      ? 'border-primary/80 shadow-xl shadow-primary/25 ring-2 ring-primary/40'
                       : isConnSrc
                         ? 'border-amber-400/80 shadow-lg shadow-amber-400/20 ring-1 ring-amber-400/30'
                         : (isPendingConn || isRerouting)
                           ? 'border-blue-400/60 hover:border-blue-400/90'
                           : isDragging
                             ? 'border-primary/40 shadow-xl'
-                            : 'border-border/50 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5'
+                            : isCardHovered
+                              ? 'border-primary/40 shadow-xl shadow-primary/10'
+                              : 'border-border/50 hover:border-primary/30'
                   }`}
                   onClick={(e) => {
-                    if (reroutingConn) { handleRerouteTarget(e, String(stakeholder.id)); return; }
-                    if (connectingFrom === '__pending__') { setConnectingFrom(String(stakeholder.id)); return; }
+                    if (reroutingConn) { handleRerouteTarget(e, cardId); return; }
+                    if (connectingFrom === '__pending__') { setConnectingFrom(cardId); return; }
                     handleNodeClick(e, stakeholder);
                   }}
                 >
-                  <CardContent className="p-3.5">
-                    {/* Drag handle — only visible in edit mode */}
-                    {mode === 'edit' && (
-                      <div className="flex items-center justify-center mb-1.5 -mt-1 opacity-40 hover:opacity-70 transition-opacity">
-                        <GripVertical className="w-4 h-4 text-muted-foreground" />
-                      </div>
-                    )}
-
-                    {/* Avatar + name row */}
-                    <div className="flex items-center gap-3 mb-3">
+                  <CardContent className="p-2.5">
+                    {/* ── Collapsed view: avatar + name + role badge + sentiment ── */}
+                    <div className="flex items-center gap-2">
                       <div className="relative shrink-0">
-                        <StakeholderAvatar name={stakeholder.name} avatarUrl={stakeholder.avatar} size="lg" className="border-2 border-background" />
-                        <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-card"
+                        <StakeholderAvatar name={stakeholder.name} avatarUrl={stakeholder.avatar} size="sm" className="border-2 border-background" />
+                        <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-card"
                           style={{ backgroundColor: sentimentDot(stakeholder.sentiment) }}
                         />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="text-[12px] font-semibold leading-tight truncate">{stakeholder.name}</div>
-                        <div className="text-[10px] text-muted-foreground leading-tight mt-0.5 truncate">{stakeholder.title}</div>
+                        <div className="text-[11px] font-semibold leading-tight truncate">{stakeholder.name}</div>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          {(stakeholder.roles ?? [stakeholder.role]).slice(0, 1).map(r => (
+                            <Badge key={r} variant="outline" className={`text-[8px] px-1 py-0 h-3.5 leading-none ${getRoleColor(r as Stakeholder['role'])}`}>
+                              {r}
+                            </Badge>
+                          ))}
+                        </div>
                       </div>
                       {mode === 'edit' && (
                         <button
                           onClick={(e) => handleRemoveStakeholder(stakeholder.id, e)}
-                          className="shrink-0 w-5 h-5 rounded flex items-center justify-center bg-destructive/10 hover:bg-destructive/20 text-destructive transition-colors"
+                          className="shrink-0 w-4 h-4 rounded flex items-center justify-center bg-destructive/10 hover:bg-destructive/20 text-destructive transition-colors"
                         >
-                          <Trash2 className="w-3 h-3" />
+                          <Trash2 className="w-2.5 h-2.5" />
                         </button>
                       )}
                     </div>
 
-                    {/* Role badges */}
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      {(stakeholder.roles ?? [stakeholder.role]).slice(0, 2).map(r => (
-                        <Badge key={r} variant="outline" className={`text-[9px] px-1.5 py-0 h-4 ${getRoleColor(r as Stakeholder['role'])}`}>
-                          {r}
-                        </Badge>
-                      ))}
-                    </div>
-
-                    {/* Heat bar */}
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1">
-                          <Flame className="w-2.5 h-2.5" style={{ color: heatColor }} />
-                          <span className="text-[9px] text-muted-foreground font-mono">{heatWindow}</span>
-                        </div>
-                        <span className="text-[9px] font-medium" style={{ color: heatColor }}>
-                          {touchpoints > 0 ? `${touchpoints} touchpoint${touchpoints !== 1 ? 's' : ''}` : 'No contact'}
-                        </span>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-muted/60 overflow-hidden">
+                    {/* ── Expanded details: visible on hover (view mode) or always (edit mode) ── */}
+                    <AnimatePresence>
+                      {isCardExpanded && (
                         <motion.div
-                          className="h-full rounded-full"
-                          style={{ background: heatColor }}
-                          initial={{ width: 0 }}
-                          animate={{ width: `${heat * 100}%` }}
-                          transition={{ duration: 0.6, ease: 'easeOut' }}
-                        />
-                      </div>
-                      <div className="text-[9px] text-muted-foreground">{getHeatLabel(heat)}</div>
-                    </div>
-
-                    {/* Expandable interaction history */}
-                    <div className="mt-2 border-t border-border/20 pt-2">
-                      <div className="flex items-center justify-between">
-                        <button
-                          className="flex items-center gap-1 text-[9px] text-muted-foreground hover:text-foreground transition-colors"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setExpandedCardId(isExpanded ? null : stakeholder.id);
-                          }}
-                          onMouseDown={(e) => e.stopPropagation()}
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.18, ease: 'easeOut' }}
+                          className="overflow-hidden"
                         >
-                          <span className="font-medium uppercase tracking-wider">
-                            {interactions.length} interaction{interactions.length !== 1 ? 's' : ''}
-                          </span>
-                          {isExpanded ? <ChevronUp className="w-3 h-3 ml-0.5" /> : <ChevronDown className="w-3 h-3 ml-0.5" />}
-                        </button>
-                        {/* Add interaction button */}
-                        <button
-                          className="w-4 h-4 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            addInteraction(stakeholder.name);
-                            setExpandedCardId(stakeholder.id);
-                          }}
-                          onMouseDown={(e) => e.stopPropagation()}
-                          title="Add interaction"
-                        >
-                          <Plus className="w-3 h-3" />
-                        </button>
-                      </div>
+                          <div className="mt-2 pt-2 border-t border-border/20">
+                            {/* Drag handle — only visible in edit mode */}
+                            {mode === 'edit' && (
+                              <div className="flex items-center justify-center mb-1.5 -mt-1 opacity-40 hover:opacity-70 transition-opacity">
+                                <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
+                              </div>
+                            )}
 
-                      <AnimatePresence>
-                        {isExpanded && (
-                          <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="overflow-hidden"
-                          >
-                            <div className="mt-1.5 space-y-2 max-h-64 overflow-y-auto pr-0.5">
-                              {interactions.slice(0, 8).map(interaction => {
-                                const isEditingThis = editingInteraction === interaction.id;
-                                return (
-                                  <div
-                                    key={interaction.id}
-                                    className={`rounded-lg border transition-colors ${
-                                      isEditingThis
-                                        ? 'bg-muted/50 border-primary/30 p-2'
-                                        : 'bg-muted/20 border-border/20 p-1.5'
-                                    }`}
-                                    onMouseDown={(e) => e.stopPropagation()}
-                                  >
-                                    {isEditingThis ? (
-                                      /* ── Edit mode for this interaction ── */
-                                      <div className="space-y-1.5">
-                                        {/* Type + Date row */}
-                                        <div className="flex gap-1.5">
-                                          <select
-                                            value={interaction.type}
-                                            onChange={(e) => updateInteraction(interaction.id, { type: e.target.value as Interaction['type'] })}
-                                            className="flex-1 text-[9px] bg-background border border-border/50 rounded px-1.5 py-1 text-foreground"
-                                            onClick={(e) => e.stopPropagation()}
-                                          >
-                                            {INTERACTION_TYPES.map(t => (
-                                              <option key={t} value={t}>{t}</option>
-                                            ))}
-                                          </select>
-                                          <input
-                                            type="date"
-                                            value={typeof interaction.date === 'string' ? interaction.date : new Date(interaction.date).toISOString().slice(0, 10)}
-                                            onChange={(e) => updateInteraction(interaction.id, { date: e.target.value })}
-                                            className="w-24 text-[9px] bg-background border border-border/50 rounded px-1.5 py-1 text-foreground"
-                                            onClick={(e) => e.stopPropagation()}
-                                          />
-                                        </div>
-                                        {/* Duration */}
-                                        <div className="flex items-center gap-1.5">
-                                          <Clock className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
-                                          <input
-                                            type="number"
-                                            value={interaction.duration}
-                                            onChange={(e) => updateInteraction(interaction.id, { duration: Number(e.target.value) })}
-                                            className="w-14 text-[9px] bg-background border border-border/50 rounded px-1.5 py-1 text-foreground"
-                                            min={1}
-                                            onClick={(e) => e.stopPropagation()}
-                                          />
-                                          <span className="text-[9px] text-muted-foreground">min</span>
-                                        </div>
-                                        {/* Notes / summary */}
-                                        <textarea
-                                          value={interaction.summary}
-                                          onChange={(e) => updateInteraction(interaction.id, { summary: e.target.value })}
-                                          placeholder="Notes..."
-                                          rows={2}
-                                          className="w-full text-[9px] bg-background border border-border/50 rounded px-1.5 py-1 text-foreground resize-none leading-relaxed"
-                                          onClick={(e) => e.stopPropagation()}
-                                        />
-                                        {/* Save / Delete row */}
-                                        <div className="flex gap-1">
-                                          <button
-                                            className="flex-1 flex items-center justify-center gap-1 text-[9px] py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                                            onClick={(e) => { e.stopPropagation(); setEditingInteraction(null); }}
-                                          >
-                                            <Check className="w-2.5 h-2.5" /> Done
-                                          </button>
-                                          <button
-                                            className="flex items-center justify-center w-6 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
-                                            onClick={(e) => { e.stopPropagation(); deleteInteraction(interaction.id); }}
-                                          >
-                                            <Trash2 className="w-2.5 h-2.5" />
-                                          </button>
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      /* ── Read mode for this interaction ── */
-                                      <div>
-                                        <div className="flex items-center gap-1.5 mb-0.5">
-                                          <span className="text-[9px] font-semibold text-foreground/80 truncate">{interaction.type}</span>
-                                          <div className="flex items-center gap-1 ml-auto shrink-0">
-                                            <Calendar className="w-2.5 h-2.5 text-muted-foreground/60" />
-                                            <span className="text-[9px] text-muted-foreground">{(typeof interaction.date === 'string' ? interaction.date : new Date(interaction.date).toISOString().slice(0, 10)).slice(5)}</span>
-                                            <Clock className="w-2.5 h-2.5 text-muted-foreground/60 ml-1" />
-                                            <span className="text-[9px] text-muted-foreground">{interaction.duration}m</span>
-                                            <button
-                                              className="ml-1 w-4 h-4 rounded flex items-center justify-center hover:bg-muted/60 transition-colors"
-                                              onClick={(e) => { e.stopPropagation(); setEditingInteraction(interaction.id); }}
-                                            >
-                                              <Pencil className="w-2.5 h-2.5 text-muted-foreground/60 hover:text-foreground" />
-                                            </button>
-                                          </div>
-                                        </div>
-                                        {interaction.summary && (
-                                          <p className="text-[9px] text-muted-foreground leading-relaxed line-clamp-2">{interaction.summary}</p>
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                              {interactions.length > 8 && (
-                                <div className="text-[9px] text-muted-foreground/60 text-center py-0.5">
-                                  +{interactions.length - 8} more — open profile to view all
+                            {/* Job title */}
+                            {stakeholder.title && (
+                              <div className="text-[9px] text-muted-foreground mb-2 truncate">{stakeholder.title}</div>
+                            )}
+
+                            {/* Additional role badges */}
+                            {(stakeholder.roles ?? [stakeholder.role]).length > 1 && (
+                              <div className="flex flex-wrap gap-1 mb-2">
+                                {(stakeholder.roles ?? [stakeholder.role]).slice(1, 3).map(r => (
+                                  <Badge key={r} variant="outline" className={`text-[8px] px-1 py-0 h-3.5 leading-none ${getRoleColor(r as Stakeholder['role'])}`}>
+                                    {r}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Heat bar */}
+                            <div className="space-y-1 mb-2">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1">
+                                  <Flame className="w-2.5 h-2.5" style={{ color: heatColor }} />
+                                  <span className="text-[9px] text-muted-foreground font-mono">{heatWindow}</span>
                                 </div>
-                              )}
+                                <span className="text-[9px] font-medium" style={{ color: heatColor }}>
+                                  {touchpoints > 0 ? `${touchpoints} tp` : 'No contact'}
+                                </span>
+                              </div>
+                              <div className="h-1 rounded-full bg-muted/60 overflow-hidden">
+                                <motion.div
+                                  className="h-full rounded-full"
+                                  style={{ background: heatColor }}
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${heat * 100}%` }}
+                                  transition={{ duration: 0.5, ease: 'easeOut' }}
+                                />
+                              </div>
                             </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
+
+                            {/* Expandable interaction history */}
+                            <div className="border-t border-border/20 pt-1.5">
+                              <div className="flex items-center justify-between">
+                                <button
+                                  className="flex items-center gap-1 text-[9px] text-muted-foreground hover:text-foreground transition-colors"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setExpandedCardId(isExpanded ? null : stakeholder.id);
+                                  }}
+                                  onMouseDown={(e) => e.stopPropagation()}
+                                >
+                                  <span className="font-medium uppercase tracking-wider">
+                                    {interactions.length} interaction{interactions.length !== 1 ? 's' : ''}
+                                  </span>
+                                  {isExpanded ? <ChevronUp className="w-3 h-3 ml-0.5" /> : <ChevronDown className="w-3 h-3 ml-0.5" />}
+                                </button>
+                                <button
+                                  className="w-4 h-4 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    addInteraction(stakeholder.name);
+                                    setExpandedCardId(stakeholder.id);
+                                  }}
+                                  onMouseDown={(e) => e.stopPropagation()}
+                                  title="Add interaction"
+                                >
+                                  <Plus className="w-3 h-3" />
+                                </button>
+                              </div>
+
+                              <AnimatePresence>
+                                {isExpanded && (
+                                  <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="overflow-hidden"
+                                  >
+                                    <div className="mt-1.5 space-y-2 max-h-48 overflow-y-auto pr-0.5">
+                                      {interactions.slice(0, 6).map(interaction => {
+                                        const isEditingThis = editingInteraction === interaction.id;
+                                        return (
+                                          <div
+                                            key={interaction.id}
+                                            className={`rounded-lg border transition-colors ${
+                                              isEditingThis
+                                                ? 'bg-muted/50 border-primary/30 p-2'
+                                                : 'bg-muted/20 border-border/20 p-1.5'
+                                            }`}
+                                            onMouseDown={(e) => e.stopPropagation()}
+                                          >
+                                            {isEditingThis ? (
+                                              /* ── Edit mode for this interaction ── */
+                                              <div className="space-y-1.5">
+                                                <div className="flex gap-1.5">
+                                                  <select
+                                                    value={interaction.type}
+                                                    onChange={(e) => updateInteraction(interaction.id, { type: e.target.value as Interaction['type'] })}
+                                                    className="flex-1 text-[9px] bg-background border border-border/50 rounded px-1.5 py-1 text-foreground"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                  >
+                                                    {INTERACTION_TYPES.map(t => (
+                                                      <option key={t} value={t}>{t}</option>
+                                                    ))}
+                                                  </select>
+                                                  <input
+                                                    type="date"
+                                                    value={typeof interaction.date === 'string' ? interaction.date : new Date(interaction.date).toISOString().slice(0, 10)}
+                                                    onChange={(e) => updateInteraction(interaction.id, { date: e.target.value })}
+                                                    className="w-24 text-[9px] bg-background border border-border/50 rounded px-1.5 py-1 text-foreground"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                  />
+                                                </div>
+                                                <div className="flex items-center gap-1.5">
+                                                  <Clock className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
+                                                  <input
+                                                    type="number"
+                                                    value={interaction.duration}
+                                                    onChange={(e) => updateInteraction(interaction.id, { duration: Number(e.target.value) })}
+                                                    className="w-14 text-[9px] bg-background border border-border/50 rounded px-1.5 py-1 text-foreground"
+                                                    min={1}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                  />
+                                                  <span className="text-[9px] text-muted-foreground">min</span>
+                                                </div>
+                                                <textarea
+                                                  value={interaction.summary}
+                                                  onChange={(e) => updateInteraction(interaction.id, { summary: e.target.value })}
+                                                  placeholder="Notes..."
+                                                  rows={2}
+                                                  className="w-full text-[9px] bg-background border border-border/50 rounded px-1.5 py-1 text-foreground resize-none leading-relaxed"
+                                                  onClick={(e) => e.stopPropagation()}
+                                                />
+                                                <div className="flex gap-1">
+                                                  <button
+                                                    className="flex-1 flex items-center justify-center gap-1 text-[9px] py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                                                    onClick={(e) => { e.stopPropagation(); setEditingInteraction(null); }}
+                                                  >
+                                                    <Check className="w-2.5 h-2.5" /> Done
+                                                  </button>
+                                                  <button
+                                                    className="flex items-center justify-center w-6 rounded bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+                                                    onClick={(e) => { e.stopPropagation(); deleteInteraction(interaction.id); }}
+                                                  >
+                                                    <Trash2 className="w-2.5 h-2.5" />
+                                                  </button>
+                                                </div>
+                                              </div>
+                                            ) : (
+                                              /* ── Read mode for this interaction ── */
+                                              <div>
+                                                <div className="flex items-center gap-1.5 mb-0.5">
+                                                  <span className="text-[9px] font-semibold text-foreground/80 truncate">{interaction.type}</span>
+                                                  <div className="flex items-center gap-1 ml-auto shrink-0">
+                                                    <Calendar className="w-2.5 h-2.5 text-muted-foreground/60" />
+                                                    <span className="text-[9px] text-muted-foreground">{(typeof interaction.date === 'string' ? interaction.date : new Date(interaction.date).toISOString().slice(0, 10)).slice(5)}</span>
+                                                    <Clock className="w-2.5 h-2.5 text-muted-foreground/60 ml-1" />
+                                                    <span className="text-[9px] text-muted-foreground">{interaction.duration}m</span>
+                                                    <button
+                                                      className="ml-1 w-4 h-4 rounded flex items-center justify-center hover:bg-muted/60 transition-colors"
+                                                      onClick={(e) => { e.stopPropagation(); setEditingInteraction(interaction.id); }}
+                                                    >
+                                                      <Pencil className="w-2.5 h-2.5 text-muted-foreground/60 hover:text-foreground" />
+                                                    </button>
+                                                  </div>
+                                                </div>
+                                                {interaction.summary && (
+                                                  <p className="text-[9px] text-muted-foreground leading-relaxed line-clamp-2">{interaction.summary}</p>
+                                                )}
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
+                                      {interactions.length > 6 && (
+                                        <div className="text-[9px] text-muted-foreground/60 text-center py-0.5">
+                                          +{interactions.length - 6} more — open profile to view all
+                                        </div>
+                                      )}
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -1971,92 +1932,6 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
         </div>
       </div>
 
-      {/* Hover Tooltip */}
-      <AnimatePresence>
-        {hoveredId && !modalStakeholder && (() => {
-          const s = localStakeholders.find(x => x.id === hoveredId);
-          if (!s) return null;
-          const heat = getHeat(s);
-          const touchpoints = getTouchpointCount(s);
-          const recentInteractions = localInteractions
-            .filter(i => i.keyParticipant.toLowerCase().includes(s.name.split(' ')[0].toLowerCase()))
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-            .slice(0, 3);
-
-          const tooltipW = 260;
-          const left = hoverPos.x + 16 + tooltipW > window.innerWidth
-            ? hoverPos.x - tooltipW - 8
-            : hoverPos.x + 16;
-          const top = Math.min(hoverPos.y - 20, window.innerHeight - 320);
-
-          return (
-            <motion.div
-              key={hoveredId}
-              initial={{ opacity: 0, scale: 0.95, y: 4 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 4 }}
-              transition={{ duration: 0.15 }}
-              className="fixed z-50 pointer-events-none"
-              style={{ left, top, width: tooltipW }}
-            >
-              <div className="bg-card/95 backdrop-blur-md border border-border/60 rounded-xl shadow-2xl p-4">
-                <div className="flex items-center gap-3 mb-3">
-                  <StakeholderAvatar name={s.name} avatarUrl={s.avatar} size="md" className="border-2 border-background" />
-                  <div>
-                    <div className="text-[13px] font-semibold">{s.name}</div>
-                    <div className="text-[11px] text-muted-foreground">{s.title}</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 mb-3 flex-wrap">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: sentimentDot(s.sentiment) }} />
-                    <span className={`text-[11px] font-medium ${sentimentLabel(s.sentiment)}`}>{s.sentiment}</span>
-                  </div>
-                  {(s.roles ?? [s.role]).map(r => (
-                    <Badge key={r} variant="outline" className={`text-[9px] px-1.5 py-0 h-4 ${getRoleColor(r as Stakeholder['role'])}`}>{r}</Badge>
-                  ))}
-                </div>
-                <div className="mb-3 p-2 rounded-lg bg-muted/40">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <div className="flex items-center gap-1">
-                      <Flame className="w-3 h-3" style={{ color: getHeatColor(heat) }} />
-                      <span className="text-[10px] font-medium">Engagement ({heatWindow})</span>
-                    </div>
-                    <span className="text-[10px]" style={{ color: getHeatColor(heat) }}>{touchpoints} touchpoints</span>
-                  </div>
-                  <div className="h-2 rounded-full bg-muted overflow-hidden">
-                    <div className="h-full rounded-full transition-all" style={{ width: `${heat * 100}%`, background: getHeatColor(heat) }} />
-                  </div>
-                  <div className="text-[9px] text-muted-foreground mt-1">{getHeatLabel(heat)}</div>
-                </div>
-                {s.keyInsights && (
-                  <div className="mb-3">
-                    <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Key Insight</div>
-                    <div className="text-[11px] text-foreground/80 leading-relaxed line-clamp-3">{s.keyInsights}</div>
-                  </div>
-                )}
-                {recentInteractions.length > 0 && (
-                  <div>
-                    <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Recent Touchpoints</div>
-                    <div className="space-y-1">
-                      {recentInteractions.map(i => (
-                        <div key={i.id} className="flex items-center gap-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-primary/60 shrink-0" />
-                          <span className="text-[10px] text-muted-foreground truncate">{i.type}</span>
-                          <span className="text-[10px] text-muted-foreground/60 ml-auto shrink-0">{(typeof i.date === 'string' ? i.date : new Date(i.date).toISOString().slice(0, 10)).slice(5)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                <div className="mt-3 pt-2 border-t border-border/30 text-[9px] text-muted-foreground/60 text-center">
-                  Click to view & edit full profile
-                </div>
-              </div>
-            </motion.div>
-          );
-        })()}
-      </AnimatePresence>
 
       {/* Legend */}
       <div className="absolute bottom-3 left-3 z-20 flex items-center gap-3 text-[10px] text-muted-foreground bg-card/90 backdrop-blur-sm rounded-md px-3 py-2 border border-border/30 flex-wrap">

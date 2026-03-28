@@ -275,3 +275,12 @@
 - [x] Fix duplicate profile modal: clicking a card opens two overlapping modals — root cause was duplicate onStakeholderClick call in handleMouseUp AND handleNodeClick; removed from handleMouseUp
 - [x] Fix connection lines overlapping cards: SVG moved before cards (z-10 < z-20), edge-to-edge routing from card border not center, hover-only labels
 - [x] Increase spacing between cards: ring radii scale dynamically, edge gap added to getEdgePoint()
+
+## Stakeholder Profile Modal Fix (March 28)
+
+- [x] Fix Stakeholder Profile modal: content not scrollable, info cut off at bottom of viewport
+
+## Visual Cleanup (March 28)
+
+- [x] Remove concentric ring background circles and center DEAL label from Stakeholder Map
+- [x] Fix Stakeholder Profile modal: content not scrollable (replace ScrollArea with overflow-y-auto div)

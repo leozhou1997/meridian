@@ -802,7 +802,7 @@ export default function DealDetail() {
               exit={{ scale: 0.95, opacity: 0, y: 10 }}
               transition={{ duration: 0.2 }}
               onClick={e => e.stopPropagation()}
-              className="w-[640px] max-h-[82vh] overflow-hidden rounded-2xl bg-card border border-border/60 shadow-2xl flex flex-col"
+              className="w-[640px] max-h-[85vh] overflow-hidden rounded-2xl bg-card border border-border/60 shadow-2xl flex flex-col"
             >
               {/* Modal sticky header with tabs */}
               <div className="flex items-center justify-between px-5 py-3 border-b border-border/30 shrink-0">
@@ -876,7 +876,7 @@ export default function DealDetail() {
                   )}
                 </div>
               </div>
-              <ScrollArea className="flex-1">
+              <div className="flex-1 min-h-0 overflow-y-auto">
                 <div className="p-5">
                   {/* Brief View */}
                   {profileModalView === 'brief' && !isEditingProfile && (() => {
@@ -1334,7 +1334,7 @@ export default function DealDetail() {
                   </div>
                   )}
                 </div>
-              </ScrollArea>
+              </div>
             </motion.div>
             </motion.div>
           )}

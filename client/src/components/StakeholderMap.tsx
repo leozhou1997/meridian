@@ -1271,32 +1271,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
 
         <div style={{ transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})`, transformOrigin: 'top left', width: '100%', minHeight: '100%', position: 'relative' }}>
           {/* Layout background: Concentric rings OR Stage columns */}
-          {viewLayout === 'concentric' ? (() => {
-            const nodeW = compactMode ? COMPACT_NODE_W : NODE_W;
-            // Use the same geometry as card layout for accurate ring alignment
-            const { cx, cy, radii } = computeRingGeometry(localStakeholders, containerW, compactMode);
-            return (
-              <svg className="absolute inset-0 w-full pointer-events-none" style={{ height: '100%', overflow: 'visible' }}>
-                {[...radii].reverse().map((r, revIdx) => {
-                  const idx = radii.length - 1 - revIdx;
-                  return (
-                    <g key={idx}>
-                      <circle cx={cx} cy={cy} r={r + nodeW / 2 + 30}
-                        fill={RING_COLORS[idx]}
-                        stroke={RING_COLORS[idx].replace(/[\d.]+\)$/, '0.3)')}
-                        strokeWidth="1"
-                        strokeDasharray="6 4"
-                      />
-                    </g>
-                  );
-                })}
-                <circle cx={cx} cy={cy} r={28} fill="hsl(var(--primary))" opacity="0.15" />
-                <circle cx={cx} cy={cy} r={20} fill="hsl(var(--primary))" opacity="0.25" />
-                <circle cx={cx} cy={cy} r={4} fill="hsl(var(--primary))" opacity="0.8" />
-                <text x={cx} y={cy + 42} textAnchor="middle" fontSize="10" fill="hsl(var(--muted-foreground))" fontWeight="600" opacity="0.6" style={{ fontFamily: 'var(--font-mono, monospace)' }}>DEAL</text>
-              </svg>
-            );
-          })() : (
+          {viewLayout === 'concentric' ? null : (
             /* Stage column lanes — colored vertical rectangles with editable titles */
             <div className="absolute inset-0 w-full h-full" style={{ pointerEvents: 'none' }}>
               <div className="flex w-full h-full">

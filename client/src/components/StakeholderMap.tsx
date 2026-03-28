@@ -312,7 +312,7 @@ function computeConcentricPositions(
     ringStakeholders.forEach((s, i) => {
       const angle = startAngle + i * angleStep;
       raw.push({
-        id: s.id,
+        id: String(s.id),
         x: centerX + radius * Math.cos(angle),
         y: centerY + radius * Math.sin(angle),
       });
@@ -375,7 +375,7 @@ function computeStagePositions(
     const colCenterX = colIdx * colWidth + colWidth / 2 - nodeW / 2;
     bucket.forEach((s, rowIdx) => {
       raw.push({
-        id: s.id,
+        id: String(s.id),
         x: colCenterX,
         y: 80 + rowIdx * (nodeH + gap),
       });
@@ -491,6 +491,8 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     setPositions(freshPositions);
     if (viewLayout === 'concentric') circlePositionsRef.current = freshPositions;
     else stagePositionsRef.current = freshPositions;
+    setZoom(1);
+    setPanOffset({ x: 0, y: 0 });
     setConnections(buildDefaultConnections(stks, deal.buyingStages ?? []));
     setLocalInteractions([...(deal.meetings ?? [])]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -540,6 +542,11 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
   const [dragMoved, setDragMoved] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+
+  // ── Pan state ─────────────────────────────────────────────────────────────
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const isPanningRef = useRef(false);
+  const panStartRef = useRef({ mx: 0, my: 0, ox: 0, oy: 0 });
 
   // ── Connection drawing state ──────────────────────────────────────────────
   const [connectingFrom, setConnectingFrom] = useState<string | null>(null);
@@ -603,6 +610,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
   const handleReset = () => {
     setPositions(computeInitialPositions(localStakeholders, Array.isArray(deal.buyingStages) ? deal.buyingStages : [], containerW, viewLayout, compactMode));
     setZoom(1);
+    setPanOffset({ x: 0, y: 0 });
   };
 
   // Switch between concentric and stage layouts
@@ -635,6 +643,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
       else stagePositionsRef.current = fresh;
     }
     setZoom(1);
+    setPanOffset({ x: 0, y: 0 });
   };
 
   // Toggle compact/expanded mode
@@ -644,6 +653,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     const actualW = containerRef.current?.getBoundingClientRect().width || containerW;
     setPositions(computeInitialPositions(localStakeholders, Array.isArray(deal.buyingStages) ? deal.buyingStages : [], actualW, viewLayout, newCompact));
     setZoom(1);
+    setPanOffset({ x: 0, y: 0 });
   };
 
   // ── Drag handlers ─────────────────────────────────────────────────────────
@@ -726,22 +736,50 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     };
   }, [dragging, handleMouseMove, handleMouseUp]);
 
+  // ── Pan handlers ───────────────────────────────────────────────────────────
+  const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
+    // Only pan when clicking the canvas background (not a card or button)
+    if ((e.target as HTMLElement).closest('.stakeholder-node, button, input, select, [role="dialog"]')) return;
+    if (dragging || connectingFrom || reroutingConn) return;
+    if (e.button !== 0) return;
+    isPanningRef.current = true;
+    panStartRef.current = { mx: e.clientX, my: e.clientY, ox: panOffset.x, oy: panOffset.y };
+    e.preventDefault();
+  }, [dragging, connectingFrom, reroutingConn, panOffset]);
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!isPanningRef.current) return;
+      const dx = e.clientX - panStartRef.current.mx;
+      const dy = e.clientY - panStartRef.current.my;
+      setPanOffset({ x: panStartRef.current.ox + dx, y: panStartRef.current.oy + dy });
+    };
+    const onUp = () => { isPanningRef.current = false; };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, []);
+
   // ── Node click (view mode) ────────────────────────────────────────────────
   const handleNodeClick = (e: React.MouseEvent, stakeholder: Stakeholder) => {
     e.stopPropagation();
     setConnEditPopup(null);
 
     if (mode === 'edit' && connectingFrom) {
-      if (connectingFrom === stakeholder.id) { setConnectingFrom(null); return; }
+      const sid = String(stakeholder.id);
+      if (connectingFrom === sid) { setConnectingFrom(null); return; }
       const exists = connections.find(
-        c => (c.from === connectingFrom && c.to === stakeholder.id) ||
-             (c.from === stakeholder.id && c.to === connectingFrom)
+        c => (c.from === connectingFrom && c.to === sid) ||
+             (c.from === sid && c.to === connectingFrom)
       );
       if (exists) {
         setConnections(prev => prev.filter(c => c.id !== exists.id));
         toast('Connection removed');
       } else {
-        setConnections(prev => [...prev, { id: nanoid(8), from: connectingFrom, to: stakeholder.id, type: pendingConnType }]);
+        setConnections(prev => [...prev, { id: nanoid(8), from: connectingFrom, to: sid, type: pendingConnType }]);
         toast(`"${pendingConnType.replace('_', ' ')}" connection added`);
       }
       setConnectingFrom(null);
@@ -1154,14 +1192,15 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
 
       {/* Canvas */}
       <div
-        className="absolute inset-0 top-0 overflow-auto"
-        style={{ cursor: dragging ? 'grabbing' : (connectingFrom || reroutingConn) ? 'crosshair' : 'default' }}
-        onClick={() => { setConnEditPopup(null); setHoveredId(null); }}
-        onMouseDown={() => {
-          if (mode === 'view' && !dragging) {
-            // Drag hint detected in card's onMouseDown
-          }
+        className="absolute inset-0 top-0 overflow-hidden"
+        style={{
+          cursor: dragging ? 'grabbing'
+            : isPanningRef.current ? 'grabbing'
+            : (connectingFrom || reroutingConn) ? 'crosshair'
+            : 'grab'
         }}
+        onClick={() => { setConnEditPopup(null); setHoveredId(null); }}
+        onMouseDown={handleCanvasMouseDown}
       >
         {/* Background dot grid */}
         <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ opacity: 0.1 }}>
@@ -1173,7 +1212,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
           <rect width="100%" height="100%" fill="url(#dotgrid-unified)" />
         </svg>
 
-        <div style={{ transform: `scale(${zoom})`, transformOrigin: 'top left', width: '100%', minHeight: '100%', position: 'relative' }}>
+        <div style={{ transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})`, transformOrigin: 'top left', width: '100%', minHeight: '100%', position: 'relative' }}>
           {/* Layout background: Concentric rings OR Stage columns */}
           {viewLayout === 'concentric' ? (() => {
             const nodeW = compactMode ? COMPACT_NODE_W : NODE_W;
@@ -1292,7 +1331,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
             const pos = getPos(stakeholder.id);
             if (!pos) return null;
             const isDragging = dragging === stakeholder.id;
-            const isConnSrc = connectingFrom === stakeholder.id;
+            const isConnSrc = connectingFrom === String(stakeholder.id);
             const isPendingConn = connectingFrom === '__pending__';
             const isRerouting = !!reroutingConn;
             const heat = getHeat(stakeholder);
@@ -1310,17 +1349,17 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
               return (
                 <motion.div
                   key={stakeholder.id}
-                  className={`absolute select-none z-20 flex flex-col items-center cursor-pointer`}
+                  className={`absolute select-none z-20 flex flex-col items-center cursor-pointer stakeholder-node`}
                   style={{ left: pos.x, top: pos.y, width: COMPACT_NODE_W }}
                   initial={{ opacity: 0, scale: 0.5 }}
                   animate={{ opacity: 1, scale: isHighlighted ? 1.2 : 1 }}
                   transition={{ duration: 0.25, delay: idx * 0.03 }}
-                  onMouseDown={(e) => handleMouseDown(e, stakeholder.id)}
-                  onMouseEnter={(e) => { setHoveredId(stakeholder.id); setHoverPos({ x: e.clientX, y: e.clientY }); }}
+                  onMouseDown={(e) => handleMouseDown(e, String(stakeholder.id))}
+                  onMouseEnter={(e) => { setHoveredId(String(stakeholder.id)); setHoverPos({ x: e.clientX, y: e.clientY }); }}
                   onMouseLeave={() => setHoveredId(null)}
                   onClick={(e) => {
-                    if (reroutingConn) { handleRerouteTarget(e, stakeholder.id); return; }
-                    if (connectingFrom === '__pending__') { setConnectingFrom(stakeholder.id); return; }
+                    if (reroutingConn) { handleRerouteTarget(e, String(stakeholder.id)); return; }
+                    if (connectingFrom === '__pending__') { setConnectingFrom(String(stakeholder.id)); return; }
                     handleNodeClick(e, stakeholder);
                   }}
                 >
@@ -1348,15 +1387,15 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
             return (
               <motion.div
                 key={stakeholder.id}
-                className={`absolute select-none ${isDragging ? 'z-30' : 'z-20'}`}
+                className={`absolute select-none ${isDragging ? 'z-30' : 'z-20'} stakeholder-node`}
                 style={{ left: pos.x, top: pos.y, width: NODE_W }}
                 initial={{ opacity: 0, scale: 0.85 }}
                 animate={{ opacity: 1, scale: isDragging ? 1.04 : 1 }}
                 transition={{ duration: 0.25, delay: idx * 0.04 }}
-                onMouseDown={(e) => handleMouseDown(e, stakeholder.id)}
+                onMouseDown={(e) => handleMouseDown(e, String(stakeholder.id))}
                 onMouseEnter={(e) => {
                   if (mode === 'edit' && dragging) return;
-                  setHoveredId(stakeholder.id);
+                  setHoveredId(String(stakeholder.id));
                   setHoverPos({ x: e.clientX, y: e.clientY });
                 }}
                 onMouseLeave={() => setHoveredId(null)}
@@ -1376,12 +1415,12 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                             : 'border-border/50 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5'
                   }`}
                   onClick={(e) => {
-                    if (reroutingConn) { handleRerouteTarget(e, stakeholder.id); return; }
-                    if (connectingFrom === '__pending__') { setConnectingFrom(stakeholder.id); return; }
+                    if (reroutingConn) { handleRerouteTarget(e, String(stakeholder.id)); return; }
+                    if (connectingFrom === '__pending__') { setConnectingFrom(String(stakeholder.id)); return; }
                     handleNodeClick(e, stakeholder);
                   }}
                 >
-                  <div className="p-3.5">
+                  <CardContent className="p-3.5">
                     {/* Drag handle — only visible in edit mode */}
                     {mode === 'edit' && (
                       <div className="flex items-center justify-center mb-1.5 -mt-1 opacity-40 hover:opacity-70 transition-opacity">
@@ -1593,7 +1632,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                         )}
                       </AnimatePresence>
                     </div>
-                  </div>
+                  </CardContent>
                 </Card>
               </motion.div>
             );
@@ -2097,8 +2136,8 @@ function buildDefaultConnections(stakeholders: Stakeholder[], stages: string[]):
       if (Math.abs(idx1 - idx2) <= 1) {
         result.push({
           id: nanoid(8),
-          from: s1.id,
-          to: s2.id,
+          from: String(s1.id),
+          to: String(s2.id),
           type: s1.role === 'Blocker' || s2.role === 'Blocker' ? 'blocks' : 'reports_to',
         });
       }

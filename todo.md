@@ -243,3 +243,10 @@
 - [x] Circles view: legend only shows in Circles mode, hidden in Stages mode
 - [x] Switching between Circles and Stages auto-restores each view's independent positions
 - [x] Stages positions persisted to DB (separate column or key from Circles positions)
+
+## StakeholderMap Interaction Fixes (March 28)
+
+- [x] Fix Edit Mode: cards cannot be dragged (broken after Circles/Stages rebuild)
+- [x] Fix connection lines: all lines missing from map (SVG layer broken)
+- [x] Fix Draw Link: clicking card after activating Draw Link does nothing
+- [x] Add canvas pan: left-click drag on background moves the entire map viewport

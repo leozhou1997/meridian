@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Compass, LayoutDashboard, Users, FileText, MessageSquare,
   Search, LogOut, ChevronDown, ChevronRight, Settings, Sun, Moon, BookOpen, Plus,
-  PanelLeftClose, PanelLeftOpen, Briefcase
+  PanelLeftClose, ChevronLeft, Briefcase
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -17,13 +17,10 @@ import { useLanguage } from '@/contexts/LanguageContext';
 
 const stages = ['Discovery', 'Demo', 'Technical Evaluation', 'POC', 'Negotiation', 'Closed Won', 'Closed Lost'] as const;
 
-const PIPELINE_COLLAPSED_KEY = 'pipeline-sidebar-collapsed';
-
-// ── Pipeline sidebar context — lets child pages (Dashboard, DealDetail) render the toggle button ──
+// ── Pipeline sidebar context ──
 interface PipelineCtx {
   isCollapsed: boolean;
   toggle: () => void;
-  /** True only on pages where the pipeline sidebar is shown */
   hasPipeline: boolean;
 }
 export const PipelineContext = createContext<PipelineCtx>({ isCollapsed: true, toggle: () => {}, hasPipeline: false });
@@ -43,36 +40,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
     new Set(['Discovery', 'Demo', 'Technical Evaluation', 'POC', 'Negotiation'])
   );
 
-  // Pipeline sidebar is only relevant on Dashboard (/) and Deal detail (/deal/:id)
+  // Pipeline sidebar ONLY on Deal detail pages (/deal/:id)
   const isDealPage = /^\/deal\/\d+/.test(location);
-  const isDashboard = location === '/';
-  const hasPipeline = isDashboard || isDealPage;
+  const hasPipeline = isDealPage;
 
-  // Sidebar collapsed state
-  const [isCollapsed, setIsCollapsed] = useState(() => {
-    if (isDealPage) return false; // Deal pages: default to expanded for quick deal switching
-    const saved = localStorage.getItem(PIPELINE_COLLAPSED_KEY);
-    return saved === 'true';
-  });
+  // Sidebar state: default expanded on deal pages
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   useEffect(() => {
     if (isDealPage) {
-      setIsCollapsed(false); // Deal pages: always start expanded
-    } else if (isDashboard) {
-      const saved = localStorage.getItem(PIPELINE_COLLAPSED_KEY);
-      setIsCollapsed(saved === 'true');
+      setIsCollapsed(false);
     }
-  }, [isDealPage, isDashboard]);
+  }, [isDealPage]);
 
-  const toggle = () => {
-    setIsCollapsed(prev => {
-      const next = !prev;
-      if (!isDealPage) {
-        localStorage.setItem(PIPELINE_COLLAPSED_KEY, String(next));
-      }
-      return next;
-    });
-  };
+  const toggle = () => setIsCollapsed(prev => !prev);
 
   const { data: deals = [] } = trpc.deals.list.useQuery(undefined, {
     refetchOnWindowFocus: false,
@@ -111,8 +92,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
   return (
     <PipelineContext.Provider value={{ isCollapsed, toggle, hasPipeline }}>
       <div className="h-screen flex overflow-hidden bg-background">
-        {/* Icon sidebar */}
-        <div className="w-[60px] bg-sidebar border-r border-sidebar-border flex flex-col items-center py-4 shrink-0">
+        {/* ── Icon sidebar (Layer 1 — highest z-index) ── */}
+        <div className="w-[60px] bg-sidebar border-r border-sidebar-border flex flex-col items-center py-4 shrink-0 z-40 relative">
           <Link href="/">
             <div className="w-9 h-9 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center mb-6 hover:bg-primary/30 transition-colors">
               <Compass className="w-5 h-5 text-primary" />
@@ -143,26 +124,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 </Tooltip>
               );
             })}
-
-            {/* Pipeline toggle button — only show when sidebar is collapsed and on pipeline pages */}
-            {hasPipeline && isCollapsed && (
-              <>
-                <div className="my-2 w-10 h-px bg-sidebar-border" />
-                <Tooltip delayDuration={0}>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={toggle}
-                      className="w-10 h-10 rounded-lg flex items-center justify-center text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all"
-                    >
-                      <PanelLeftOpen className="w-[18px] h-[18px]" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="font-display text-xs">
-                    {t('nav.showPipeline') || 'Show Pipeline'}
-                  </TooltipContent>
-                </Tooltip>
-              </>
-            )}
 
             {/* New Deal button */}
             <div className="my-2 w-10 h-px bg-sidebar-border" />
@@ -228,17 +189,40 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <img src={avatarUrl} alt={user?.name ?? 'User'} className="w-full h-full object-cover" />
             </div>
           </div>
+
+          {/* ── Edge-tab handle: protruding tab on right edge of icon sidebar ── */}
+          {/* Only visible on Deal pages when Pipeline sidebar is collapsed */}
+          {hasPipeline && isCollapsed && (
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={toggle}
+                  className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-full
+                    w-5 h-14 rounded-r-md
+                    bg-sidebar border border-l-0 border-sidebar-border
+                    flex items-center justify-center
+                    text-muted-foreground hover:text-foreground hover:bg-sidebar-accent
+                    transition-all duration-200 shadow-md
+                    z-50"
+                  aria-label="Open deal switcher"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="font-display text-xs">
+                Show Deal Switcher
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
 
-        {/* Pipeline sidebar — only rendered on Dashboard and Deal pages */}
+        {/* ── Pipeline sidebar (Layer 2 — overlays content on Deal pages) ── */}
         {hasPipeline && (
           <>
             <div
-              className={`bg-sidebar border-r border-sidebar-border flex flex-col transition-all duration-300 ease-in-out overflow-hidden ${
-                isDealPage
-                  ? `absolute left-[60px] top-0 bottom-0 z-30 shadow-2xl ${isCollapsed ? 'w-0 border-r-0' : 'w-[260px]'}`
-                  : `shrink-0 ${isCollapsed ? 'w-0 border-r-0' : 'w-[260px]'}`
-              }`}
+              className={`bg-sidebar border-r border-sidebar-border flex flex-col transition-all duration-300 ease-in-out overflow-hidden
+                absolute left-[60px] top-0 bottom-0 z-30 shadow-2xl
+                ${isCollapsed ? 'w-0 border-r-0' : 'w-[260px]'}`}
             >
               <div className="w-[260px] flex flex-col h-full">
                 <div className="p-4 border-b border-sidebar-border">
@@ -255,6 +239,19 @@ export default function AppLayout({ children }: AppLayoutProps) {
                           </button>
                         </TooltipTrigger>
                         <TooltipContent side="right" className="font-display text-xs">{t('pipeline.newDeal')}</TooltipContent>
+                      </Tooltip>
+                      <Tooltip delayDuration={0}>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={toggle}
+                            className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50 transition-all"
+                          >
+                            <PanelLeftClose className="w-3.5 h-3.5" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="font-display text-xs">
+                          {t('pipeline.hide') || 'Hide'}
+                        </TooltipContent>
                       </Tooltip>
                     </div>
                   </div>
@@ -360,8 +357,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
               </div>
             </div>
 
-            {/* Backdrop overlay — only on deal pages when pipeline is open */}
-            {isDealPage && !isCollapsed && (
+            {/* Backdrop overlay — click to close */}
+            {!isCollapsed && (
               <div
                 className="absolute left-[60px] top-0 bottom-0 right-0 z-20 bg-background/60 backdrop-blur-[2px]"
                 onClick={toggle}
@@ -371,7 +368,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </>
         )}
 
-        {/* Main content */}
+        {/* ── Main content (Layer 3) ── */}
         <main className="flex-1 overflow-auto min-w-0">
           {children}
         </main>
@@ -380,7 +377,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   );
 }
 
-// ── Reusable Pipeline toggle button — used in Dashboard and DealDetail headers ──
+// ── Reusable Pipeline toggle button — used in DealDetail header ──
 export function PipelineToggleButton({ className = '' }: { className?: string }) {
   const { isCollapsed, toggle, hasPipeline } = usePipeline();
   const { t } = useLanguage();
@@ -396,7 +393,7 @@ export function PipelineToggleButton({ className = '' }: { className?: string })
           aria-label={isCollapsed ? 'Show pipeline' : 'Hide pipeline'}
         >
           {isCollapsed
-            ? <PanelLeftOpen className="w-3.5 h-3.5 text-muted-foreground" />
+            ? <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
             : <PanelLeftClose className="w-3.5 h-3.5 text-muted-foreground" />
           }
           <span className="text-muted-foreground">{isCollapsed ? t('pipeline.show') || 'Pipeline' : t('pipeline.hide') || 'Hide'}</span>

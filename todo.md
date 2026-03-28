@@ -351,3 +351,12 @@
 - [ ] Support multi-type uploads: Meeting Transcript (text), Video/Audio file, Screenshot (image), PDF document
 - [ ] Remove the "Update Customer History" refresh button from deal header (or move into timeline as a CRM sync action item)
 - [ ] Frontend only — no backend parsing needed yet, just UI scaffolding with upload placeholders
+
+## Deals Management Page & Pipeline Handle Redesign (March 28)
+
+- [ ] Create Deals management page (/deals) — comprehensive table/list view with filtering, sorting, stage grouping
+- [ ] Pipeline sidebar only shows on Deal Detail pages (/deal/:id), NOT on Dashboard or Deals page
+- [ ] Remove Pipeline toggle from icon sidebar nav items
+- [ ] Add edge-tab handle: when Pipeline sidebar is collapsed on Deal Detail, show a protruding tab on the right edge of icon sidebar with arrow icon (→), clicking expands the Pipeline sidebar
+- [ ] Handle should visually "poke out" from the icon sidebar layer, suggesting a hidden layer behind it
+- [ ] Register /deals route in App.tsx

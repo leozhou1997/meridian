@@ -15,6 +15,7 @@ import AdminPlayground from "./pages/AdminPlayground";
 import Settings from "./pages/Settings";
 import Onboarding from "./pages/Onboarding";
 import NewDeal from "./pages/NewDeal";
+import Deals from "./pages/Deals";
 import AppLayout from "./components/AppLayout";
 import { useAuth } from "./_core/hooks/useAuth";
 import { getLoginUrl } from "./const";
@@ -53,6 +54,9 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/">
         <ProtectedRoute component={Dashboard} />
+      </Route>
+      <Route path="/deals">
+        <ProtectedRoute component={Deals} />
       </Route>
       <Route path="/deal/new">
         <ProtectedRoute component={NewDeal} fullScreen />

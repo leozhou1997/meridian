@@ -288,3 +288,10 @@
 ## Stakeholder Map Ring Fix (March 28)
 
 - [x] Restore concentric ring backgrounds (colored fills + dashed borders), remove only the center gray dot and DEAL label
+
+## Stakeholder Map UX Improvements (March 28)
+
+- [x] Ring legend: align colors to actual ring colors (blue=Decision Makers, green=Influencers, red=Blockers), hover ring to highlight legend
+- [x] Connection lines: upgrade to cubic bezier arcs bowing perpendicular to line direction (22% bow, min 30px, max 80px)
+- [x] Reset Layout button: clear localStorage cache (positions + history) and rebuild default connections
+- [x] Map empty state: show guided prompt when a deal has no stakeholders

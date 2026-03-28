@@ -499,6 +499,8 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
   const [hoverPos, setHoverPos] = useState({ x: 0, y: 0 });
   // ── Hovered connection (for hover-only labels) ────────────────────────────
   const [hoveredConnId, setHoveredConnId] = useState<string | null>(null);
+  // ── Hovered ring index (for legend highlight) ────────────────────────────
+  const [hoveredRingIdx, setHoveredRingIdx] = useState<number | null>(null);
 
   // ── Expanded interaction history on cards ─────────────────────────────────
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
@@ -675,9 +677,20 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
   };
 
   const handleReset = () => {
-    setPositions(computeInitialPositions(localStakeholders, Array.isArray(deal.buyingStages) ? deal.buyingStages : [], containerW, viewLayout, compactMode));
+    // Clear localStorage cache so positions are fully recalculated from scratch
+    try {
+      localStorage.removeItem(storageKey(deal.id));
+      localStorage.removeItem(historyKey(deal.id));
+    } catch {}
+    // Also clear the in-memory layout caches
+    circlePositionsRef.current = [];
+    stagePositionsRef.current = [];
+    const freshPositions = computeInitialPositions(localStakeholders, Array.isArray(deal.buyingStages) ? deal.buyingStages : [], containerW, viewLayout, compactMode);
+    setPositions(freshPositions);
+    setConnections(buildDefaultConnections(localStakeholders, Array.isArray(deal.buyingStages) ? deal.buyingStages : []));
     setZoom(1);
     setPanOffset({ x: 0, y: 0 });
+    toast.success('Layout reset to default');
   };
 
   // Switch between concentric and stage layouts
@@ -973,13 +986,35 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     <div className="relative h-full w-full" ref={containerRef}>
       {/* Concentric circle ring labels — only shown in Circles mode */}
       {viewLayout === 'concentric' && (
-        <div className="absolute top-2 left-3 z-10 flex items-center gap-3 text-[10px] text-muted-foreground bg-card/80 backdrop-blur-sm rounded-md px-3 py-2 border border-border/30">
-          {RING_LABELS.map((label, i) => (
-            <div key={label} className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-full border-2" style={{ borderColor: RING_COLORS[i].replace(/[\d.]+\)$/, '0.6)'), backgroundColor: RING_COLORS[i] }} />
-              <span className="font-medium">{label}</span>
-            </div>
-          ))}
+        <div className="absolute top-2 left-3 z-10 flex items-center gap-3 text-[10px] bg-card/80 backdrop-blur-sm rounded-md px-3 py-2 border border-border/30">
+          {RING_LABELS.map((label, i) => {
+            const ringBaseColors = ['#6382ff', '#10b981', '#ef4444'];
+            const isHovered = hoveredRingIdx === i;
+            return (
+              <div
+                key={label}
+                className="flex items-center gap-1.5 cursor-default transition-all duration-150"
+                style={{ opacity: hoveredRingIdx !== null && !isHovered ? 0.35 : 1 }}
+                onMouseEnter={() => setHoveredRingIdx(i)}
+                onMouseLeave={() => setHoveredRingIdx(null)}
+              >
+                <div
+                  className="w-3 h-3 rounded-full border-2 transition-all duration-150"
+                  style={{
+                    borderColor: ringBaseColors[i],
+                    backgroundColor: isHovered ? ringBaseColors[i] : RING_COLORS[i],
+                    boxShadow: isHovered ? `0 0 6px ${ringBaseColors[i]}80` : 'none',
+                  }}
+                />
+                <span
+                  className="font-medium transition-colors duration-150"
+                  style={{ color: isHovered ? ringBaseColors[i] : undefined }}
+                >
+                  {label}
+                </span>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -1425,11 +1460,24 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                   const from = getEdgePoint(fromPos.x, fromPos.y, tcx, tcy);
                   const to   = getEdgePoint(toPos.x,   toPos.y,   fcx, fcy);
 
-                  // Cubic bezier control points — gentle curve
-                  const cpx1 = from.x + (to.x - from.x) * 0.4;
-                  const cpy1 = from.y + (to.y - from.y) * 0.15;
-                  const cpx2 = from.x + (to.x - from.x) * 0.6;
-                  const cpy2 = from.y + (to.y - from.y) * 0.85;
+                  // Cubic bezier control points — arc that bows perpendicular to the line
+                  // Compute perpendicular direction for the bow
+                  const lineDx = to.x - from.x;
+                  const lineDy = to.y - from.y;
+                  const lineLen = Math.sqrt(lineDx * lineDx + lineDy * lineDy) || 1;
+                  // Perpendicular unit vector (rotated 90° clockwise)
+                  const perpX = lineDy / lineLen;
+                  const perpY = -lineDx / lineLen;
+                  // Bow amount: 20% of line length, min 30px, max 80px
+                  const bow = Math.min(Math.max(lineLen * 0.22, 30), 80);
+                  // Mid-point of the straight line
+                  const midX = (from.x + to.x) / 2;
+                  const midY = (from.y + to.y) / 2;
+                  // Control points pulled toward the perpendicular mid-bow
+                  const cpx1 = from.x + (midX - from.x) * 0.6 + perpX * bow * 0.5;
+                  const cpy1 = from.y + (midY - from.y) * 0.6 + perpY * bow * 0.5;
+                  const cpx2 = to.x + (midX - to.x) * 0.6 + perpX * bow * 0.5;
+                  const cpy2 = to.y + (midY - to.y) * 0.6 + perpY * bow * 0.5;
 
                   // Midpoint on bezier at t=0.5 for label placement
                   const t = 0.5;
@@ -1487,6 +1535,34 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
               </svg>
             );
           })()}
+          {/* Empty state — shown when no stakeholders exist */}
+          {localStakeholders.length === 0 && (
+            <div
+              className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
+              style={{ zIndex: 15 }}
+            >
+              <div className="flex flex-col items-center gap-4 text-center px-8 py-10 rounded-2xl border border-dashed border-border/40 bg-card/40 backdrop-blur-sm max-w-xs">
+                <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-primary/60">
+                    <circle cx="12" cy="8" r="4" />
+                    <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+                    <circle cx="19" cy="8" r="3" />
+                    <path d="M22 14c0-2.5-1.8-4.5-4-5" />
+                    <circle cx="5" cy="8" r="3" />
+                    <path d="M2 14c0-2.5 1.8-4.5 4-5" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground/80 mb-1">No stakeholders yet</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Switch to <span className="font-medium text-foreground/70">Edit mode</span> and click
+                    <span className="font-medium text-primary/80"> + Add Stakeholder</span> to start
+                    mapping the buying committee for this deal.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
           {/* Stakeholder nodes — z-20 base, z-30 when dragging */}
           {localStakeholders.map((stakeholder, idx) => {
             const pos = getPos(String(stakeholder.id));

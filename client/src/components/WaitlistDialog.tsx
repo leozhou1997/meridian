@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { t } from "@/lib/i18n";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +25,7 @@ export function WaitlistDialog({
   onOpenChange,
   source = "landing_page",
 }: WaitlistDialogProps) {
+  const { language } = useLanguage();
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [companyName, setCompanyName] = useState("");
@@ -71,18 +74,20 @@ export function WaitlistDialog({
               <CheckCircle2 className="w-8 h-8 text-emerald-400" />
             </div>
             <h3 className="text-xl font-semibold mb-2">
-              {alreadySubmitted ? "You're Already on the List!" : "You're on the List!"}
+              {alreadySubmitted
+                ? t(language, "waitlist_success_already")
+                : t(language, "waitlist_success_title")}
             </h3>
             <p className="text-slate-400 text-sm max-w-xs">
               {alreadySubmitted
-                ? "We already have your request. Our team will reach out soon with next steps."
-                : "Thank you for your interest in Meridian. We'll reach out soon with early access details."}
+                ? t(language, "waitlist_success_already_desc")
+                : t(language, "waitlist_success_desc")}
             </p>
             <Button
               onClick={() => handleClose(false)}
               className="mt-6 bg-white/10 hover:bg-white/20 text-white border-0"
             >
-              Got it
+              {t(language, "waitlist_got_it")}
             </Button>
           </div>
         ) : (
@@ -90,22 +95,22 @@ export function WaitlistDialog({
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-white">
                 <Sparkles className="w-5 h-5 text-cyan-400" />
-                Request Early Access
+                {t(language, "waitlist_title")}
               </DialogTitle>
               <DialogDescription className="text-slate-400">
-                Join the waitlist for Meridian's AI-powered deal intelligence platform.
+                {t(language, "waitlist_desc")}
               </DialogDescription>
             </DialogHeader>
 
             <form onSubmit={handleSubmit} className="space-y-4 mt-2">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-slate-300 text-sm">
-                  Work Email <span className="text-red-400">*</span>
+                  {t(language, "waitlist_email_label")} <span className="text-red-400">*</span>
                 </Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="you@company.com"
+                  placeholder={t(language, "waitlist_email_placeholder")}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -115,12 +120,12 @@ export function WaitlistDialog({
 
               <div className="space-y-2">
                 <Label htmlFor="fullName" className="text-slate-300 text-sm">
-                  Full Name
+                  {t(language, "waitlist_name_label")}
                 </Label>
                 <Input
                   id="fullName"
                   type="text"
-                  placeholder="Jane Smith"
+                  placeholder={t(language, "waitlist_name_placeholder")}
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   className="bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:border-cyan-500/50 focus:ring-cyan-500/20"
@@ -129,12 +134,12 @@ export function WaitlistDialog({
 
               <div className="space-y-2">
                 <Label htmlFor="companyName" className="text-slate-300 text-sm">
-                  Company
+                  {t(language, "waitlist_company_label")}
                 </Label>
                 <Input
                   id="companyName"
                   type="text"
-                  placeholder="Acme Corp"
+                  placeholder={t(language, "waitlist_company_placeholder")}
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
                   className="bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:border-cyan-500/50 focus:ring-cyan-500/20"
@@ -149,16 +154,16 @@ export function WaitlistDialog({
                 {requestAccess.isPending ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Submitting...
+                    {t(language, "waitlist_submitting")}
                   </>
                 ) : (
-                  "Request Access"
+                  t(language, "waitlist_submit")
                 )}
               </Button>
 
               {requestAccess.isError && (
                 <p className="text-red-400 text-sm text-center">
-                  Something went wrong. Please try again.
+                  {t(language, "waitlist_error")}
                 </p>
               )}
             </form>

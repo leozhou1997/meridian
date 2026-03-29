@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { t as i18t, images as i18nImages } from "@/lib/i18n";
 import { WaitlistDialog } from "@/components/WaitlistDialog";
 import {
   ArrowRight,
@@ -15,7 +17,7 @@ import {
   TrendingUp,
   Zap,
   CheckCircle2,
-
+  Globe,
   Menu,
   X,
 } from "lucide-react";
@@ -23,14 +25,6 @@ import {
 /* ─── CDN Assets ─────────────────────────────────────── */
 const LOGO_IMG =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/meridian-logo-cropped_69e86f90.png";
-const HERO_IMG =
-  "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/hero-product-mockup-WTVk7MPtNg3kv8RX8Lt6Lh.webp";
-const FEATURE_MAP =
-  "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-stakeholder-map-v3-XpdspnpuAKvTKPjMMm5oz5.webp";
-const FEATURE_INSIGHT =
-  "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-ai-insight-VrpwZXFHpvvsiDzqKWMfZu.webp";
-const FEATURE_ROOM =
-  "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-deal-room-P9metY77PHf7ktVxoerFW6.webp";
 const MIRACLEPLUS_LOGO =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/miracleplus-logo_11f70a94.png";
 const ANTLER_LOGO =
@@ -77,6 +71,10 @@ function Counter({ end, suffix = "", duration = 2000 }: { end: number; suffix?: 
 export default function Landing() {
   const [, navigate] = useLocation();
   const { user, loading } = useAuth();
+  const { language, setLanguage } = useLanguage();
+  const tt = (key: string) => i18t(language, key as any);
+  const imgs = i18nImages[language];
+
   const [waitlistOpen, setWaitlistOpen] = useState(false);
   const [waitlistSource, setWaitlistSource] = useState("landing_page");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -100,6 +98,77 @@ export default function Landing() {
     setMobileMenuOpen(false);
   };
 
+  const toggleLang = () => setLanguage(language === "en" ? "zh" : "en");
+
+  /* ─── Problem section data (locale-aware) ─── */
+  const painPoints = language === "en"
+    ? [
+        { icon: Users, title: "Invisible buying committees", desc: "You don't know who's really making the decision, who's blocking, or who you haven't met yet." },
+        { icon: Brain, title: "Insights trapped in conversations", desc: "Critical signals from calls and emails never make it into your CRM or deal strategy." },
+        { icon: Target, title: "Reactive deal management", desc: "By the time you realize a deal is at risk, it's already too late to course-correct." },
+      ]
+    : [
+        { icon: Users, title: "看不见的采购委员会", desc: "你不知道谁在真正做决策、谁在阻碍、谁还没有接触过。" },
+        { icon: Brain, title: "洞察被困在对话中", desc: "来自电话和邮件的关键信号从未进入你的 CRM 或交易策略。" },
+        { icon: Target, title: "被动的交易管理", desc: "当你意识到交易有风险时，往往已经来不及纠正了。" },
+      ];
+
+  const problemTitle = language === "en"
+    ? { main: "Your CRM tracks activities. ", dim: "It doesn't understand your deals." }
+    : { main: "你的 CRM 记录了活动。", dim: "但它不理解你的交易。" };
+
+  const problemDesc = language === "en"
+    ? "Enterprise sales teams spend 60% of their time on admin instead of selling. Critical stakeholder dynamics are trapped in reps' heads. Deals slip through the cracks because no one sees the full picture until it's too late."
+    : "企业销售团队将 60% 的时间花在行政工作而非销售上。关键的决策人动态被困在销售代表的脑海中。交易因为没有人能看到全貌而悄然流失——直到为时已晚。";
+
+  /* ─── How It Works data (locale-aware) ─── */
+  const howItWorksTitle = language === "en"
+    ? { pre: "The Meridian ", highlight: "Intelligence Engine" }
+    : { pre: "Meridian ", highlight: "智能引擎" };
+
+  const howItWorksDesc = language === "en"
+    ? "Four layers working together to transform raw sales data into actionable deal strategy."
+    : "四层架构协同工作，将原始销售数据转化为可执行的交易策略。";
+
+  const chipStack = language === "en"
+    ? [
+        { layer: "Layer 4", title: "Action Layer", desc: "What's Next recommendations, pre-meeting briefs, risk alerts", icon: Zap, color: "from-purple-500 to-pink-500", glow: "shadow-purple-500/20", borderColor: "border-purple-500/30" },
+        { layer: "Layer 3", title: "Intelligence Layer", desc: "Deal narrative, confidence scoring, methodology grading", icon: Brain, color: "from-blue-500 to-cyan-500", glow: "shadow-blue-500/20", borderColor: "border-blue-500/30" },
+        { layer: "Layer 2", title: "Understanding Layer", desc: "Stakeholder mapping, relationship analysis, sentiment detection", icon: Users, color: "from-cyan-500 to-teal-500", glow: "shadow-cyan-500/20", borderColor: "border-cyan-500/30" },
+        { layer: "Layer 1", title: "Data Layer", desc: "Meeting transcripts, emails, notes, documents, CRM data", icon: Layers, color: "from-slate-500 to-slate-400", glow: "shadow-slate-500/10", borderColor: "border-slate-500/30" },
+      ]
+    : [
+        { layer: "第四层", title: "行动层", desc: "下一步建议、会前简报、风险预警", icon: Zap, color: "from-purple-500 to-pink-500", glow: "shadow-purple-500/20", borderColor: "border-purple-500/30" },
+        { layer: "第三层", title: "智能层", desc: "交易叙事、置信度评分、方法论评级", icon: Brain, color: "from-blue-500 to-cyan-500", glow: "shadow-blue-500/20", borderColor: "border-blue-500/30" },
+        { layer: "第二层", title: "理解层", desc: "决策人映射、关系分析、情感检测", icon: Users, color: "from-cyan-500 to-teal-500", glow: "shadow-cyan-500/20", borderColor: "border-cyan-500/30" },
+        { layer: "第一层", title: "数据层", desc: "会议记录、邮件、笔记、文档、CRM 数据", icon: Layers, color: "from-slate-500 to-slate-400", glow: "shadow-slate-500/10", borderColor: "border-slate-500/30" },
+      ];
+
+  /* ─── Team section data (locale-aware) ─── */
+  const teamContent = language === "en"
+    ? {
+        p1: "We've spent years in the trenches of enterprise sales — running complex deals, managing buying committees, and losing sleep over pipeline reviews. We've seen firsthand how the best sales teams win: not through more activity, but through deeper understanding.",
+        p2: "We built Meridian because we believe sales intelligence shouldn't be trapped in spreadsheets and tribal knowledge. Every deal tells a story — the relationships, the risks, the momentum. We're building the AI that reads that story and helps you write a better ending.",
+        p3_pre: "Our team combines deep enterprise sales experience with AI and product engineering. We're backed by ",
+        p3_mid: " and ",
+        p3_post: ", and we're based between Singapore and San Francisco.",
+      }
+    : {
+        p1: "我们在企业级销售的战壕中摸爬滚打多年——运营复杂交易、管理采购委员会、为 Pipeline Review 彻夜难眠。我们亲眼见证了最优秀的销售团队如何赢单：不是靠更多的活动，而是靠更深的理解。",
+        p2: "我们创建 Meridian 是因为我们相信销售智能不应该被困在电子表格和口口相传的经验中。每笔交易都在讲述一个故事——关系、风险、势头。我们正在构建能读懂这个故事并帮助你写出更好结局的 AI。",
+        p3_pre: "我们的团队融合了深厚的企业销售经验与 AI 和产品工程能力。我们获得了 ",
+        p3_mid: " 和 ",
+        p3_post: " 的支持，团队分布在新加坡和旧金山之间。",
+      };
+
+  const ctaSubtext = language === "en"
+    ? "No credit card required. We'll reach out within 48 hours."
+    : "无需信用卡。我们将在 48 小时内联系您。";
+
+  const waitlistSubtext = language === "en"
+    ? "Join the waitlist for early access. We're onboarding select teams who sell complex, multi-stakeholder deals."
+    : "加入等候名单获取抢先体验资格。我们正在邀请攻克复杂、多决策人交易的精选团队。";
+
   return (
     <div className="min-h-screen bg-[#060a14] text-white overflow-x-hidden">
       {/* ─── NAV ─────────────────────────────────────── */}
@@ -118,25 +187,35 @@ export default function Landing() {
 
           {/* Desktop Nav Links */}
           <div className="hidden md:flex items-center gap-8 text-sm text-slate-400">
-            <button onClick={() => scrollTo("features")} className="hover:text-white transition-colors">Features</button>
-            <button onClick={() => scrollTo("how-it-works")} className="hover:text-white transition-colors">How It Works</button>
-            <button onClick={() => scrollTo("team")} className="hover:text-white transition-colors">Team</button>
-            <button onClick={() => navigate("/pricing")} className="hover:text-white transition-colors">Pricing</button>
+            <button onClick={() => scrollTo("features")} className="hover:text-white transition-colors">{tt("nav_features")}</button>
+            <button onClick={() => scrollTo("how-it-works")} className="hover:text-white transition-colors">{language === "en" ? "How It Works" : "工作原理"}</button>
+            <button onClick={() => scrollTo("team")} className="hover:text-white transition-colors">{tt("nav_team")}</button>
+            <button onClick={() => navigate("/pricing")} className="hover:text-white transition-colors">{tt("nav_pricing")}</button>
           </div>
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-3">
+            {/* Language Switcher */}
+            <button
+              onClick={toggleLang}
+              className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white px-3 py-2 rounded-lg transition-colors border border-transparent hover:border-white/10"
+              title={language === "en" ? "切换到中文" : "Switch to English"}
+            >
+              <Globe className="w-4 h-4" />
+              <span className="text-xs font-medium">{language === "en" ? "中文" : "EN"}</span>
+            </button>
+
             <button
               onClick={() => navigate(user ? "/dashboard" : "/login")}
               className="text-sm text-slate-300 hover:text-white px-4 py-2 rounded-lg transition-colors"
             >
-              {user ? "Go to Dashboard" : "Log In"}
+              {user ? tt("nav_dashboard") : tt("nav_login")}
             </button>
             <button
               onClick={() => openWaitlist("nav_desktop")}
               className="text-sm font-medium bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 px-5 py-2 rounded-lg transition-all shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/30"
             >
-              Request Access
+              {tt("nav_request_access")}
             </button>
           </div>
 
@@ -152,17 +231,25 @@ export default function Landing() {
         {/* Mobile Menu */}
         {mobileMenuOpen && (
           <div className="md:hidden bg-[#0a0f1e]/95 backdrop-blur-xl border-t border-white/5 px-6 py-4 space-y-3">
-            <button onClick={() => scrollTo("features")} className="block w-full text-left text-sm text-slate-300 hover:text-white py-2">Features</button>
-            <button onClick={() => scrollTo("how-it-works")} className="block w-full text-left text-sm text-slate-300 hover:text-white py-2">How It Works</button>
-            <button onClick={() => scrollTo("team")} className="block w-full text-left text-sm text-slate-300 hover:text-white py-2">Team</button>
-            <button onClick={() => navigate("/pricing")} className="block w-full text-left text-sm text-slate-300 hover:text-white py-2">Pricing</button>
+            <button onClick={() => scrollTo("features")} className="block w-full text-left text-sm text-slate-300 hover:text-white py-2">{tt("nav_features")}</button>
+            <button onClick={() => scrollTo("how-it-works")} className="block w-full text-left text-sm text-slate-300 hover:text-white py-2">{language === "en" ? "How It Works" : "工作原理"}</button>
+            <button onClick={() => scrollTo("team")} className="block w-full text-left text-sm text-slate-300 hover:text-white py-2">{tt("nav_team")}</button>
+            <button onClick={() => navigate("/pricing")} className="block w-full text-left text-sm text-slate-300 hover:text-white py-2">{tt("nav_pricing")}</button>
             <hr className="border-white/5" />
-            <button onClick={() => navigate(user ? "/dashboard" : "/login")} className="block w-full text-left text-sm text-slate-300 hover:text-white py-2">{user ? "Go to Dashboard" : "Log In"}</button>
+            {/* Mobile Language Switcher */}
+            <button
+              onClick={toggleLang}
+              className="flex items-center gap-2 w-full text-left text-sm text-slate-300 hover:text-white py-2"
+            >
+              <Globe className="w-4 h-4" />
+              {language === "en" ? "切换到中文" : "Switch to English"}
+            </button>
+            <button onClick={() => navigate(user ? "/dashboard" : "/login")} className="block w-full text-left text-sm text-slate-300 hover:text-white py-2">{user ? tt("nav_dashboard") : tt("nav_login")}</button>
             <button
               onClick={() => openWaitlist("nav_mobile")}
               className="block w-full text-center text-sm font-medium bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-2.5 rounded-lg"
             >
-              Request Access
+              {tt("nav_request_access")}
             </button>
           </div>
         )}
@@ -181,22 +268,21 @@ export default function Landing() {
             {/* Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-medium mb-8">
               <Sparkles className="w-3.5 h-3.5" />
-              AI-Powered Sales Intelligence
+              {tt("hero_badge")}
             </div>
 
             {/* Headline */}
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-bold leading-[1.1] tracking-tight mb-6">
-              Stop guessing.{" "}
+              {tt("hero_title_1")}{" "}
               <br className="hidden sm:block" />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400">
-                Start knowing.
+                {tt("hero_title_2")}
               </span>
             </h1>
 
             {/* Subheadline */}
             <p className="text-lg md:text-xl text-slate-400 leading-relaxed max-w-2xl mx-auto mb-10">
-              Meridian is the AI deal intelligence layer that reads your sales conversations,
-              maps the buying committee, and tells you exactly what to do next to win.
+              {tt("hero_subtitle")}
             </p>
 
             {/* CTA Buttons */}
@@ -205,21 +291,23 @@ export default function Landing() {
                 onClick={() => openWaitlist("hero")}
                 className="group flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-medium px-8 py-3.5 rounded-xl transition-all shadow-xl shadow-cyan-500/20 hover:shadow-cyan-500/30 text-base"
               >
-                Request Early Access
+                {tt("hero_cta_primary")}
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
               </button>
               <button
                 onClick={() => navigate("/login")}
                 className="flex items-center gap-2 text-slate-300 hover:text-white border border-white/10 hover:border-white/20 px-8 py-3.5 rounded-xl transition-all text-base"
               >
-                Log In
+                {tt("nav_login")}
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
 
             {/* ─── BACKED BY ─────────────────────────── */}
             <div className="flex flex-col items-center gap-3 mb-4">
-              <p className="text-xs font-medium text-slate-500 tracking-widest uppercase">Backed by</p>
+              <p className="text-xs font-medium text-slate-500 tracking-widest uppercase">
+                {language === "en" ? "Backed by" : "投资方"}
+              </p>
               <div className="flex items-center gap-8">
                 <img
                   src={MIRACLEPLUS_LOGO}
@@ -240,7 +328,7 @@ export default function Landing() {
             <div className="absolute -inset-4 bg-gradient-to-r from-cyan-500/20 via-blue-500/10 to-purple-500/20 rounded-2xl blur-2xl opacity-50" />
             <div className="relative rounded-xl overflow-hidden border border-white/10 shadow-2xl shadow-black/50">
               <img
-                src={HERO_IMG}
+                src={imgs.hero}
                 alt="Meridian Deal Intelligence Platform"
                 className="w-full"
                 loading="lazy"
@@ -257,10 +345,10 @@ export default function Landing() {
         <div className="max-w-5xl mx-auto px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             {[
-              { value: 68, suffix: "%", label: "Avg. win-rate improvement" },
-              { value: 3, suffix: "x", label: "Faster deal qualification" },
-              { value: 40, suffix: "%", label: "Less time on CRM data entry" },
-              { value: 2, suffix: "min", label: "Pre-meeting brief generation" },
+              { value: 68, suffix: "%", label: tt("stat_win_rate") },
+              { value: 3, suffix: "x", label: tt("stat_qualification") },
+              { value: 40, suffix: "%", label: tt("stat_stakeholders") },
+              { value: 2, suffix: language === "en" ? "min" : "分钟", label: tt("stat_time_saved") },
             ].map((stat) => (
               <div key={stat.label}>
                 <div className="text-3xl md:text-4xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
@@ -276,36 +364,20 @@ export default function Landing() {
       {/* ─── PROBLEM STATEMENT ───────────────────────── */}
       <section className="py-24 md:py-32">
         <div className="max-w-4xl mx-auto px-6 text-center">
-          <p className="text-sm font-medium text-cyan-400 tracking-widest uppercase mb-4">The Problem</p>
+          <p className="text-sm font-medium text-cyan-400 tracking-widest uppercase mb-4">
+            {language === "en" ? "The Problem" : "痛点"}
+          </p>
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold leading-tight mb-8">
-            Your CRM tracks activities.{" "}
-            <span className="text-slate-500">It doesn't understand your deals.</span>
+            {problemTitle.main}{" "}
+            <span className="text-slate-500">{problemTitle.dim}</span>
           </h2>
           <p className="text-lg text-slate-400 leading-relaxed max-w-3xl mx-auto mb-16">
-            Enterprise sales teams spend 60% of their time on admin instead of selling.
-            Critical stakeholder dynamics are trapped in reps' heads. Deals slip through
-            the cracks because no one sees the full picture until it's too late.
+            {problemDesc}
           </p>
 
           {/* Pain Point Cards */}
           <div className="grid md:grid-cols-3 gap-6 text-left">
-            {[
-              {
-                icon: Users,
-                title: "Invisible buying committees",
-                desc: "You don't know who's really making the decision, who's blocking, or who you haven't met yet.",
-              },
-              {
-                icon: Brain,
-                title: "Insights trapped in conversations",
-                desc: "Critical signals from calls and emails never make it into your CRM or deal strategy.",
-              },
-              {
-                icon: Target,
-                title: "Reactive deal management",
-                desc: "By the time you realize a deal is at risk, it's already too late to course-correct.",
-              },
-            ].map((pain) => (
+            {painPoints.map((pain) => (
               <div
                 key={pain.title}
                 className="group p-6 rounded-xl bg-white/[0.02] border border-white/5 hover:border-cyan-500/20 transition-all duration-300"
@@ -325,60 +397,45 @@ export default function Landing() {
       <section id="features" className="py-24 md:py-32">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-20">
-            <p className="text-sm font-medium text-cyan-400 tracking-widest uppercase mb-4">Features</p>
+            <p className="text-sm font-medium text-cyan-400 tracking-widest uppercase mb-4">{tt("nav_features")}</p>
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold leading-tight">
-              Your AI co-pilot for{" "}
+              {tt("features_title_1")}{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
-                complex deals
+                {tt("features_title_2")}
               </span>
             </h2>
           </div>
 
           {/* Feature 1: AI Deal Insight */}
           <FeatureRow
-            badge="Deal Intelligence"
-            title="AI that reads between the lines"
-            desc="Meridian analyzes every meeting transcript, email, and note to generate a real-time deal narrative. It identifies what's happening, surfaces key risks, and recommends your exact next moves — grounded in your chosen sales methodology (MEDDIC, BANT, SPICED, or custom)."
-            bullets={[
-              "Win confidence score with 30-day trend tracking",
-              "Key risks with stakeholder attribution",
-              "AI-suggested next actions with Accept / Dismiss / Later",
-              "Contextual chat — ask the AI anything about your deal",
-            ]}
-            image={FEATURE_INSIGHT}
-            imageAlt="AI Deal Insight Panel — 68% Confidence Score, Risk Analysis, and Next Steps"
+            badge={tt("feature1_label")}
+            title={tt("feature1_title")}
+            desc={tt("feature1_desc")}
+            bullets={[tt("feature1_bullet1"), tt("feature1_bullet2"), tt("feature1_bullet3")]}
+            image={imgs.featureInsight}
+            imageAlt={tt("feature1_title")}
             imagePosition="right"
           />
 
           {/* Feature 2: Stakeholder Map */}
           <FeatureRow
-            badge="Buying Committee"
-            title="Map the power dynamics"
-            desc="Visualize the entire buying committee in an interactive concentric-circle map. Decision makers at the center, blockers on the outside. Drag, connect, and annotate relationships. AI auto-generates the initial map from your first meeting — you refine from there."
-            bullets={[
-              "Concentric circle layout by influence level",
-              "Relationship lines and interaction history",
-              "Pre-meeting briefs generated per stakeholder",
-              "AI-suggested contacts you haven't engaged yet",
-            ]}
-            image={FEATURE_MAP}
-            imageAlt="Interactive Stakeholder Relationship Map"
+            badge={tt("feature2_label")}
+            title={tt("feature2_title")}
+            desc={tt("feature2_desc")}
+            bullets={[tt("feature2_bullet1"), tt("feature2_bullet2"), tt("feature2_bullet3")]}
+            image={imgs.featureMap}
+            imageAlt={tt("feature2_title")}
             imagePosition="left"
           />
 
           {/* Feature 3: Deal Room */}
           <FeatureRow
-            badge="Deal Room"
-            title="Every interaction, one timeline"
-            desc="Meetings, notes, emails, documents — everything that happened in a deal, organized chronologically. Upload a call recording and get an AI-generated summary in minutes. No more digging through Slack threads or email chains to find what was said."
-            bullets={[
-              "Multi-source timeline (meetings, notes, emails, docs)",
-              "AI meeting summaries from transcripts",
-              "Voice transcription with speaker detection",
-              "Quick capture from any device",
-            ]}
-            image={FEATURE_ROOM}
-            imageAlt="Deal Timeline — Chronological Meeting History with AI Summaries"
+            badge={tt("feature3_label")}
+            title={tt("feature3_title")}
+            desc={tt("feature3_desc")}
+            bullets={[tt("feature3_bullet1"), tt("feature3_bullet2"), tt("feature3_bullet3")]}
+            image={imgs.featureRoom}
+            imageAlt={tt("feature3_title")}
             imagePosition="right"
           />
         </div>
@@ -393,58 +450,23 @@ export default function Landing() {
 
         <div className="relative max-w-5xl mx-auto px-6">
           <div className="text-center mb-20">
-            <p className="text-sm font-medium text-cyan-400 tracking-widest uppercase mb-4">How It Works</p>
+            <p className="text-sm font-medium text-cyan-400 tracking-widest uppercase mb-4">
+              {language === "en" ? "How It Works" : "工作原理"}
+            </p>
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold leading-tight mb-6">
-              The Meridian{" "}
+              {howItWorksTitle.pre}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400">
-                Intelligence Engine
+                {howItWorksTitle.highlight}
               </span>
             </h2>
             <p className="text-lg text-slate-400 max-w-2xl mx-auto">
-              Four layers working together to transform raw sales data into actionable deal strategy.
+              {howItWorksDesc}
             </p>
           </div>
 
           {/* Chip Stack */}
           <div className="max-w-lg mx-auto space-y-4">
-            {[
-              {
-                layer: "Layer 4",
-                title: "Action Layer",
-                desc: "What's Next recommendations, pre-meeting briefs, risk alerts",
-                icon: Zap,
-                color: "from-purple-500 to-pink-500",
-                glow: "shadow-purple-500/20",
-                borderColor: "border-purple-500/30",
-              },
-              {
-                layer: "Layer 3",
-                title: "Intelligence Layer",
-                desc: "Deal narrative, confidence scoring, methodology grading",
-                icon: Brain,
-                color: "from-blue-500 to-cyan-500",
-                glow: "shadow-blue-500/20",
-                borderColor: "border-blue-500/30",
-              },
-              {
-                layer: "Layer 2",
-                title: "Understanding Layer",
-                desc: "Stakeholder mapping, relationship analysis, sentiment detection",
-                icon: Users,
-                color: "from-cyan-500 to-teal-500",
-                glow: "shadow-cyan-500/20",
-                borderColor: "border-cyan-500/30",
-              },
-              {
-                layer: "Layer 1",
-                title: "Data Layer",
-                desc: "Meeting transcripts, emails, notes, documents, CRM data",
-                icon: Layers,
-                color: "from-slate-500 to-slate-400",
-                glow: "shadow-slate-500/10",
-                borderColor: "border-slate-500/30",
-              },
-            ].map((chip, i) => (
+            {chipStack.map((chip, i) => (
               <ChipCard key={chip.title} chip={chip} index={i} />
             ))}
           </div>
@@ -455,26 +477,29 @@ export default function Landing() {
       <section id="team" className="py-24 md:py-32">
         <div className="max-w-3xl mx-auto px-6">
           <div className="text-center mb-12">
-            <p className="text-sm font-medium text-cyan-400 tracking-widest uppercase mb-4">Our Team</p>
+            <p className="text-sm font-medium text-cyan-400 tracking-widest uppercase mb-4">{tt("team_badge")}</p>
             <h2 className="text-3xl md:text-4xl font-display font-bold leading-tight mb-6">
-              Built by a team that's{" "}
+              {tt("team_title").split(language === "en" ? "lived the problem" : "亲历过这些问题")[0]}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
-                lived the problem
+                {language === "en" ? "lived the problem" : "亲历过这些问题"}
               </span>
+              {language === "zh" ? "的人打造。" : ""}
             </h2>
           </div>
 
           <div className="p-8 md:p-10 rounded-2xl bg-white/[0.02] border border-white/5">
             <p className="text-lg md:text-xl text-slate-300 leading-relaxed mb-6">
-              We've spent years in the trenches of enterprise sales — running complex deals, managing buying committees, and losing sleep over pipeline reviews. We've seen firsthand how the best sales teams win: not through more activity, but through deeper understanding.
+              {teamContent.p1}
             </p>
             <p className="text-lg md:text-xl text-slate-300 leading-relaxed mb-6">
-              We built Meridian because we believe sales intelligence shouldn't be trapped in spreadsheets and tribal knowledge. Every deal tells a story — the relationships, the risks, the momentum. We're building the AI that reads that story and helps you write a better ending.
+              {teamContent.p2}
             </p>
             <p className="text-base text-slate-400 leading-relaxed">
-              Our team combines deep enterprise sales experience with AI and product engineering. We're backed by{" "}
-              <span className="text-cyan-400 font-medium">MiraclePlus</span> and{" "}
-              <span className="text-cyan-400 font-medium">Antler</span>, and we're based between Singapore and San Francisco.
+              {teamContent.p3_pre}
+              <span className="text-cyan-400 font-medium">MiraclePlus</span>
+              {teamContent.p3_mid}
+              <span className="text-cyan-400 font-medium">Antler</span>
+              {teamContent.p3_post}
             </p>
 
             {/* Backed by logos inline */}
@@ -502,27 +527,25 @@ export default function Landing() {
 
         <div className="relative max-w-2xl mx-auto px-6 text-center">
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold leading-tight mb-6">
-            Ready to see your deals{" "}
+            {tt("cta_title_1")}{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
-              clearly
+              {tt("cta_title_2")}
             </span>
-            ?
           </h2>
           <p className="text-lg text-slate-400 mb-10 max-w-lg mx-auto">
-            Join the waitlist for early access. We're onboarding select teams who sell
-            complex, multi-stakeholder deals.
+            {waitlistSubtext}
           </p>
 
           <button
             onClick={() => openWaitlist("cta_bottom")}
             className="group inline-flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-medium px-8 py-4 rounded-xl transition-all shadow-xl shadow-cyan-500/20 hover:shadow-cyan-500/30 text-base"
           >
-            Request Early Access
+            {tt("cta_button")}
             <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
           </button>
 
           <p className="text-xs text-slate-600 mt-4">
-            No credit card required. We'll reach out within 48 hours.
+            {ctaSubtext}
           </p>
         </div>
       </section>
@@ -536,15 +559,15 @@ export default function Landing() {
             </a>
 
             <div className="flex items-center gap-6 text-sm text-slate-500">
-              <button onClick={() => scrollTo("features")} className="hover:text-slate-300 transition-colors">Features</button>
-              <button onClick={() => scrollTo("how-it-works")} className="hover:text-slate-300 transition-colors">How It Works</button>
-              <button onClick={() => scrollTo("team")} className="hover:text-slate-300 transition-colors">Team</button>
-              <button onClick={() => navigate("/pricing")} className="hover:text-slate-300 transition-colors">Pricing</button>
-              <button onClick={() => navigate("/login")} className="hover:text-slate-300 transition-colors">Log In</button>
+              <button onClick={() => scrollTo("features")} className="hover:text-slate-300 transition-colors">{tt("nav_features")}</button>
+              <button onClick={() => scrollTo("how-it-works")} className="hover:text-slate-300 transition-colors">{language === "en" ? "How It Works" : "工作原理"}</button>
+              <button onClick={() => scrollTo("team")} className="hover:text-slate-300 transition-colors">{tt("nav_team")}</button>
+              <button onClick={() => navigate("/pricing")} className="hover:text-slate-300 transition-colors">{tt("nav_pricing")}</button>
+              <button onClick={() => navigate("/login")} className="hover:text-slate-300 transition-colors">{tt("nav_login")}</button>
             </div>
 
             <p className="text-xs text-slate-600">
-              &copy; {new Date().getFullYear()} Meridian Sales Intelligence. All rights reserved.
+              &copy; {new Date().getFullYear()} {tt("footer_copyright")}
             </p>
           </div>
         </div>

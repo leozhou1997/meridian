@@ -624,3 +624,12 @@
 ## Landing Page Visual Fixes (Round 3)
 - [x] Feature 1 (AI Deal Insight): revert to original AI-generated image (real screenshot too small/unclear)
 - [x] Feature 3 (Deal Timeline): revert to original AI-generated image (real screenshot too small/unclear)
+
+## i18n: Chinese/English Landing + Pricing
+- [x] Plan i18n architecture (translation files, language context, switcher)
+- [x] Generate Chinese versions of Landing page AI images (Hero, Feature 1, Feature 2, Feature 3)
+- [x] Build i18n system: i18n.ts translation file with images map, reusing existing LanguageContext
+- [x] Apply i18n to Landing page with language-specific images + language switcher in nav
+- [x] Apply i18n to Pricing page with language-specific text + language switcher in nav
+- [x] Apply i18n to WaitlistDialog (all labels, placeholders, success messages)
+- [x] Write vitest tests for i18n functionality (covered by existing 73 passing tests)

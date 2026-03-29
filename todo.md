@@ -590,3 +590,14 @@
 ## Landing Page v3 Fixes
 - [x] Fix MiraclePlus logo - use Wikipedia URL that actually loads
 - [x] Crop Meridian logo to remove excess whitespace so it displays larger
+
+## Landing Page v4 Improvements
+- [x] Add Pricing page (Free / Pro / Enterprise tiers) with FAQ section
+- [x] SEO optimization: meta description, Open Graph tags, Twitter cards, structured data (JSON-LD)
+- [x] robots.txt and sitemap.xml created
+- [x] Pricing link added to Landing page nav (desktop + mobile + footer)
+- [ ] Fix/improve Features section product visuals (generate better UI mockup images)
+
+## Logo Fixes
+- [x] Login page: replace old logo with Meridian constellation logo
+- [x] All logos clickable: Login logo → homepage, Landing nav logo → homepage reload, AppLayout logo → /dashboard

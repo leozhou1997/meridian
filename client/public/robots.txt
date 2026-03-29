@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+Allow: /landing
+Allow: /pricing
+Disallow: /dashboard
+Disallow: /deal/
+Disallow: /deals
+Disallow: /stakeholders
+Disallow: /deal-room
+Disallow: /ask
+Disallow: /knowledge
+Disallow: /admin/
+Disallow: /settings
+Disallow: /onboarding
+Disallow: /api/
+
+Sitemap: https://meridianos.ai/sitemap.xml

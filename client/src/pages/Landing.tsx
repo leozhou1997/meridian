@@ -127,15 +127,16 @@ export default function Landing() {
       >
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           {/* Logo */}
-          <div className="flex items-center gap-2.5">
+          <a href="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
             <img src={LOGO_IMG} alt="Meridian" className="h-10 w-auto brightness-0 invert" />
-          </div>
+          </a>
 
           {/* Desktop Nav Links */}
           <div className="hidden md:flex items-center gap-8 text-sm text-slate-400">
             <button onClick={() => scrollTo("features")} className="hover:text-white transition-colors">Features</button>
             <button onClick={() => scrollTo("how-it-works")} className="hover:text-white transition-colors">How It Works</button>
             <button onClick={() => scrollTo("team")} className="hover:text-white transition-colors">Team</button>
+            <button onClick={() => navigate("/pricing")} className="hover:text-white transition-colors">Pricing</button>
           </div>
 
           {/* Desktop CTA */}
@@ -169,6 +170,7 @@ export default function Landing() {
             <button onClick={() => scrollTo("features")} className="block w-full text-left text-sm text-slate-300 hover:text-white py-2">Features</button>
             <button onClick={() => scrollTo("how-it-works")} className="block w-full text-left text-sm text-slate-300 hover:text-white py-2">How It Works</button>
             <button onClick={() => scrollTo("team")} className="block w-full text-left text-sm text-slate-300 hover:text-white py-2">Team</button>
+            <button onClick={() => navigate("/pricing")} className="block w-full text-left text-sm text-slate-300 hover:text-white py-2">Pricing</button>
             <hr className="border-white/5" />
             <button onClick={() => navigate(user ? "/dashboard" : "/login")} className="block w-full text-left text-sm text-slate-300 hover:text-white py-2">{user ? "Go to Dashboard" : "Log In"}</button>
             <button
@@ -573,14 +575,15 @@ export default function Landing() {
       <footer className="border-t border-white/5 py-12">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-2.5">
+            <a href="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
               <img src={LOGO_IMG} alt="Meridian" className="h-8 w-auto brightness-0 invert" />
-            </div>
+            </a>
 
             <div className="flex items-center gap-6 text-sm text-slate-500">
               <button onClick={() => scrollTo("features")} className="hover:text-slate-300 transition-colors">Features</button>
               <button onClick={() => scrollTo("how-it-works")} className="hover:text-slate-300 transition-colors">How It Works</button>
               <button onClick={() => scrollTo("team")} className="hover:text-slate-300 transition-colors">Team</button>
+              <button onClick={() => navigate("/pricing")} className="hover:text-slate-300 transition-colors">Pricing</button>
               <button onClick={() => navigate("/login")} className="hover:text-slate-300 transition-colors">Log In</button>
             </div>
 

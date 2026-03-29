@@ -17,6 +17,7 @@ import Onboarding from "./pages/Onboarding";
 import NewDeal from "./pages/NewDeal";
 import Deals from "./pages/Deals";
 import Landing from "./pages/Landing";
+import Pricing from "./pages/Pricing";
 import AppLayout from "./components/AppLayout";
 import { useAuth } from "./_core/hooks/useAuth";
 import { getLoginUrl } from "./const";
@@ -79,6 +80,7 @@ function Router() {
       {/* Keep /landing as an explicit route so it's always accessible */}
       <Route path="/landing" component={Landing} />
       <Route path="/login" component={Login} />
+      <Route path="/pricing" component={Pricing} />
       <Route path="/dashboard">
         <ProtectedRoute component={Dashboard} />
       </Route>

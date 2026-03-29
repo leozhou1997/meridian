@@ -13,7 +13,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { AlertCircle, Eye, EyeOff, Loader2, BarChart3, Shield, Zap } from "lucide-react";
+import { AlertCircle, Eye, EyeOff, Loader2, Shield, Zap, BarChart3 } from "lucide-react";
+
+const LOGO_IMG =
+  "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/meridian-logo-cropped_69e86f90.png";
 
 export default function Login() {
   const [, navigate] = useLocation();
@@ -98,12 +101,13 @@ export default function Login() {
     <div className="min-h-screen bg-slate-950 flex">
       {/* Left panel - branding */}
       <div className="hidden lg:flex flex-col justify-between w-1/2 bg-gradient-to-br from-slate-900 to-indigo-950 border-r border-slate-800/50 p-12">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-400 flex items-center justify-center">
-            <BarChart3 className="w-4 h-4 text-white" />
-          </div>
-          <span className="font-bold text-lg text-white">Meridian</span>
-        </div>
+        <a href="/" className="flex items-center gap-2.5 group">
+          <img
+            src={LOGO_IMG}
+            alt="Meridian"
+            className="h-10 w-auto brightness-0 invert group-hover:opacity-80 transition-opacity"
+          />
+        </a>
 
         <div>
           <h1 className="text-4xl font-bold leading-tight mb-6 text-white">
@@ -163,12 +167,13 @@ export default function Login() {
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-sm">
           {/* Mobile logo */}
-          <div className="lg:hidden flex items-center gap-2 mb-8">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-400 flex items-center justify-center">
-              <BarChart3 className="w-4 h-4 text-white" />
-            </div>
-            <span className="font-bold text-lg text-white">Meridian</span>
-          </div>
+          <a href="/" className="lg:hidden flex items-center gap-2.5 mb-8">
+            <img
+              src={LOGO_IMG}
+              alt="Meridian"
+              className="h-10 w-auto brightness-0 invert"
+            />
+          </a>
 
           <Card className="border-slate-800 bg-slate-900/80 backdrop-blur-sm shadow-2xl">
             <CardHeader className="space-y-1 pb-4">

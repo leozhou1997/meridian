@@ -644,3 +644,21 @@
 - [x] Update Landing.tsx stats values: stat3 keep 40%, stat4 change from 2min to 2hrs
 - [x] Regenerate 4 Chinese images with predominantly Chinese text (titles, insights, actions all in Chinese)
 - [x] Upload and update i18n.ts with v3 Chinese image URLs
+
+## Mockup Refinements (Round 2)
+- [ ] Hero: adjust Deal Insight panel from 30% to 40% width (four-six split)
+- [ ] All mockups: replace initial-based avatars with real human photos
+- [ ] Stakeholder Map: enlarge slightly, reduce people count, focus on clear rings + connections
+
+## Mockup Refinements (Round 3) - EN + ZH Final
+- [x] Compress Deal Insight 68% area, show What's Happening + Key Risks + What's Next all visible
+- [x] Stakeholder Map: thicker connection lines, add legend for rings and lines
+- [x] Stakeholder Map: reference product UI elements and highlight key indicators
+- [x] Update Feature Insight mockup with same Deal Insight changes
+- [x] Create Chinese versions of all 4 mockups with realistic Chinese content
+- [x] Generate all 8 screenshots (4 EN + 4 ZH)
+- [x] Enhance colors to jewel-tone with transparency for marketing impact
+- [x] Add Deal Insight panel elevation (shadow/border) for visual hierarchy
+- [x] Add dotted grid background to Stakeholder Map for sandbox feel
+- [x] Change Confidence Score from bar chart to smooth curve
+- [x] Upload all 8 images to CDN and update i18n.ts

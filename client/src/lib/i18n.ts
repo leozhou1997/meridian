@@ -43,7 +43,7 @@ export const translations = {
     stat_win_rate: "Win-rate improvement",
     stat_qualification: "Faster qualification",
     stat_stakeholders: "Shorter deal cycles",
-    stat_time_saved: "Saved weekly per rep",
+    stat_time_saved: "Saved daily per rep",
 
     /* ─── Landing: Features section header ─── */
     features_badge: "Core Capabilities",
@@ -223,7 +223,7 @@ export const translations = {
     hero_title_1: "看透交易本质，",
     hero_title_2: "而非只看数据。",
     hero_subtitle:
-      "Meridian 深度解读每一次客户互动——发现隐藏风险、绘制采购决策链、精准推荐下一步行动。",
+      "子午线深度解读每一次客户互动——发现隐藏风险、绘制采购决策链、精准推荐下一步行动。",
     hero_cta_primary: "申请抢先体验",
     hero_cta_secondary: "了解产品",
 
@@ -231,7 +231,7 @@ export const translations = {
     stat_win_rate: "赢单率提升",
     stat_qualification: "更快的商机评估",
     stat_stakeholders: "缩短成交周期",
-    stat_time_saved: "每周节省准备时间",
+    stat_time_saved: "每天节省准备时间",
 
     /* ─── Landing: Features section header ─── */
     features_badge: "核心能力",
@@ -242,7 +242,7 @@ export const translations = {
     feature1_label: "AI 交易洞察",
     feature1_title: "读懂字里行间的 AI。",
     feature1_desc:
-      "Meridian 不只是总结会议——它将每一次互动综合为动态交易叙事，在风险浮出水面之前识别它们，并以置信度评分推荐具体的下一步行动。",
+      "子午线不只是总结会议——它将每一次互动综合为动态交易叙事，在风险浮出水面之前识别它们，并以置信度评分推荐具体的下一步行动。",
     feature1_bullet1: "带趋势分析的置信度评分",
     feature1_bullet2: "跨所有互动的风险识别",
     feature1_bullet3: "按决策人的 AI 行动建议",
@@ -269,17 +269,17 @@ export const translations = {
     team_badge: "我们的团队",
     team_title: "由亲历过这些问题的人打造。",
     team_subtitle:
-      "我们在企业级销售领域深耕多年——经历过复杂的采购委员会、多线程交易和漫长销售周期的混乱。Meridian 是我们一直想要的工具。",
+      "我们在企业级销售领域深耕多年——经历过复杂的采购委员会、多线程交易和漫长销售周期的混乱。子午线是我们一直想要的工具。",
 
     /* ─── Landing: Bottom CTA ─── */
     cta_title_1: "不再猜测，",
     cta_title_2: "开始洞察。",
     cta_subtitle:
-      "加入正在使用 Meridian 自信成交复杂交易的销售团队。",
+      "加入正在使用子午线自信成交复杂交易的销售团队。",
     cta_button: "申请抢先体验",
 
     /* ─── Landing: Footer ─── */
-    footer_copyright: "Meridian 销售智能平台。保留所有权利。",
+    footer_copyright: "子午线销售智能平台。保留所有权利。",
 
     /* ─── Pricing: Hero ─── */
     pricing_badge: "简洁透明的定价",
@@ -348,7 +348,7 @@ export const translations = {
     faqs: [
       {
         q: "AI Credit 是如何运作的？",
-        a: "每当 Meridian 生成一个洞察——例如交易分析、决策人简报或下一步行动建议——会根据复杂度消耗一定数量的 Credit。Pro 计划每用户每月包含 1,000 个 Credit，对大多数活跃销售团队来说足够使用。如有需要，可以购买额外的 Credit 包。",
+        a: "每当子午线生成一个洞察——例如交易分析、决策人简报或下一步行动建议——会根据复杂度消耗一定数量的 Credit。Pro 计划每用户每月包含 1,000 个 Credit，对大多数活跃销售团队来说足够使用。如有需要，可以购买额外的 Credit 包。",
       },
       {
         q: "可以随时切换计划吗？",
@@ -364,7 +364,7 @@ export const translations = {
       },
       {
         q: "AI 如何处理我的数据？",
-        a: "Meridian 使用最先进的语言模型分析你的会议记录、笔记和交易上下文。你的数据在传输和存储时均加密，且绝不会用于训练模型。每个租户的数据完全隔离。",
+        a: "子午线使用最先进的语言模型分析你的会议记录、笔记和交易上下文。你的数据在传输和存储时均加密，且绝不会用于训练模型。每个租户的数据完全隔离。",
       },
       {
         q: "有哪些 CRM 集成？",
@@ -380,7 +380,7 @@ export const translations = {
 
     /* ─── WaitlistDialog ─── */
     waitlist_title: "申请抢先体验",
-    waitlist_desc: "加入 Meridian AI 销售智能平台的等候名单。",
+    waitlist_desc: "加入子午线 AI 销售智能平台的等候名单。",
     waitlist_email_label: "工作邮箱",
     waitlist_name_label: "姓名",
     waitlist_company_label: "公司",
@@ -392,7 +392,7 @@ export const translations = {
     waitlist_error: "出了点问题，请重试。",
     waitlist_success_title: "你已加入名单！",
     waitlist_success_already: "你已经在名单中了！",
-    waitlist_success_desc: "感谢你对 Meridian 的关注。我们会尽快联系你，提供抢先体验的详情。",
+    waitlist_success_desc: "感谢你对子午线的关注。我们会尽快联系你，提供抢先体验的详情。",
     waitlist_success_already_desc: "我们已收到你的申请。团队会尽快与你联系，告知后续步骤。",
     waitlist_got_it: "知道了",
   },

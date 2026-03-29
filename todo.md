@@ -662,3 +662,8 @@
 - [x] Add dotted grid background to Stakeholder Map for sandbox feel
 - [x] Change Confidence Score from bar chart to smooth curve
 - [x] Upload all 8 images to CDN and update i18n.ts
+
+## Quick Fixes - Stats + Chinese Brand Name
+- [x] Change stat4 from "每周节省准备时间" to "每天节省准备时间" (2hrs daily not weekly)
+- [x] Change English stat4 from "Saved weekly per rep" to "Saved daily per rep"
+- [x] Translate Meridian to 子午线 in Chinese version throughout i18n.ts

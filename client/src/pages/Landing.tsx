@@ -348,7 +348,7 @@ export default function Landing() {
               { value: 68, suffix: "%", label: tt("stat_win_rate") },
               { value: 3, suffix: "x", label: tt("stat_qualification") },
               { value: 40, suffix: "%", label: tt("stat_stakeholders") },
-              { value: 2, suffix: language === "en" ? "min" : "分钟", label: tt("stat_time_saved") },
+              { value: 2, suffix: language === "en" ? "hrs" : "小时", label: tt("stat_time_saved") },
             ].map((stat) => (
               <div key={stat.label}>
                 <div className="text-3xl md:text-4xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">

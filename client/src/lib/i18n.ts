@@ -12,10 +12,10 @@ export const images = {
     featureRoom: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-deal-room-P9metY77PHf7ktVxoerFW6.webp",
   },
   zh: {
-    hero: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/hero-zh-v2-Yr3zeoL6GvxY5BFEEtiM75.webp",
-    featureInsight: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-insight-zh-v2-J77WAtTPiKh5DJtmHMxAMG.webp",
-    featureMap: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-map-zh-v2-de9zM3PXqu3kAviKaigb4U.webp",
-    featureRoom: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-room-zh-v2-neQ7BTbVxHbxQGkdndgMDd.webp",
+    hero: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/hero-zh-v3-g8LmfZDG5BW53JRuMnYrTC.webp",
+    featureInsight: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-insight-zh-v3-WWVBrAqzWxAVUGtAQ48BRx.webp",
+    featureMap: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-map-zh-v3-m9H5LkC4bSH2nkWuSParvJ.webp",
+    featureRoom: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-room-zh-v3-btsn5YVExfewdKpc72bhmo.webp",
   },
 } as const;
 
@@ -42,8 +42,8 @@ export const translations = {
     /* ─── Landing: Stats ─── */
     stat_win_rate: "Win-rate improvement",
     stat_qualification: "Faster qualification",
-    stat_stakeholders: "Stakeholders mapped",
-    stat_time_saved: "Time saved per deal",
+    stat_stakeholders: "Shorter deal cycles",
+    stat_time_saved: "Saved weekly per rep",
 
     /* ─── Landing: Features section header ─── */
     features_badge: "Core Capabilities",
@@ -230,8 +230,8 @@ export const translations = {
     /* ─── Landing: Stats ─── */
     stat_win_rate: "赢单率提升",
     stat_qualification: "更快的商机评估",
-    stat_stakeholders: "已绘制决策人",
-    stat_time_saved: "每笔交易节省时间",
+    stat_stakeholders: "缩短成交周期",
+    stat_time_saved: "每周节省准备时间",
 
     /* ─── Landing: Features section header ─── */
     features_badge: "核心能力",

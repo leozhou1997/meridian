@@ -637,3 +637,10 @@
 ## Chinese Image Style Fix
 - [x] Regenerate Chinese Landing page images to match English version style (same UI mockup, Chinese text)
 - [x] Update i18n.ts with new Chinese image URLs (v2)
+
+## Hero Stats Fix + Chinese Image v3
+- [x] Fix hero stats: change "已绘制决策人" → "缩短成交周期", "每笔交易节省时间" → "每周节省准备时间"
+- [x] Update English stats to match: "Stakeholders mapped" → "Shorter deal cycles", "Time saved per deal" → "Saved weekly per rep"
+- [x] Update Landing.tsx stats values: stat3 keep 40%, stat4 change from 2min to 2hrs
+- [x] Regenerate 4 Chinese images with predominantly Chinese text (titles, insights, actions all in Chinese)
+- [x] Upload and update i18n.ts with v3 Chinese image URLs

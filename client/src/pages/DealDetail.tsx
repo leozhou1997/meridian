@@ -592,7 +592,7 @@ export default function DealDetail() {
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <h2 className="font-display text-xl font-bold mb-2">Deal not found</h2>
-          <Link href="/">
+          <Link href="/dashboard">
             <Button variant="outline" size="sm">Back to Dashboard</Button>
           </Link>
         </div>

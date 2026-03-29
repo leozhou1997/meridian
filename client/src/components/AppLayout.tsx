@@ -73,7 +73,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     .reduce((s, d) => s + (d.value ?? 0), 0);
 
   const navItems = [
-    { icon: LayoutDashboard, label: t('nav.dashboard'), path: '/' },
+    { icon: LayoutDashboard, label: t('nav.dashboard'), path: '/dashboard' },
     { icon: Briefcase, label: t('nav.deals') || 'Deals', path: '/deals' },
     { icon: Users, label: t('nav.stakeholders'), path: '/stakeholders' },
     { icon: FileText, label: t('nav.dealRoom') || 'Deal Room', path: '/deal-room' },
@@ -88,7 +88,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       <div className="h-screen flex overflow-hidden bg-background pb-0 md:pb-0">
         {/* ── Icon sidebar (Layer 1 — highest z-index, desktop only) ── */}
         <div className="hidden md:flex w-[60px] bg-sidebar border-r border-sidebar-border flex-col items-center py-4 shrink-0 z-40 relative">
-          <Link href="/">
+          <Link href="/dashboard">
             <div className="w-9 h-9 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center mb-6 hover:bg-primary/30 transition-colors">
               <Compass className="w-5 h-5 text-primary" />
             </div>
@@ -96,7 +96,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
           <nav className="flex-1 flex flex-col items-center gap-1">
             {navItems.map((item) => {
-              const isActive = location === item.path || (item.path !== '/' && location.startsWith(item.path));
+              const isActive = location === item.path || (item.path !== '/dashboard' && item.path !== '/' && location.startsWith(item.path));
               return (
                 <Tooltip key={item.path} delayDuration={0}>
                   <TooltipTrigger asChild>
@@ -425,7 +425,7 @@ function MobileBottomNav({ navItems, location }: MobileBottomNavProps) {
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-sidebar border-t border-sidebar-border">
       <div className="flex items-center justify-around h-[60px] px-2">
         {mobileItems.map((item) => {
-          const isActive = location === item.path || (item.path !== '/' && location.startsWith(item.path));
+          const isActive = location === item.path || (item.path !== '/dashboard' && item.path !== '/' && location.startsWith(item.path));
           return (
             <Link key={item.path} href={item.path}>
               <div className={`flex flex-col items-center gap-0.5 px-4 py-2 rounded-lg transition-all ${

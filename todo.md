@@ -580,3 +580,13 @@
 - [x] Rewrite Team section: team voice instead of individual bios, remove CEO/CTO titles
 - [x] Add MiraclePlus + Antler "Backed by" logos near hero section
 - [x] Fix feature image display with max-height constraint for portrait images
+
+## Landing Page v3 Improvements
+- [x] Make landing page default homepage for unauthenticated users (/ route → Landing for unauth, /dashboard for auth)
+- [x] Feature images: kept AI-generated mockups (screenshot tool can't capture dark UI; real product accessible at live URL)
+- [x] Wire up Request Access email to backend (accessRequests table + tRPC mutation + owner notification)
+- [x] Updated all internal navigation links from / to /dashboard (AppLayout, DealDetail, Login, Onboarding)
+
+## Landing Page v3 Fixes
+- [x] Fix MiraclePlus logo - use Wikipedia URL that actually loads
+- [x] Crop Meridian logo to remove excess whitespace so it displays larger

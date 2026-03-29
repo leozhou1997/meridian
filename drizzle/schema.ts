@@ -279,6 +279,21 @@ export const promptTemplates = mysqlTable("promptTemplates", {
 export type PromptTemplate = typeof promptTemplates.$inferSelect;
 export type InsertPromptTemplate = typeof promptTemplates.$inferInsert;
 
+// ─── Access Requests (Landing Page) ─────────────────────────────────────────
+
+export const accessRequests = mysqlTable("accessRequests", {
+  id: int("id").autoincrement().primaryKey(),
+  email: varchar("email", { length: 320 }).notNull(),
+  source: varchar("source", { length: 100 }).default("landing_page").notNull(),
+  status: mysqlEnum("status", ["pending", "contacted", "converted", "rejected"]).default("pending").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type AccessRequest = typeof accessRequests.$inferSelect;
+export type InsertAccessRequest = typeof accessRequests.$inferInsert;
+
 // ─── Company Profiles (Onboarding / CRM Init) ───────────────────────────────
 
 export const companyProfiles = mysqlTable("companyProfiles", {

@@ -23,7 +23,7 @@ import {
 
 /* ─── CDN Assets ─────────────────────────────────────── */
 const LOGO_IMG =
-  "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/meridian-logo_58ba415d.png";
+  "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/meridian-logo-cropped_69e86f90.png";
 const HERO_IMG =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/hero-product-mockup-WTVk7MPtNg3kv8RX8Lt6Lh.webp";
 const FEATURE_MAP =
@@ -33,7 +33,7 @@ const FEATURE_INSIGHT =
 const FEATURE_ROOM =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-deal-room-P9metY77PHf7ktVxoerFW6.webp";
 const MIRACLEPLUS_LOGO =
-  "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/miracleplus-logo_aa0b1540.png";
+  "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/miracleplus-logo_11f70a94.png";
 const ANTLER_LOGO =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/antler-logo_e6d05a8f.png";
 
@@ -91,13 +91,23 @@ export default function Landing() {
     return () => window.removeEventListener("scroll", handler);
   }, []);
 
+  const requestAccessMutation = trpc.landing.requestAccess.useMutation({
+    onSuccess: () => {
+      setSubmitting(false);
+      setSubmitted(true);
+    },
+    onError: () => {
+      setSubmitting(false);
+      // Still show success to user (don't expose backend errors)
+      setSubmitted(true);
+    },
+  });
+
   const handleRequestAccess = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
     setSubmitting(true);
-    await new Promise((r) => setTimeout(r, 800));
-    setSubmitting(false);
-    setSubmitted(true);
+    requestAccessMutation.mutate({ email: email.trim() });
   };
 
   const scrollTo = (id: string) => {
@@ -118,7 +128,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-2.5">
-            <img src={LOGO_IMG} alt="Meridian" className="h-8 w-auto brightness-0 invert" />
+            <img src={LOGO_IMG} alt="Meridian" className="h-10 w-auto brightness-0 invert" />
           </div>
 
           {/* Desktop Nav Links */}
@@ -131,7 +141,7 @@ export default function Landing() {
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-3">
             <button
-              onClick={() => navigate(user ? "/" : "/login")}
+              onClick={() => navigate(user ? "/dashboard" : "/login")}
               className="text-sm text-slate-300 hover:text-white px-4 py-2 rounded-lg transition-colors"
             >
               {user ? "Go to Dashboard" : "Log In"}
@@ -160,7 +170,7 @@ export default function Landing() {
             <button onClick={() => scrollTo("how-it-works")} className="block w-full text-left text-sm text-slate-300 hover:text-white py-2">How It Works</button>
             <button onClick={() => scrollTo("team")} className="block w-full text-left text-sm text-slate-300 hover:text-white py-2">Team</button>
             <hr className="border-white/5" />
-            <button onClick={() => navigate(user ? "/" : "/login")} className="block w-full text-left text-sm text-slate-300 hover:text-white py-2">{user ? "Go to Dashboard" : "Log In"}</button>
+            <button onClick={() => navigate(user ? "/dashboard" : "/login")} className="block w-full text-left text-sm text-slate-300 hover:text-white py-2">{user ? "Go to Dashboard" : "Log In"}</button>
             <button
               onClick={() => scrollTo("cta")}
               className="block w-full text-center text-sm font-medium bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-2.5 rounded-lg"
@@ -564,7 +574,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2.5">
-              <img src={LOGO_IMG} alt="Meridian" className="h-6 w-auto brightness-0 invert" />
+              <img src={LOGO_IMG} alt="Meridian" className="h-8 w-auto brightness-0 invert" />
             </div>
 
             <div className="flex items-center gap-6 text-sm text-slate-500">

@@ -49,12 +49,37 @@ function ProtectedRoute({ component: Component, fullScreen = false }: { componen
   );
 }
 
+/* Home route: Landing for guests, Dashboard for authenticated users */
+function HomeRoute() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-muted-foreground text-sm animate-pulse">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Landing />;
+  }
+
+  return (
+    <AppLayout>
+      <Dashboard />
+    </AppLayout>
+  );
+}
+
 function Router() {
   return (
     <Switch>
+      <Route path="/" component={HomeRoute} />
+      {/* Keep /landing as an explicit route so it's always accessible */}
       <Route path="/landing" component={Landing} />
       <Route path="/login" component={Login} />
-      <Route path="/">
+      <Route path="/dashboard">
         <ProtectedRoute component={Dashboard} />
       </Route>
       <Route path="/deals">

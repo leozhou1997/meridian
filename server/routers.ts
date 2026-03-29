@@ -11,6 +11,7 @@ import { stakeholdersRouter } from "./routers/stakeholders";
 import { teamRouter } from "./routers/team";
 import { onboardingRouter } from "./routers/onboarding";
 import { salesModelRouter } from "./routers/salesModels";
+import { landingRouter } from "./routers/landing";
 
 export const appRouter = router({
   system: systemRouter,
@@ -25,6 +26,7 @@ export const appRouter = router({
   team: teamRouter,
   onboarding: onboardingRouter,
   salesModels: salesModelRouter,
+  landing: landingRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -31,7 +31,7 @@ export default function Login() {
   // Redirect if already logged in
   useEffect(() => {
     if (!authLoading && user) {
-      navigate("/");
+      navigate("/dashboard");
     }
   }, [user, authLoading, navigate]);
 

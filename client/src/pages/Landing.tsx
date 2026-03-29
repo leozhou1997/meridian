@@ -25,13 +25,13 @@ import {
 const LOGO_IMG =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/meridian-logo-cropped_69e86f90.png";
 const HERO_IMG =
-  "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/screenshot-dashboard-cropped_af62dfbe.png";
+  "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/hero-product-mockup-WTVk7MPtNg3kv8RX8Lt6Lh.webp";
 const FEATURE_MAP =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-stakeholder-map-v3-XpdspnpuAKvTKPjMMm5oz5.webp";
 const FEATURE_INSIGHT =
-  "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/screenshot-deal-detail-cropped_4d33eb4a.png";
+  "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/deal-insight-only_fdc798f1.png";
 const FEATURE_ROOM =
-  "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/screenshot-deal-room-cropped_00840a7a.png";
+  "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/deal-timeline-only_65686d81.png";
 const MIRACLEPLUS_LOGO =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/miracleplus-logo_11f70a94.png";
 const ANTLER_LOGO =
@@ -361,7 +361,7 @@ export default function Landing() {
               "Contextual chat — ask the AI anything about your deal",
             ]}
             image={FEATURE_INSIGHT}
-            imageAlt="AI Deal Insight Panel with Confidence Score and Risk Analysis"
+            imageAlt="AI Deal Insight Panel — 68% Confidence Score, Risk Analysis, and Next Steps"
             imagePosition="right"
           />
 
@@ -393,7 +393,7 @@ export default function Landing() {
               "Quick capture from any device",
             ]}
             image={FEATURE_ROOM}
-            imageAlt="Deal Room Timeline"
+            imageAlt="Deal Timeline — Chronological Meeting History with AI Summaries"
             imagePosition="right"
           />
         </div>

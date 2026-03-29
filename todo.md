@@ -615,3 +615,8 @@
 - [x] Replace Landing page visuals: Hero=real dashboard, Feature1=real deal detail, Feature2=AI stakeholder map, Feature3=real deal room
 - [x] Crop preview mode bar from real screenshots
 - [x] Add future feature hints in screenshots where appropriate (stakeholder map shows future-state visualization)
+
+## Landing Page Visual Fixes (Round 2)
+- [x] Hero: revert to AI-generated image (Dashboard screenshot looks too CRM-like)
+- [x] Feature 1 (AI Deal Insight): crop to only show Deal Insight panel (left side) - not full Deal Detail with Stakeholder Map
+- [x] Feature 3 (Deal Room): replace global Deal Room list with Deal Timeline inside a specific deal (showing multi-source interactions)

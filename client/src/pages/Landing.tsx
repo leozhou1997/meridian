@@ -29,9 +29,9 @@ const HERO_IMG =
 const FEATURE_MAP =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-stakeholder-map-v3-XpdspnpuAKvTKPjMMm5oz5.webp";
 const FEATURE_INSIGHT =
-  "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/deal-insight-only_fdc798f1.png";
+  "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-ai-insight-VrpwZXFHpvvsiDzqKWMfZu.webp";
 const FEATURE_ROOM =
-  "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/deal-timeline-only_65686d81.png";
+  "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-deal-room-P9metY77PHf7ktVxoerFW6.webp";
 const MIRACLEPLUS_LOGO =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/miracleplus-logo_11f70a94.png";
 const ANTLER_LOGO =

@@ -620,3 +620,7 @@
 - [x] Hero: revert to AI-generated image (Dashboard screenshot looks too CRM-like)
 - [x] Feature 1 (AI Deal Insight): crop to only show Deal Insight panel (left side) - not full Deal Detail with Stakeholder Map
 - [x] Feature 3 (Deal Room): replace global Deal Room list with Deal Timeline inside a specific deal (showing multi-source interactions)
+
+## Landing Page Visual Fixes (Round 3)
+- [x] Feature 1 (AI Deal Insight): revert to original AI-generated image (real screenshot too small/unclear)
+- [x] Feature 3 (Deal Timeline): revert to original AI-generated image (real screenshot too small/unclear)

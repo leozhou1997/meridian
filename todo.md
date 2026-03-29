@@ -667,3 +667,7 @@
 - [x] Change stat4 from "每周节省准备时间" to "每天节省准备时间" (2hrs daily not weekly)
 - [x] Change English stat4 from "Saved weekly per rep" to "Saved daily per rep"
 - [x] Translate Meridian to 子午线 in Chinese version throughout i18n.ts
+
+## Backer Info in Team Section
+- [x] EN: Add "Backed by MiraclePlus and Antler" to team section
+- [x] ZH: Add "由奇绩创坛和Antler支持，扎根深圳，服务全球出海一线" to team section

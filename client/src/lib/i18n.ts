@@ -81,7 +81,7 @@ export const translations = {
     team_badge: "Our Team",
     team_title: "Built by people who've lived the problem.",
     team_subtitle:
-      "We've spent years in enterprise sales — navigating complex buying committees, multi-threaded deals, and the chaos of long sales cycles. Meridian is the tool we wished we had.",
+      "We've spent years in enterprise sales — navigating complex buying committees, multi-threaded deals, and the chaos of long sales cycles. Meridian is the tool we wished we had. Backed by MiraclePlus and Antler.",
 
     /* ─── Landing: Bottom CTA ─── */
     cta_title_1: "Stop guessing.",
@@ -269,7 +269,7 @@ export const translations = {
     team_badge: "我们的团队",
     team_title: "由亲历过这些问题的人打造。",
     team_subtitle:
-      "我们在企业级销售领域深耕多年——经历过复杂的采购委员会、多线程交易和漫长销售周期的混乱。子午线是我们一直想要的工具。",
+      "我们在企业级销售领域深耕多年——经历过复杂的采购委员会、多线程交易和漫长销售周期的混乱。子午线是我们一直想要的工具。由奇绩创坛和 Antler 支持，扎根深圳，服务全球出海一线。",
 
     /* ─── Landing: Bottom CTA ─── */
     cta_title_1: "不再猜测，",

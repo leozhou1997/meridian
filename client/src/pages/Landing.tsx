@@ -3,7 +3,6 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import {
-  BarChart3,
   ArrowRight,
   ChevronRight,
   Sparkles,
@@ -23,6 +22,8 @@ import {
 } from "lucide-react";
 
 /* ─── CDN Assets ─────────────────────────────────────── */
+const LOGO_IMG =
+  "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/meridian-logo_58ba415d.png";
 const HERO_IMG =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/hero-product-mockup-WTVk7MPtNg3kv8RX8Lt6Lh.webp";
 const FEATURE_MAP =
@@ -31,6 +32,10 @@ const FEATURE_INSIGHT =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-ai-insight-VrpwZXFHpvvsiDzqKWMfZu.webp";
 const FEATURE_ROOM =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-deal-room-P9metY77PHf7ktVxoerFW6.webp";
+const MIRACLEPLUS_LOGO =
+  "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/miracleplus-logo_aa0b1540.png";
+const ANTLER_LOGO =
+  "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/antler-logo_e6d05a8f.png";
 
 /* ─── Intersection Observer Hook ─────────────────────── */
 function useInView(threshold = 0.15) {
@@ -79,9 +84,6 @@ export default function Landing() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
-  // Landing page is public - no redirect needed
-  // Authenticated users can still view it and navigate to dashboard via Log In button
-
   // Track scroll for nav background
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 40);
@@ -93,7 +95,6 @@ export default function Landing() {
     e.preventDefault();
     if (!email.trim()) return;
     setSubmitting(true);
-    // Simulate submission (can wire to backend later)
     await new Promise((r) => setTimeout(r, 800));
     setSubmitting(false);
     setSubmitted(true);
@@ -103,8 +104,6 @@ export default function Landing() {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
     setMobileMenuOpen(false);
   };
-
-  // No loading gate needed - landing page is fully public
 
   return (
     <div className="min-h-screen bg-[#060a14] text-white overflow-x-hidden">
@@ -119,10 +118,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-              <BarChart3 className="w-4 h-4 text-white" />
-            </div>
-            <span className="font-display font-bold text-lg tracking-tight">Meridian</span>
+            <img src={LOGO_IMG} alt="Meridian" className="h-8 w-auto brightness-0 invert" />
           </div>
 
           {/* Desktop Nav Links */}
@@ -207,7 +203,7 @@ export default function Landing() {
             </p>
 
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
               <button
                 onClick={() => scrollTo("cta")}
                 className="group flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-medium px-8 py-3.5 rounded-xl transition-all shadow-xl shadow-cyan-500/20 hover:shadow-cyan-500/30 text-base"
@@ -223,6 +219,23 @@ export default function Landing() {
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
+
+            {/* ─── BACKED BY ─────────────────────────── */}
+            <div className="flex flex-col items-center gap-3 mb-4">
+              <p className="text-xs font-medium text-slate-500 tracking-widest uppercase">Backed by</p>
+              <div className="flex items-center gap-8">
+                <img
+                  src={MIRACLEPLUS_LOGO}
+                  alt="MiraclePlus"
+                  className="h-8 md:h-9 w-auto brightness-0 invert opacity-60 hover:opacity-90 transition-opacity"
+                />
+                <img
+                  src={ANTLER_LOGO}
+                  alt="Antler"
+                  className="h-5 md:h-6 w-auto brightness-0 invert opacity-60 hover:opacity-90 transition-opacity"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Hero Product Screenshot */}
@@ -233,7 +246,7 @@ export default function Landing() {
                 src={HERO_IMG}
                 alt="Meridian Deal Intelligence Platform"
                 className="w-full"
-                loading="eager"
+                loading="lazy"
               />
               {/* Gradient overlay at bottom */}
               <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#060a14] to-transparent" />
@@ -338,7 +351,6 @@ export default function Landing() {
             image={FEATURE_INSIGHT}
             imageAlt="AI Deal Insight Panel"
             imagePosition="right"
-            imageClass="max-w-[280px] md:max-w-[320px] rounded-xl"
           />
 
           {/* Feature 2: Stakeholder Map */}
@@ -355,7 +367,6 @@ export default function Landing() {
             image={FEATURE_MAP}
             imageAlt="Stakeholder Map Visualization"
             imagePosition="left"
-            imageClass="rounded-xl"
           />
 
           {/* Feature 3: Deal Room */}
@@ -372,7 +383,6 @@ export default function Landing() {
             image={FEATURE_ROOM}
             imageAlt="Deal Room Timeline"
             imagePosition="right"
-            imageClass="rounded-xl"
           />
         </div>
       </section>
@@ -446,48 +456,43 @@ export default function Landing() {
 
       {/* ─── TEAM ────────────────────────────────────── */}
       <section id="team" className="py-24 md:py-32">
-        <div className="max-w-4xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <p className="text-sm font-medium text-cyan-400 tracking-widest uppercase mb-4">Team</p>
+        <div className="max-w-3xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <p className="text-sm font-medium text-cyan-400 tracking-widest uppercase mb-4">Our Team</p>
             <h2 className="text-3xl md:text-4xl font-display font-bold leading-tight mb-6">
-              Built by people who've{" "}
+              Built by a team that's{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
                 lived the problem
               </span>
             </h2>
-            <p className="text-lg text-slate-400 max-w-2xl mx-auto">
-              We've spent years in enterprise sales and AI. We built Meridian because
-              we know what it's like to lose a deal you should have won.
-            </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
-            {[
-              {
-                name: "Leo",
-                role: "Co-Founder & CEO",
-                bio: "Former enterprise sales leader with deep experience in complex B2B deals. Obsessed with turning sales process into a repeatable, data-driven system.",
-              },
-              {
-                name: "Coming Soon",
-                role: "Co-Founder & CTO",
-                bio: "We're looking for a technical co-founder who's passionate about AI and enterprise software. Interested? Reach out below.",
-              },
-            ].map((member) => (
-              <div
-                key={member.name}
-                className="p-6 rounded-xl bg-white/[0.02] border border-white/5 hover:border-cyan-500/20 transition-all duration-300"
-              >
-                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border border-white/10 flex items-center justify-center mb-4">
-                  <span className="text-lg font-display font-bold text-cyan-400">
-                    {member.name === "Coming Soon" ? "?" : member.name[0]}
-                  </span>
-                </div>
-                <h3 className="font-display font-semibold text-base mb-0.5">{member.name}</h3>
-                <p className="text-sm text-cyan-400 mb-3">{member.role}</p>
-                <p className="text-sm text-slate-500 leading-relaxed">{member.bio}</p>
-              </div>
-            ))}
+          <div className="p-8 md:p-10 rounded-2xl bg-white/[0.02] border border-white/5">
+            <p className="text-lg md:text-xl text-slate-300 leading-relaxed mb-6">
+              We've spent years in the trenches of enterprise sales — running complex deals, managing buying committees, and losing sleep over pipeline reviews. We've seen firsthand how the best sales teams win: not through more activity, but through deeper understanding.
+            </p>
+            <p className="text-lg md:text-xl text-slate-300 leading-relaxed mb-6">
+              We built Meridian because we believe sales intelligence shouldn't be trapped in spreadsheets and tribal knowledge. Every deal tells a story — the relationships, the risks, the momentum. We're building the AI that reads that story and helps you write a better ending.
+            </p>
+            <p className="text-base text-slate-400 leading-relaxed">
+              Our team combines deep enterprise sales experience with AI and product engineering. We're backed by{" "}
+              <span className="text-cyan-400 font-medium">MiraclePlus</span> and{" "}
+              <span className="text-cyan-400 font-medium">Antler</span>, and we're based between Singapore and San Francisco.
+            </p>
+
+            {/* Backed by logos inline */}
+            <div className="flex items-center gap-6 mt-8 pt-6 border-t border-white/5">
+              <img
+                src={MIRACLEPLUS_LOGO}
+                alt="MiraclePlus"
+                className="h-6 w-auto brightness-0 invert opacity-40"
+              />
+              <img
+                src={ANTLER_LOGO}
+                alt="Antler"
+                className="h-4 w-auto brightness-0 invert opacity-40"
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -559,10 +564,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center">
-                <BarChart3 className="w-3.5 h-3.5 text-white" />
-              </div>
-              <span className="font-display font-bold text-sm">Meridian</span>
+              <img src={LOGO_IMG} alt="Meridian" className="h-6 w-auto brightness-0 invert" />
             </div>
 
             <div className="flex items-center gap-6 text-sm text-slate-500">
@@ -591,7 +593,6 @@ function FeatureRow({
   image,
   imageAlt,
   imagePosition,
-  imageClass = "",
 }: {
   badge: string;
   title: string;
@@ -600,7 +601,6 @@ function FeatureRow({
   image: string;
   imageAlt: string;
   imagePosition: "left" | "right";
-  imageClass?: string;
 }) {
   const { ref, inView } = useInView(0.1);
   const isLeft = imagePosition === "left";
@@ -632,12 +632,12 @@ function FeatureRow({
 
       {/* Image */}
       <div className="flex-1 flex justify-center">
-        <div className="relative">
+        <div className="relative w-full max-w-lg">
           <div className="absolute -inset-3 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 rounded-2xl blur-xl opacity-50" />
           <img
             src={image}
             alt={imageAlt}
-            className={`relative border border-white/10 shadow-2xl shadow-black/40 ${imageClass}`}
+            className="relative w-full max-h-[420px] object-contain rounded-xl border border-white/10 shadow-2xl shadow-black/40"
             loading="lazy"
           />
         </div>

@@ -573,3 +573,10 @@
 - [x] Responsive mobile layout with hamburger menu
 - [x] Team section (Leo + CTO placeholder)
 - [x] Route at /landing, accessible to all users
+
+## Landing Page Updates (v2)
+- [x] Replace logo with provided Meridian constellation PNG (uploaded to CDN)
+- [x] Add product screenshots/visuals to Features section (AI-generated mockups for all 3 features)
+- [x] Rewrite Team section: team voice instead of individual bios, remove CEO/CTO titles
+- [x] Add MiraclePlus + Antler "Backed by" logos near hero section
+- [x] Fix feature image display with max-height constraint for portrait images

@@ -25,13 +25,13 @@ import {
 const LOGO_IMG =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/meridian-logo-cropped_69e86f90.png";
 const HERO_IMG =
-  "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/hero-product-mockup-WTVk7MPtNg3kv8RX8Lt6Lh.webp";
+  "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/screenshot-dashboard-cropped_af62dfbe.png";
 const FEATURE_MAP =
-  "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-stakeholder-map-nG3DcUGz8G3NnqpS2aZomP.webp";
+  "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-stakeholder-map-v3-XpdspnpuAKvTKPjMMm5oz5.webp";
 const FEATURE_INSIGHT =
-  "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-ai-insight-VrpwZXFHpvvsiDzqKWMfZu.webp";
+  "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/screenshot-deal-detail-cropped_4d33eb4a.png";
 const FEATURE_ROOM =
-  "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-deal-room-P9metY77PHf7ktVxoerFW6.webp";
+  "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/screenshot-deal-room-cropped_00840a7a.png";
 const MIRACLEPLUS_LOGO =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/miracleplus-logo_11f70a94.png";
 const ANTLER_LOGO =
@@ -361,7 +361,7 @@ export default function Landing() {
               "Contextual chat — ask the AI anything about your deal",
             ]}
             image={FEATURE_INSIGHT}
-            imageAlt="AI Deal Insight Panel"
+            imageAlt="AI Deal Insight Panel with Confidence Score and Risk Analysis"
             imagePosition="right"
           />
 
@@ -377,7 +377,7 @@ export default function Landing() {
               "AI-suggested contacts you haven't engaged yet",
             ]}
             image={FEATURE_MAP}
-            imageAlt="Stakeholder Map Visualization"
+            imageAlt="Interactive Stakeholder Relationship Map"
             imagePosition="left"
           />
 

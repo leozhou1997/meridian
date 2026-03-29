@@ -596,8 +596,22 @@
 - [x] SEO optimization: meta description, Open Graph tags, Twitter cards, structured data (JSON-LD)
 - [x] robots.txt and sitemap.xml created
 - [x] Pricing link added to Landing page nav (desktop + mobile + footer)
-- [ ] Fix/improve Features section product visuals (generate better UI mockup images)
+- [x] Fix/improve Features section product visuals (real screenshots + AI-generated stakeholder map)
 
 ## Logo Fixes
 - [x] Login page: replace old logo with Meridian constellation logo
 - [x] All logos clickable: Login logo → homepage, Landing nav logo → homepage reload, AppLayout logo → /dashboard
+
+## Pricing Page Revamp
+- [x] Remove Free/Starter tier from Pricing page
+- [x] Pro tier: $149/mo/user, 1000 credits included, credit-based insight generation
+- [x] Custom Enterprise tier kept
+- [x] All buttons changed to "Request Access"
+- [x] Update FAQ to reflect credits model (no free plan)
+
+## Landing Page Real Screenshots
+- [x] Capture real product screenshots (Dashboard, Deal Detail, Deal Room)
+- [x] AI-generate enhanced stakeholder map visual (more impactful than real screenshot)
+- [x] Replace Landing page visuals: Hero=real dashboard, Feature1=real deal detail, Feature2=AI stakeholder map, Feature3=real deal room
+- [x] Crop preview mode bar from real screenshots
+- [x] Add future feature hints in screenshots where appropriate (stakeholder map shows future-state visualization)

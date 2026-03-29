@@ -67,8 +67,12 @@ function Router() {
       <Route path="/stakeholders">
         <ProtectedRoute component={Stakeholders} />
       </Route>
-      <Route path="/transcripts">
+      <Route path="/deal-room">
         <ProtectedRoute component={Transcripts} />
+      </Route>
+      {/* Redirect old route */}
+      <Route path="/transcripts">
+        <Redirect to="/deal-room" />
       </Route>
       <Route path="/ask">
         <ProtectedRoute component={AskMeridian} />

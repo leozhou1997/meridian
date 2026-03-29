@@ -417,7 +417,9 @@ function computeStagePositions(
 
   if (stakeholders.length === 0 || stages.length === 0) return [];
 
-  const colWidth = containerW / stages.length;
+  // Ensure minimum column width so cards don't overlap horizontally
+  const minColWidth = nodeW + gap;
+  const colWidth = Math.max(containerW / stages.length, minColWidth);
   const raw: NodePosition[] = [];
 
   // Group stakeholders by stage column
@@ -448,7 +450,7 @@ function computeStagePositions(
     });
   });
 
-  const maxX = containerW - nodeW;
+  const maxX = Math.max(containerW, colWidth * stages.length) - nodeW;
   return resolveCollisions(raw, null, 0, 0, maxX, nodeH);
 }
 
@@ -1357,7 +1359,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
 
       {/* Canvas */}
       <div
-        className="absolute inset-0 top-0 overflow-hidden"
+        className="absolute inset-0 top-0 overflow-auto"
         style={{
           cursor: dragging ? 'grabbing'
             : isPanningRef.current ? 'grabbing'

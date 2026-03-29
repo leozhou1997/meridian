@@ -4,10 +4,17 @@ import {
   createSnapshot,
   getOrCreateDefaultTenant,
   getSnapshots,
+  getSnapshotCountsByTenant,
   updateSnapshotSuggestionActions,
 } from "../db";
 
 export const snapshotsRouter = router({
+  countsByDeal: protectedProcedure
+    .query(async ({ ctx }) => {
+      const tenant = await getOrCreateDefaultTenant(ctx.user.id, ctx.user.name ?? "User");
+      return getSnapshotCountsByTenant(tenant.id);
+    }),
+
   listByDeal: protectedProcedure
     .input(z.object({ dealId: z.number() }))
     .query(async ({ ctx, input }) => {

@@ -1,4 +1,4 @@
-import { and, desc, eq, lt, isNotNull, ne } from "drizzle-orm";
+import { and, desc, eq, lt, isNotNull, ne, sql, count } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   aiLogs,
@@ -295,6 +295,15 @@ export async function getLatestSnapshot(dealId: number, tenantId: number) {
     .orderBy(desc(snapshots.date))
     .limit(1);
   return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getSnapshotCountsByTenant(tenantId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ dealId: snapshots.dealId, count: count() })
+    .from(snapshots)
+    .where(eq(snapshots.tenantId, tenantId))
+    .groupBy(snapshots.dealId);
 }
 
 // ─── Next Actions ─────────────────────────────────────────────────────────────

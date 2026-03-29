@@ -71,6 +71,14 @@ export default function Onboarding() {
   const { language } = useLanguage();
   const [step, setStep] = useState(1);
 
+  // M7: Guard — redirect if already onboarded
+  const { data: existingProfile, isLoading: profileLoading } = trpc.onboarding.getCompanyProfile.useQuery();
+  if (!profileLoading && existingProfile) {
+    // Already onboarded, redirect to dashboard
+    navigate('/', { replace: true });
+    return null;
+  }
+
   // Step 1: Your Company Info
   const [companyUrl, setCompanyUrl] = useState('');
   const [knowledgeBase, setKnowledgeBase] = useState('');
@@ -193,6 +201,18 @@ export default function Onboarding() {
       {/* Main content */}
       <div className="flex-1 flex flex-col items-center justify-center p-8 overflow-auto">
         <div className="w-full max-w-2xl">
+          {/* Skip / Back to Dashboard */}
+          <div className="flex justify-end mb-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-muted-foreground hover:text-foreground gap-1"
+              onClick={() => navigate('/')}
+            >
+              {language === 'zh' ? '跳过，稍后设置' : 'Skip, set up later'}
+              <ArrowRight className="w-3 h-3" />
+            </Button>
+          </div>
           <StepIndicator current={step} total={3} />
 
           {/* Step 1: Your Company */}

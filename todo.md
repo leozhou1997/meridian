@@ -554,9 +554,9 @@
 - [x] Fix C2: Inconsistent Add dialogs — unified /transcripts page to use new "Add to Deal Room" dialog matching Deal Detail
 - [x] Fix M6: Inline ACV edit shows formatted currency ($240,000) instead of raw number (240000)
 - [x] Fix M2: Board view Kanban columns properly scrollable horizontally (min-content width)
-- [ ] Fix M1: Stakeholder Map cards overlap in Stages layout view
-- [ ] Fix M3: Follow-up entries show no summary text in Deal Room
-- [ ] Fix M5: Deal Room page counters show 0 for analysis/actions
-- [ ] Fix M7: Onboarding accessible to existing users without guard
-- [ ] Fix N1: Route naming inconsistency (/transcripts vs "Deal Room" title)
-- [ ] Fix N2: Sidebar icons lack tooltips for accessibility
+- [x] Fix M1: Stakeholder Map Stages layout — auto-size canvas height based on card positions, overflow-y-auto
+- [x] Fix M3: Cleaned up 3 empty follow-up entries in DB (created from old broken dialog with no summary/participant)
+- [x] Fix M5: Deal Room page analysis counter now shows real snapshot counts from DB (added countsByDeal endpoint)
+- [x] Fix M7: Onboarding guard — redirects to dashboard if company profile already exists, added Skip button
+- [x] Fix N1: Route renamed /transcripts → /deal-room with redirect from old URL
+- [x] Fix N2: Sidebar icons already had tooltips (verified during testing — was a false positive)

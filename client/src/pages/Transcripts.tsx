@@ -315,6 +315,7 @@ export default function Transcripts() {
   const { data: deals = [], isLoading: dealsLoading } = trpc.deals.list.useQuery();
   const { data: allMeetings = [], isLoading: meetingsLoading } = trpc.meetings.listAll.useQuery();
   const { data: allStakeholders = [] } = trpc.stakeholders.listAll.useQuery();
+  const { data: snapshotCounts = [] } = trpc.snapshots.countsByDeal.useQuery();
   const utils = trpc.useUtils();
 
   const createMeeting = trpc.meetings.create.useMutation({
@@ -365,8 +366,8 @@ export default function Transcripts() {
         ...deal,
         interactions,
         stakeholderCount: stakeholders.length,
-        snapshotCount: 0, // We don't have a listAll for snapshots, so we'll show 0
-        actionCount: 0,
+        snapshotCount: snapshotCounts.find(s => s.dealId === deal.id)?.count ?? 0,
+        actionCount: 0, // Actions are embedded in snapshots as suggestionActions
         lastActivity,
         density,
       };

@@ -76,7 +76,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     { icon: LayoutDashboard, label: t('nav.dashboard'), path: '/' },
     { icon: Briefcase, label: t('nav.deals') || 'Deals', path: '/deals' },
     { icon: Users, label: t('nav.stakeholders'), path: '/stakeholders' },
-    { icon: FileText, label: t('nav.transcripts'), path: '/transcripts' },
+    { icon: FileText, label: t('nav.dealRoom') || 'Deal Room', path: '/deal-room' },
     { icon: BookOpen, label: t('nav.knowledge'), path: '/knowledge' },
     { icon: MessageSquare, label: t('nav.ask'), path: '/ask' },
   ];

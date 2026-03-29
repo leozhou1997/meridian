@@ -16,6 +16,7 @@ import Settings from "./pages/Settings";
 import Onboarding from "./pages/Onboarding";
 import NewDeal from "./pages/NewDeal";
 import Deals from "./pages/Deals";
+import Landing from "./pages/Landing";
 import AppLayout from "./components/AppLayout";
 import { useAuth } from "./_core/hooks/useAuth";
 import { getLoginUrl } from "./const";
@@ -51,6 +52,7 @@ function ProtectedRoute({ component: Component, fullScreen = false }: { componen
 function Router() {
   return (
     <Switch>
+      <Route path="/landing" component={Landing} />
       <Route path="/login" component={Login} />
       <Route path="/">
         <ProtectedRoute component={Dashboard} />

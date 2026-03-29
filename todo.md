@@ -560,3 +560,16 @@
 - [x] Fix M7: Onboarding guard — redirects to dashboard if company profile already exists, added Skip button
 - [x] Fix N1: Route renamed /transcripts → /deal-room with redirect from old URL
 - [x] Fix N2: Sidebar icons already had tooltips (verified during testing — was a false positive)
+
+## Landing Page (Official Website)
+- [x] Capture product screenshots for landing page assets
+- [x] Build landing page with 7 sections: Hero, Social Proof, Problem, Features, Architecture, Team, CTA+Footer
+- [x] Dark theme with teal/cyan accent, minimalistic but visually striking
+- [x] Nav with Log In + Request Access buttons (Go to Dashboard for authenticated users)
+- [x] Hero section with animated counter stats
+- [x] Feature showcase (Deal Intelligence, Buying Committee, Deal Room)
+- [x] CSS 3D chip-stacking architecture diagram (Meridian Intelligence Engine)
+- [x] Email collection form for Request Access (with success toast)
+- [x] Responsive mobile layout with hamburger menu
+- [x] Team section (Leo + CTO placeholder)
+- [x] Route at /landing, accessible to all users

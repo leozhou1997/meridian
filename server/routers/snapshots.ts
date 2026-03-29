@@ -4,6 +4,7 @@ import {
   createSnapshot,
   getOrCreateDefaultTenant,
   getSnapshots,
+  updateSnapshotSuggestionActions,
 } from "../db";
 
 export const snapshotsRouter = router({
@@ -35,5 +36,21 @@ export const snapshotsRouter = router({
         : input.whatsNext;
       const id = await createSnapshot({ ...input, whatsNext: whatsNext as any, tenantId: tenant.id });
       return { id };
+    }),
+
+  // Save user's disposition of AI suggestions for a snapshot
+  saveSuggestionActions: protectedProcedure
+    .input(z.object({
+      snapshotId: z.number(),
+      suggestionActions: z.array(z.object({
+        action: z.string(),
+        status: z.enum(['accepted', 'rejected', 'later', 'pending']),
+        actionId: z.number().optional(),
+      })),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const tenant = await getOrCreateDefaultTenant(ctx.user.id, ctx.user.name ?? "User");
+      await updateSnapshotSuggestionActions(input.snapshotId, tenant.id, input.suggestionActions);
+      return { success: true };
     }),
 });

@@ -181,6 +181,7 @@ export const snapshots = mysqlTable("snapshots", {
   interactionType: varchar("interactionType", { length: 100 }),
   keyParticipant: varchar("keyParticipant", { length: 255 }),
   aiGenerated: boolean("aiGenerated").default(false).notNull(),
+  suggestionActions: json("suggestionActions").$type<Array<{ action: string; status: 'accepted' | 'rejected' | 'later' | 'pending'; actionId?: number }>>(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

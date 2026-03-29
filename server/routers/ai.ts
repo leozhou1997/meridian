@@ -14,6 +14,9 @@ import {
   rateAiLog,
   getSalesModelById,
   getCompanyProfile,
+  getLatestSnapshot,
+  getNextActions,
+  updateSnapshotSuggestionActions,
 } from "../db";
 import { BUILT_IN_MODELS, getModelDimensions, getModelName } from "./salesModels";
 
@@ -549,6 +552,30 @@ ${stakeholderSummary}`;
         tokensUsed,
         latencyMs,
       });
+
+      // Before creating new snapshot, save suggestion dispositions on the CURRENT latest snapshot
+      try {
+        const currentLatest = await getLatestSnapshot(input.dealId, tenant.id);
+        if (currentLatest && currentLatest.whatsNext && Array.isArray(currentLatest.whatsNext)) {
+          // Get all ai_suggested nextActions for this deal to determine dispositions
+          const allActions = await getNextActions(input.dealId, tenant.id);
+          const aiActions = allActions.filter(a => a.source === 'ai_suggested' && a.snapshotId === currentLatest.id);
+          
+          const suggestionActions = (currentLatest.whatsNext as Array<{ action: string }>).map(item => {
+            const actionText = typeof item === 'string' ? item : item.action;
+            const matchingAction = aiActions.find(a => a.text === actionText);
+            return {
+              action: actionText,
+              status: (matchingAction?.status as 'accepted' | 'rejected' | 'later' | 'pending') ?? 'pending',
+              actionId: matchingAction?.id,
+            };
+          });
+          
+          await updateSnapshotSuggestionActions(currentLatest.id, tenant.id, suggestionActions);
+        }
+      } catch (saveErr) {
+        console.warn('[AI] Failed to save suggestion actions on current snapshot:', saveErr);
+      }
 
       // Persist insights as a new snapshot so they survive page refresh
       if (insights) {

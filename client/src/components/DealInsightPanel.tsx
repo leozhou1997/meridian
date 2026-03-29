@@ -28,6 +28,12 @@ type NextAction = {
 
 type KeyRiskItem = { title: string; detail: string; stakeholders: string[] };
 
+type SuggestionAction = {
+  action: string;
+  status: 'accepted' | 'rejected' | 'later' | 'pending';
+  actionId?: number;
+};
+
 type Snapshot = {
   id: number;
   date: Date | string;
@@ -37,6 +43,7 @@ type Snapshot = {
   keyRisks: KeyRiskItem[] | string[] | null;
   whatsNext: Array<{ action: string; rationale: string; suggestedContacts?: Array<{ name: string; title: string; reason: string }> }> | null;
   interactionType: string | null;
+  suggestionActions?: SuggestionAction[] | null;
 };
 
 type Stakeholder = {
@@ -133,10 +140,21 @@ const STATUS_TRANSITIONS: Record<ActionStatus, ActionStatus[]> = {
 
 // ─── Collapsible Insight History ────────────────────────────────────────────
 
-function InsightHistory({ snapshots }: { snapshots: Snapshot[] }) {
+function InsightHistory({ snapshots, onRestoreSuggestion }: { snapshots: Snapshot[]; onRestoreSuggestion?: (actionText: string) => void }) {
   const [showHistory, setShowHistory] = useState(false);
+  const [expandedSnapshotId, setExpandedSnapshotId] = useState<number | null>(null);
   const olderSnapshots = snapshots.slice(1);
   if (olderSnapshots.length === 0) return null;
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'accepted': return <span className="text-[8px] px-1 py-0.5 rounded bg-blue-400/10 text-blue-400 border border-blue-400/20">Accepted</span>;
+      case 'rejected': return <span className="text-[8px] px-1 py-0.5 rounded bg-muted/30 text-muted-foreground/50 border border-border/20">Dismissed</span>;
+      case 'later': return <span className="text-[8px] px-1 py-0.5 rounded bg-purple-400/10 text-purple-400 border border-purple-400/20">Later</span>;
+      default: return <span className="text-[8px] px-1 py-0.5 rounded bg-muted/20 text-muted-foreground/40 border border-border/15">Pending</span>;
+    }
+  };
+
   return (
     <div>
       <button
@@ -148,53 +166,108 @@ function InsightHistory({ snapshots }: { snapshots: Snapshot[] }) {
       </button>
       {showHistory && (
         <div className="mt-2 space-y-3">
-          {olderSnapshots.map((snap, si) => (
-            <div key={snap.id || si} className="rounded-lg border border-border/20 bg-muted/10 p-3">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] text-muted-foreground/70 font-medium">
-                  {new Date(snap.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  {snap.interactionType && ` \u00b7 ${snap.interactionType}`}
-                </span>
-                <span className={`text-[10px] font-mono font-semibold ${getConfidenceColor(snap.confidenceScore)}`}>
-                  {snap.confidenceScore}%
-                  {snap.confidenceChange !== 0 && (
-                    <span className={snap.confidenceChange > 0 ? 'text-emerald-400' : 'text-red-400'}>
-                      {' '}{snap.confidenceChange > 0 ? '\u2191' : '\u2193'}{Math.abs(snap.confidenceChange)}
-                    </span>
-                  )}
-                </span>
+          {olderSnapshots.map((snap, si) => {
+            const isExpanded = expandedSnapshotId === snap.id;
+            const suggActions = snap.suggestionActions ?? [];
+            const hasDispositions = suggActions.length > 0;
+            return (
+              <div key={snap.id || si} className="rounded-lg border border-border/20 bg-muted/10 overflow-hidden">
+                <button
+                  className="w-full p-3 text-left hover:bg-muted/20 transition-colors"
+                  onClick={() => setExpandedSnapshotId(isExpanded ? null : snap.id)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-muted-foreground/70 font-medium">
+                        {new Date(snap.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        {snap.interactionType && ` \u00b7 ${snap.interactionType}`}
+                      </span>
+                      {hasDispositions && (
+                        <span className="text-[8px] text-muted-foreground/40">
+                          {suggActions.filter(s => s.status === 'accepted').length} accepted
+                          {suggActions.filter(s => s.status === 'rejected').length > 0 && `, ${suggActions.filter(s => s.status === 'rejected').length} dismissed`}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] font-mono font-semibold ${getConfidenceColor(snap.confidenceScore)}`}>
+                        {snap.confidenceScore}%
+                        {snap.confidenceChange !== 0 && (
+                          <span className={snap.confidenceChange > 0 ? 'text-emerald-400' : 'text-red-400'}>
+                            {' '}{snap.confidenceChange > 0 ? '\u2191' : '\u2193'}{Math.abs(snap.confidenceChange)}
+                          </span>
+                        )}
+                      </span>
+                      <div className="text-muted-foreground/40">
+                        {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                      </div>
+                    </div>
+                  </div>
+                </button>
+
+                {isExpanded && (
+                  <div className="px-3 pb-3 space-y-3 border-t border-border/15">
+                    {snap.whatsHappening && (
+                      <div className="mt-2">
+                        <span className="text-[9px] text-blue-400/70 uppercase tracking-wider font-semibold">What Was Happening</span>
+                        <p className="text-[10px] text-foreground/60 leading-relaxed mt-1">{snap.whatsHappening}</p>
+                      </div>
+                    )}
+
+                    {/* Show suggestions with their dispositions */}
+                    {snap.whatsNext && snap.whatsNext.length > 0 && (
+                      <div>
+                        <span className="text-[9px] text-emerald-400/70 uppercase tracking-wider font-semibold">Suggested Actions</span>
+                        <div className="mt-1 space-y-1.5">
+                          {snap.whatsNext.map((item: any, idx: number) => {
+                            const actionText = typeof item === 'string' ? item : item.action;
+                            const disposition = suggActions.find(s => s.action === actionText);
+                            const status = disposition?.status ?? 'pending';
+                            return (
+                              <div key={idx} className={`text-[10px] flex items-center gap-1.5 ${status === 'rejected' ? 'opacity-50' : ''}`}>
+                                <div className={`w-1 h-1 rounded-full shrink-0 ${
+                                  status === 'accepted' ? 'bg-blue-400' :
+                                  status === 'rejected' ? 'bg-muted-foreground/30' :
+                                  status === 'later' ? 'bg-purple-400' :
+                                  'bg-emerald-400/40'
+                                }`} />
+                                <span className={`flex-1 ${status === 'rejected' ? 'line-through text-foreground/30' : 'text-foreground/50'}`}>
+                                  {actionText}
+                                </span>
+                                {getStatusBadge(status)}
+                                {status === 'rejected' && onRestoreSuggestion && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); onRestoreSuggestion(actionText); }}
+                                    className="text-[8px] px-1 py-0.5 rounded text-blue-400/70 hover:text-blue-400 hover:bg-blue-400/10 transition-colors"
+                                  >
+                                    Restore
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {snap.keyRisks && (snap.keyRisks as any[]).length > 0 && (
+                      <div>
+                        <span className="text-[9px] text-red-400/70 uppercase tracking-wider font-semibold">Risks at the time</span>
+                        <div className="mt-1 space-y-1">
+                          {(snap.keyRisks as any[]).map((risk: any, idx: number) => (
+                            <div key={idx} className="text-[10px] text-foreground/50 flex items-start gap-1.5">
+                              <div className="w-1 h-1 rounded-full bg-red-400/40 mt-1.5 shrink-0" />
+                              <span>{typeof risk === 'string' ? risk : risk.title}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-              {snap.whatsHappening && (
-                <p className="text-[10px] text-foreground/60 leading-relaxed mb-2">{snap.whatsHappening}</p>
-              )}
-              {snap.whatsNext && snap.whatsNext.length > 0 && (
-                <div>
-                  <span className="text-[9px] text-emerald-400/70 uppercase tracking-wider font-semibold">Suggested Actions</span>
-                  <div className="mt-1 space-y-1">
-                    {snap.whatsNext.map((item: any, idx: number) => (
-                      <div key={idx} className="text-[10px] text-foreground/50 flex items-start gap-1.5">
-                        <div className="w-1 h-1 rounded-full bg-emerald-400/40 mt-1.5 shrink-0" />
-                        <span>{typeof item === 'string' ? item : item.action}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {snap.keyRisks && (snap.keyRisks as any[]).length > 0 && (
-                <div className="mt-2">
-                  <span className="text-[9px] text-red-400/70 uppercase tracking-wider font-semibold">Risks at the time</span>
-                  <div className="mt-1 space-y-1">
-                    {(snap.keyRisks as any[]).map((risk: any, idx: number) => (
-                      <div key={idx} className="text-[10px] text-foreground/50 flex items-start gap-1.5">
-                        <div className="w-1 h-1 rounded-full bg-red-400/40 mt-1.5 shrink-0" />
-                        <span>{typeof risk === 'string' ? risk : risk.title}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -713,6 +786,9 @@ export default function DealInsightPanel({
     onError: (err) => { toast.error('Failed to get AI response: ' + err.message); },
   });
 
+  // Save suggestion dispositions to snapshot
+  const saveSuggestionActionsMutation = trpc.snapshots.saveSuggestionActions.useMutation();
+
   const addSuggestedContactMutation = trpc.stakeholders.create.useMutation({
     onSuccess: (newStakeholder) => {
       utils.deals.get.invalidate({ id: deal.id });
@@ -844,7 +920,30 @@ export default function DealInsightPanel({
             )}
             {/* Refresh Analysis button */}
             <button
-              onClick={() => {
+              onClick={async () => {
+                // Save current suggestion dispositions to the current snapshot before generating new one
+                if (latestSnapshot?.id && whatsNextRaw && whatsNextRaw.length > 0) {
+                  const dispositions = whatsNextRaw.map((item: any) => {
+                    const actionText = typeof item === 'string' ? item : item.action;
+                    const existing = nextActions.find(a => a.text === actionText);
+                    let status: 'accepted' | 'rejected' | 'later' | 'pending' = 'pending';
+                    if (existing) {
+                      const s = existing.status ?? (existing.completed ? 'done' : 'accepted');
+                      if (s === 'rejected') status = 'rejected';
+                      else if (s === 'later') status = 'later';
+                      else status = 'accepted';
+                    }
+                    return { action: actionText, status, actionId: existing?.id };
+                  });
+                  try {
+                    await saveSuggestionActionsMutation.mutateAsync({
+                      snapshotId: latestSnapshot.id,
+                      suggestionActions: dispositions,
+                    });
+                  } catch (e) {
+                    console.warn('Failed to save suggestion dispositions:', e);
+                  }
+                }
                 generateInsightsMutation.mutate({
                   dealId: deal.id, dealName: deal.name, dealStage: deal.stage, dealValue: deal.value,
                   confidenceScore: deal.confidenceScore, companyInfo: deal.companyInfo,
@@ -856,11 +955,11 @@ export default function DealInsightPanel({
                   })),
                 });
               }}
-              disabled={generateInsightsMutation.isPending}
+              disabled={generateInsightsMutation.isPending || saveSuggestionActionsMutation.isPending}
               className="flex items-center gap-1 text-[9.5px] text-primary/60 hover:text-primary transition-colors disabled:opacity-40 w-fit"
               title="Refresh AI analysis based on current deal context"
             >
-              {generateInsightsMutation.isPending
+              {generateInsightsMutation.isPending || saveSuggestionActionsMutation.isPending
                 ? <><Loader2 className="w-2.5 h-2.5 animate-spin" /><span>{t('insight.analysing')}</span></>
                 : <><RotateCcw className="w-2.5 h-2.5" /><span>Refresh Analysis</span></>}
             </button>
@@ -959,6 +1058,16 @@ export default function DealInsightPanel({
           {/* What's Next (AI Suggestions) */}
           {whatsNextRaw && whatsNextRaw.length > 0 && (() => {
             const actionItems: WhatsNextItem[] = whatsNextRaw;
+            // Filter out suggestions that already have a corresponding nextAction (accepted/rejected/later/done)
+            const pendingItems = actionItems.filter((item) => {
+              const actionText = typeof item === 'string' ? item : item.action;
+              const existing = nextActions.find(a => a.text === actionText);
+              if (!existing) return true; // No action yet = still pending
+              const s = existing.status ?? (existing.completed ? 'done' : 'accepted');
+              // Hide if dismissed (rejected)
+              return s !== 'rejected';
+            });
+            const allHandled = pendingItems.length === 0;
             return (
               <div>
                 <div className="flex items-center gap-1.5 mb-2">
@@ -966,44 +1075,61 @@ export default function DealInsightPanel({
                   <span className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider">{t('insight.whatsNext')}</span>
                   <span className="text-[9px] text-muted-foreground/40 ml-auto">AI Suggested</span>
                 </div>
-                <div className="space-y-2">
-                  {actionItems.map((item, idx) => (
-                    <WhatsNextCard
-                      key={idx}
-                      item={item}
-                      stakeholders={deal.stakeholders}
-                      onStakeholderHover={onStakeholderHover}
-                      onStakeholderClick={onStakeholderClick}
-                      dealCompany={deal.name}
-                      existingActions={nextActions}
-                      onStatusChange={(actionId, status) => updateActionStatus?.(actionId, status)}
-                      onAddToMap={(contact) => {
-                        addSuggestedContactMutation.mutate({
-                          dealId: deal.id, name: contact.name, title: contact.title,
-                          role: 'User', sentiment: 'Neutral', engagement: 'Medium', keyInsights: contact.reason,
-                        });
-                      }}
-                      onAccept={(actionText) => {
-                        createAiAction?.(actionText, latestSnapshot?.id, 'accepted');
-                        toast.success('Action accepted \u2014 added to your task list');
-                      }}
-                      onDismiss={(actionText) => {
-                        createAiAction?.(actionText, latestSnapshot?.id, 'rejected');
-                        toast.success('Suggestion dismissed');
-                      }}
-                      onLater={(actionText) => {
-                        createAiAction?.(actionText, latestSnapshot?.id, 'later');
-                        toast.success('Saved for later');
-                      }}
-                    />
-                  ))}
-                </div>
+                {allHandled ? (
+                  <div className="flex items-center gap-2 py-3 px-3 rounded-lg bg-emerald-400/5 border border-emerald-400/15">
+                    <Check className="w-4 h-4 text-emerald-400" />
+                    <div>
+                      <p className="text-[11px] text-emerald-400/80 font-medium">All caught up!</p>
+                      <p className="text-[10px] text-muted-foreground/50">All suggestions have been handled. Refresh Analysis for new recommendations.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {pendingItems.map((item, idx) => (
+                      <WhatsNextCard
+                        key={idx}
+                        item={item}
+                        stakeholders={deal.stakeholders}
+                        onStakeholderHover={onStakeholderHover}
+                        onStakeholderClick={onStakeholderClick}
+                        dealCompany={deal.name}
+                        existingActions={nextActions}
+                        onStatusChange={(actionId, status) => updateActionStatus?.(actionId, status)}
+                        onAddToMap={(contact) => {
+                          addSuggestedContactMutation.mutate({
+                            dealId: deal.id, name: contact.name, title: contact.title,
+                            role: 'User', sentiment: 'Neutral', engagement: 'Medium', keyInsights: contact.reason,
+                          });
+                        }}
+                        onAccept={(actionText) => {
+                          createAiAction?.(actionText, latestSnapshot?.id, 'accepted');
+                          toast.success('Action accepted \u2014 added to your task list');
+                        }}
+                        onDismiss={(actionText) => {
+                          createAiAction?.(actionText, latestSnapshot?.id, 'rejected');
+                          toast.success('Suggestion dismissed');
+                        }}
+                        onLater={(actionText) => {
+                          createAiAction?.(actionText, latestSnapshot?.id, 'later');
+                          toast.success('Saved for later');
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })()}
 
           {/* Insight History */}
-          <InsightHistory snapshots={deal.snapshots} />
+          <InsightHistory
+            snapshots={deal.snapshots}
+            onRestoreSuggestion={(actionText) => {
+              // Restore a dismissed suggestion by creating it as accepted
+              createAiAction?.(actionText, latestSnapshot?.id, 'accepted');
+              toast.success('Suggestion restored and added to your task list');
+            }}
+          />
 
           {/* Divider */}
           <div className="border-t border-border/25" />

@@ -275,6 +275,28 @@ export async function createSnapshot(data: InsertSnapshot) {
   return (result as any).insertId as number;
 }
 
+export async function updateSnapshotSuggestionActions(
+  snapshotId: number,
+  tenantId: number,
+  suggestionActions: Array<{ action: string; status: 'accepted' | 'rejected' | 'later' | 'pending'; actionId?: number }>
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(snapshots)
+    .set({ suggestionActions: suggestionActions as any })
+    .where(and(eq(snapshots.id, snapshotId), eq(snapshots.tenantId, tenantId)));
+}
+
+export async function getLatestSnapshot(dealId: number, tenantId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(snapshots)
+    .where(and(eq(snapshots.dealId, dealId), eq(snapshots.tenantId, tenantId)))
+    .orderBy(desc(snapshots.date))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
 // ─── Next Actions ─────────────────────────────────────────────────────────────
 
 export async function getNextActions(dealId: number, tenantId: number) {

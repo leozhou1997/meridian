@@ -537,3 +537,13 @@
 - [x] Root cause 3: Toolbar moved to bottom-right on mobile (bottom-20) so it no longer overlaps nodes
 - [x] Root cause 4: Concentric ring SVG background now uses mobile node dimensions (NODE_W_MOBILE/NODE_H_MOBILE)
 - [x] TypeScript 0 errors, 65 tests passing
+
+## Deal Insight Workflow Persistence (March 29)
+- [x] DB schema: suggestionActions JSON field added to snapshots table (stores user dispositions per suggestion)
+- [x] Backend: saveSuggestionActions mutation persists Done/Dismiss/ToDo to snapshot
+- [x] Backend: Refresh Analysis saves current dispositions before generating new insights
+- [x] Frontend: Dismissed suggestions hidden from What's Next, "All caught up" shown when all handled
+- [x] Frontend: Insight History enhanced with expandable snapshots showing suggestions with status badges
+- [x] Frontend: Dismissed suggestions can be restored from Insight History via "Restore" button
+- [x] Frontend: Each snapshot in history shows accepted/dismissed counts summary
+- [x] TypeScript 0 errors, 65 tests passing

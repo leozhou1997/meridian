@@ -547,3 +547,16 @@
 - [x] Frontend: Dismissed suggestions can be restored from Insight History via "Restore" button
 - [x] Frontend: Each snapshot in history shows accepted/dismissed counts summary
 - [x] TypeScript 0 errors, 65 tests passing
+
+## Product Testing & Bug Fixes (March 29)
+- [x] Fix C1: nav.deals translation key leak in mobile bottom nav (added to en + zh translations)
+- [x] Fix C3: Ask Meridian hardcoded prompts referencing non-existent deals (Allbirds/Gymshark → Acme Corp/GlobalTech)
+- [x] Fix C2: Inconsistent Add dialogs — unified /transcripts page to use new "Add to Deal Room" dialog matching Deal Detail
+- [x] Fix M6: Inline ACV edit shows formatted currency ($240,000) instead of raw number (240000)
+- [x] Fix M2: Board view Kanban columns properly scrollable horizontally (min-content width)
+- [ ] Fix M1: Stakeholder Map cards overlap in Stages layout view
+- [ ] Fix M3: Follow-up entries show no summary text in Deal Room
+- [ ] Fix M5: Deal Room page counters show 0 for analysis/actions
+- [ ] Fix M7: Onboarding accessible to existing users without guard
+- [ ] Fix N1: Route naming inconsistency (/transcripts vs "Deal Room" title)
+- [ ] Fix N2: Sidebar icons lack tooltips for accessibility

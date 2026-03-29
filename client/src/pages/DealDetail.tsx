@@ -683,19 +683,29 @@ export default function DealDetail() {
     setEditingField(null);
   };
 
-  const InlineEdit = ({ field, value, setValue, displayValue, className = '', inputClassName = '' }: {
-    field: string; value: string; setValue: (v: string) => void; displayValue?: string; className?: string; inputClassName?: string;
+  const InlineEdit = ({ field, value, setValue, displayValue, className = '', inputClassName = '', prefix = '' }: {
+    field: string; value: string; setValue: (v: string) => void; displayValue?: string; className?: string; inputClassName?: string; prefix?: string;
   }) => {
     if (editingField === field) {
       return (
-        <input
-          autoFocus
-          value={value}
-          onChange={e => setValue(e.target.value)}
-          onBlur={() => saveField(field)}
-          onKeyDown={e => { if (e.key === 'Enter') saveField(field); if (e.key === 'Escape') setEditingField(null); }}
-          className={`bg-muted/50 border border-primary/30 rounded px-1.5 py-0.5 outline-none focus:border-primary text-foreground ${inputClassName}`}
-        />
+        <div className="flex items-center gap-0">
+          {prefix && <span className="text-muted-foreground text-sm font-mono">{prefix}</span>}
+          <input
+            autoFocus
+            value={field === 'value' ? Number(value).toLocaleString('en-US') : value}
+            onChange={e => {
+              if (field === 'value') {
+                const raw = e.target.value.replace(/[^0-9.]/g, '');
+                setValue(raw);
+              } else {
+                setValue(e.target.value);
+              }
+            }}
+            onBlur={() => saveField(field)}
+            onKeyDown={e => { if (e.key === 'Enter') saveField(field); if (e.key === 'Escape') setEditingField(null); }}
+            className={`bg-muted/50 border border-primary/30 rounded px-1.5 py-0.5 outline-none focus:border-primary text-foreground ${inputClassName}`}
+          />
+        </div>
       );
     }
     return (
@@ -782,6 +792,7 @@ export default function DealDetail() {
                 displayValue={`${formatCurrency(deal.value)} ACV`}
                 className="font-mono text-sm font-medium"
                 inputClassName="font-mono text-sm w-28"
+                prefix="$"
               />
               <div className="flex items-center gap-1">
                 <span className={`font-mono text-sm font-medium ${getConfidenceColor(deal.confidenceScore)}`}>

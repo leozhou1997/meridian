@@ -6,10 +6,10 @@ import { toast } from 'sonner';
 
 const suggestions = [
   'Which deals are most at risk this week?',
-  'Summarize the Allbirds deal status',
+  'Summarize the Acme Corp deal status',
   'Who are the key blockers across my pipeline?',
   'What should I prioritize today?',
-  'Draft a follow-up email for Gymshark',
+  'Draft a follow-up email for GlobalTech',
   'Compare confidence trends across deals',
 ];
 

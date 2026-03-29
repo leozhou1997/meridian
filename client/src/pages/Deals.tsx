@@ -322,7 +322,7 @@ function BoardView({
   navigate: (path: string) => void;
 }) {
   return (
-    <div className="flex gap-4 p-4 overflow-x-auto h-full">
+    <div className="flex gap-4 p-4 overflow-x-auto h-full pb-2" style={{ minWidth: 'min-content' }}>
       {stages.filter(s => s !== 'Closed Won' && s !== 'Closed Lost').map(stage => {
         const stageDeals = deals.filter(d => d.stage === stage);
         const stageValue = stageDeals.reduce((s, d) => s + (d.value ?? 0), 0);

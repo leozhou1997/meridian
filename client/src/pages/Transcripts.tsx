@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
@@ -307,11 +307,10 @@ export default function Transcripts() {
   const [showUpload, setShowUpload] = useState(false);
   const [sortBy, setSortBy] = useState<'activity' | 'density' | 'name'>('activity');
 
-  // Upload form state
-  const [uploadDealId, setUploadDealId] = useState('');
-  const [uploadType, setUploadType] = useState('');
-  const [uploadParticipant, setUploadParticipant] = useState('');
-  const [uploadTranscript, setUploadTranscript] = useState('');
+  const [addDealId, setAddDealId] = useState('');
+  const [addContentType, setAddContentType] = useState<'note' | 'audio' | 'screenshot' | 'pdf' | 'action'>('note');
+  const [addTitle, setAddTitle] = useState('');
+  const [addDescription, setAddDescription] = useState('');
 
   const { data: deals = [], isLoading: dealsLoading } = trpc.deals.list.useQuery();
   const { data: allMeetings = [], isLoading: meetingsLoading } = trpc.meetings.listAll.useQuery();
@@ -321,14 +320,14 @@ export default function Transcripts() {
   const createMeeting = trpc.meetings.create.useMutation({
     onSuccess: () => {
       utils.meetings.listAll.invalidate();
-      toast.success('Interaction recorded! AI analysis will begin shortly.');
+      toast.success('Added to Deal Room! AI analysis will begin shortly.');
       setShowUpload(false);
-      setUploadDealId('');
-      setUploadType('');
-      setUploadParticipant('');
-      setUploadTranscript('');
+      setAddDealId('');
+      setAddContentType('note');
+      setAddTitle('');
+      setAddDescription('');
     },
-    onError: () => toast.error('Failed to record interaction'),
+    onError: () => toast.error('Failed to add to Deal Room'),
   });
 
   const toggleDeal = (dealId: number) => {
@@ -420,92 +419,125 @@ export default function Transcripts() {
               Unified view of all deal activity, interactions, and data density across your pipeline.
             </p>
           </div>
-          <Dialog open={showUpload} onOpenChange={setShowUpload}>
-            <DialogTrigger asChild>
-              <Button className="font-display text-xs gap-2 shrink-0 w-full sm:w-auto">
-                <Plus className="w-3.5 h-3.5" />
-                Add Interaction
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-lg">
-              <DialogHeader>
-                <DialogTitle className="font-display">Record New Interaction</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 mt-2">
-                <div className="space-y-2">
-                  <Label className="text-xs">Deal</Label>
-                  <Select value={uploadDealId} onValueChange={setUploadDealId}>
-                    <SelectTrigger className="h-9 text-xs">
-                      <SelectValue placeholder="Select deal..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {deals.map(d => (
-                        <SelectItem key={d.id} value={String(d.id)} className="text-xs">{d.company}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+          <Button className="font-display text-xs gap-2 shrink-0 w-full sm:w-auto" onClick={() => setShowUpload(true)}>
+            <Plus className="w-3.5 h-3.5" />
+            Add to Deal Room
+          </Button>
+
+          {/* New unified Add to Deal Room dialog */}
+          {showUpload && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowUpload(false)}>
+              <div className="bg-card border border-border rounded-xl shadow-2xl w-[520px] max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between px-5 py-4 border-b border-border/30">
+                  <h3 className="font-display text-sm font-semibold">Add to Deal Room</h3>
+                  <button onClick={() => setShowUpload(false)} className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-muted transition-colors">
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label className="text-xs">Interaction Type</Label>
-                    <Select value={uploadType} onValueChange={setUploadType}>
+
+                <div className="p-5 space-y-4">
+                  {/* Deal selector */}
+                  <div>
+                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-1.5 block">Deal</label>
+                    <Select value={addDealId} onValueChange={setAddDealId}>
                       <SelectTrigger className="h-9 text-xs">
-                        <SelectValue placeholder="Type..." />
+                        <SelectValue placeholder="Select deal..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {['Discovery Call', 'Demo', 'Technical Review', 'POC Check-in', 'Negotiation', 'Executive Briefing', 'Follow-up'].map(t => (
-                          <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>
+                        {deals.map(d => (
+                          <SelectItem key={d.id} value={String(d.id)} className="text-xs">{d.company}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs">Key Participant</Label>
+
+                  {/* Content type selector */}
+                  <div>
+                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-2 block">Content Type</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { value: 'note' as const, label: 'Meeting Notes', icon: MessageSquare },
+                        { value: 'audio' as const, label: 'Audio / Video', icon: Upload },
+                        { value: 'screenshot' as const, label: 'Screenshot', icon: Eye },
+                        { value: 'pdf' as const, label: 'PDF Document', icon: FileText },
+                        { value: 'action' as const, label: 'Sales Action', icon: CheckCircle },
+                      ].map(ct => (
+                        <button
+                          key={ct.value}
+                          onClick={() => setAddContentType(ct.value)}
+                          className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border text-[11px] font-medium transition-all ${
+                            addContentType === ct.value
+                              ? 'border-primary/40 bg-primary/10 text-primary'
+                              : 'border-border/30 bg-muted/20 text-muted-foreground hover:border-border/60 hover:bg-muted/40'
+                          }`}
+                        >
+                          <ct.icon className="w-3.5 h-3.5" />
+                          {ct.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Title */}
+                  <div>
+                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-1.5 block">Title</label>
                     <Input
-                      placeholder="Name..."
+                      value={addTitle}
+                      onChange={e => setAddTitle(e.target.value)}
+                      placeholder={addContentType === 'action' ? 'e.g., Sent pricing proposal to CFO' : 'e.g., Discovery call with VP Engineering'}
                       className="h-9 text-xs"
-                      value={uploadParticipant}
-                      onChange={e => setUploadParticipant(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Description / Content */}
+                  <div>
+                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-1.5 block">
+                      {addContentType === 'note' ? 'Meeting Notes / Transcript Content' : addContentType === 'action' ? 'Action Details' : 'Description (optional)'}
+                    </label>
+                    <Textarea
+                      value={addDescription}
+                      onChange={e => setAddDescription(e.target.value)}
+                      placeholder={addContentType === 'note' ? 'Paste meeting transcript or notes here...' : 'Add details...'}
+                      className={`text-xs ${addContentType === 'note' ? 'min-h-[200px]' : 'min-h-[80px]'}`}
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-xs">Notes / Transcript</Label>
-                  <Textarea
-                    placeholder="Meeting notes, key decisions, action items, or paste full transcript..."
-                    className="min-h-[200px] text-xs font-mono"
-                    value={uploadTranscript}
-                    onChange={e => setUploadTranscript(e.target.value)}
-                  />
-                </div>
-                <div className="flex justify-end gap-2">
+
+                <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-border/30">
                   <Button variant="outline" size="sm" onClick={() => setShowUpload(false)} className="text-xs font-display">Cancel</Button>
                   <Button
                     size="sm"
                     className="text-xs font-display"
-                    disabled={!uploadDealId || !uploadType || !uploadParticipant || createMeeting.isPending}
+                    disabled={!addDealId || !addTitle.trim() || createMeeting.isPending}
                     onClick={() => {
-                      if (!uploadDealId || !uploadType || !uploadParticipant) {
-                        toast.error('Please fill in all required fields');
+                      if (!addDealId || !addTitle.trim()) {
+                        toast.error('Please select a deal and enter a title');
                         return;
                       }
+                      const typeMap: Record<string, string> = {
+                        note: 'Follow-up',
+                        audio: 'Follow-up',
+                        screenshot: 'Follow-up',
+                        pdf: 'Follow-up',
+                        action: 'Follow-up',
+                      };
                       createMeeting.mutate({
-                        dealId: Number(uploadDealId),
-                        type: uploadType,
+                        dealId: Number(addDealId),
+                        type: typeMap[addContentType] || 'Follow-up',
                         date: new Date().toISOString(),
-                        duration: 60,
-                        keyParticipant: uploadParticipant,
-                        summary: uploadTranscript.slice(0, 500),
-                        transcriptUrl: uploadTranscript.length > 500 ? uploadTranscript : undefined,
+                        duration: 30,
+                        keyParticipant: addTitle.trim(),
+                        summary: addDescription.trim().slice(0, 500) || addTitle.trim(),
+                        transcriptUrl: addDescription.length > 500 ? addDescription : undefined,
                       });
                     }}
                   >
-                    {createMeeting.isPending ? 'Saving...' : 'Save & Analyze'}
+                    {createMeeting.isPending ? 'Saving...' : 'Add to Timeline'}
                   </Button>
                 </div>
               </div>
-            </DialogContent>
-          </Dialog>
+            </div>
+          )}
         </div>
 
         {/* Global stats */}

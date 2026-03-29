@@ -1,0 +1,30 @@
+{
+  "query": "SELECT id, company, stage FROM deals ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kmzwkq9EWMaqpy.root --database PHTFs288hUf3yaW9yWMkJw --execute SELECT id, company, stage FROM deals ORDER BY id;",
+  "rows": [
+    {
+      "id": "1",
+      "company": "Acme Corp",
+      "stage": "Technical Evaluation"
+    },
+    {
+      "id": "2",
+      "company": "GlobalTech",
+      "stage": "Negotiation"
+    },
+    {
+      "id": "4",
+      "company": "Nexus Systems",
+      "stage": "Demo"
+    },
+    {
+      "id": "60001",
+      "company": "Nike, Inc.",
+      "stage": "Discovery"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tcompany\tstage\n1\tAcme Corp\tTechnical Evaluation\n2\tGlobalTech\tNegotiation\n4\tNexus Systems\tDemo\n60001\tNike, Inc.\tDiscovery\n",
+  "stderr": "",
+  "execution_time_ms": 380
+}

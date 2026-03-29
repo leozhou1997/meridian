@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { trpc } from "@/lib/trpc";
+import { WaitlistDialog } from "@/components/WaitlistDialog";
 import {
   ArrowRight,
   ChevronRight,
@@ -15,8 +15,7 @@ import {
   TrendingUp,
   Zap,
   CheckCircle2,
-  Mail,
-  Loader2,
+
   Menu,
   X,
 } from "lucide-react";
@@ -78,9 +77,8 @@ function Counter({ end, suffix = "", duration = 2000 }: { end: number; suffix?: 
 export default function Landing() {
   const [, navigate] = useLocation();
   const { user, loading } = useAuth();
-  const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [waitlistOpen, setWaitlistOpen] = useState(false);
+  const [waitlistSource, setWaitlistSource] = useState("landing_page");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -91,23 +89,10 @@ export default function Landing() {
     return () => window.removeEventListener("scroll", handler);
   }, []);
 
-  const requestAccessMutation = trpc.landing.requestAccess.useMutation({
-    onSuccess: () => {
-      setSubmitting(false);
-      setSubmitted(true);
-    },
-    onError: () => {
-      setSubmitting(false);
-      // Still show success to user (don't expose backend errors)
-      setSubmitted(true);
-    },
-  });
-
-  const handleRequestAccess = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim()) return;
-    setSubmitting(true);
-    requestAccessMutation.mutate({ email: email.trim() });
+  const openWaitlist = (source: string) => {
+    setWaitlistSource(source);
+    setWaitlistOpen(true);
+    setMobileMenuOpen(false);
   };
 
   const scrollTo = (id: string) => {
@@ -148,7 +133,7 @@ export default function Landing() {
               {user ? "Go to Dashboard" : "Log In"}
             </button>
             <button
-              onClick={() => scrollTo("cta")}
+              onClick={() => openWaitlist("nav_desktop")}
               className="text-sm font-medium bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 px-5 py-2 rounded-lg transition-all shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/30"
             >
               Request Access
@@ -174,7 +159,7 @@ export default function Landing() {
             <hr className="border-white/5" />
             <button onClick={() => navigate(user ? "/dashboard" : "/login")} className="block w-full text-left text-sm text-slate-300 hover:text-white py-2">{user ? "Go to Dashboard" : "Log In"}</button>
             <button
-              onClick={() => scrollTo("cta")}
+              onClick={() => openWaitlist("nav_mobile")}
               className="block w-full text-center text-sm font-medium bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-2.5 rounded-lg"
             >
               Request Access
@@ -217,7 +202,7 @@ export default function Landing() {
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
               <button
-                onClick={() => scrollTo("cta")}
+                onClick={() => openWaitlist("hero")}
                 className="group flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-medium px-8 py-3.5 rounded-xl transition-all shadow-xl shadow-cyan-500/20 hover:shadow-cyan-500/30 text-base"
               >
                 Request Early Access
@@ -528,42 +513,13 @@ export default function Landing() {
             complex, multi-stakeholder deals.
           </p>
 
-          {submitted ? (
-            <div className="inline-flex items-center gap-3 px-6 py-4 rounded-xl bg-cyan-500/10 border border-cyan-500/20">
-              <CheckCircle2 className="w-5 h-5 text-cyan-400" />
-              <span className="text-cyan-300 font-medium">
-                You're on the list. We'll be in touch soon.
-              </span>
-            </div>
-          ) : (
-            <form onSubmit={handleRequestAccess} className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-              <div className="relative flex-1">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <input
-                  type="email"
-                  placeholder="you@company.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full pl-10 pr-4 py-3.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/20 transition-all text-sm"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-medium px-6 py-3.5 rounded-xl transition-all shadow-lg shadow-cyan-500/20 text-sm whitespace-nowrap disabled:opacity-60"
-              >
-                {submitting ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    Request Access
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
-            </form>
-          )}
+          <button
+            onClick={() => openWaitlist("cta_bottom")}
+            className="group inline-flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-medium px-8 py-4 rounded-xl transition-all shadow-xl shadow-cyan-500/20 hover:shadow-cyan-500/30 text-base"
+          >
+            Request Early Access
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+          </button>
 
           <p className="text-xs text-slate-600 mt-4">
             No credit card required. We'll reach out within 48 hours.
@@ -593,6 +549,13 @@ export default function Landing() {
           </div>
         </div>
       </footer>
+
+      {/* Waitlist Dialog */}
+      <WaitlistDialog
+        open={waitlistOpen}
+        onOpenChange={setWaitlistOpen}
+        source={waitlistSource}
+      />
     </div>
   );
 }

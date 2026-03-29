@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { WaitlistDialog } from "@/components/WaitlistDialog";
 import {
   Check,
   ArrowRight,
@@ -117,8 +118,12 @@ export default function Pricing() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-  const handleRequestAccess = () => {
-    navigate("/#cta");
+  const [waitlistOpen, setWaitlistOpen] = useState(false);
+  const [waitlistSource, setWaitlistSource] = useState("pricing_page");
+
+  const handleRequestAccess = (source = "pricing_page") => {
+    setWaitlistSource(source);
+    setWaitlistOpen(true);
   };
 
   const handleContactSales = () => {
@@ -148,7 +153,7 @@ export default function Pricing() {
               {user ? "Go to Dashboard" : "Log In"}
             </button>
             <button
-              onClick={handleRequestAccess}
+              onClick={() => handleRequestAccess("pricing_nav")}
               className="text-sm font-medium bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 px-5 py-2 rounded-lg transition-all shadow-lg shadow-cyan-500/20"
             >
               Request Access
@@ -250,7 +255,7 @@ export default function Pricing() {
                   {!plan.highlight && <div className="mb-6" />}
 
                   <button
-                    onClick={plan.highlight ? handleRequestAccess : handleContactSales}
+                    onClick={() => plan.highlight ? handleRequestAccess("pricing_plan") : handleContactSales()}
                     className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-medium text-sm transition-all mb-8 ${
                       plan.highlight
                         ? "bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-lg shadow-cyan-500/20"
@@ -369,7 +374,7 @@ export default function Pricing() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <button
-              onClick={handleRequestAccess}
+              onClick={() => handleRequestAccess("pricing_cta")}
               className="group flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-medium px-8 py-3.5 rounded-xl transition-all shadow-xl shadow-cyan-500/20 text-base"
             >
               Request Access
@@ -406,6 +411,13 @@ export default function Pricing() {
           </div>
         </div>
       </footer>
+
+      {/* Waitlist Dialog */}
+      <WaitlistDialog
+        open={waitlistOpen}
+        onOpenChange={setWaitlistOpen}
+        source={waitlistSource}
+      />
     </div>
   );
 }

@@ -284,6 +284,8 @@ export type InsertPromptTemplate = typeof promptTemplates.$inferInsert;
 export const accessRequests = mysqlTable("accessRequests", {
   id: int("id").autoincrement().primaryKey(),
   email: varchar("email", { length: 320 }).notNull(),
+  fullName: varchar("fullName", { length: 255 }),
+  companyName: varchar("companyName", { length: 255 }),
   source: varchar("source", { length: 100 }).default("landing_page").notNull(),
   status: mysqlEnum("status", ["pending", "contacted", "converted", "rejected"]).default("pending").notNull(),
   notes: text("notes"),

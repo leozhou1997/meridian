@@ -11,6 +11,8 @@ export const landingRouter = router({
     .input(
       z.object({
         email: z.string().email(),
+        fullName: z.string().min(1).optional(),
+        companyName: z.string().min(1).optional(),
         source: z.string().optional().default("landing_page"),
       })
     )
@@ -21,11 +23,13 @@ export const landingRouter = router({
         return { success: true, message: "submitted" };
       }
 
+      const email = input.email.toLowerCase().trim();
+
       // Check if email already submitted
       const existing = await db
         .select()
         .from(accessRequests)
-        .where(eq(accessRequests.email, input.email.toLowerCase().trim()))
+        .where(eq(accessRequests.email, email))
         .limit(1);
 
       if (existing.length > 0) {
@@ -34,14 +38,26 @@ export const landingRouter = router({
 
       // Insert new access request
       await db.insert(accessRequests).values({
-        email: input.email.toLowerCase().trim(),
+        email,
+        fullName: input.fullName?.trim() || null,
+        companyName: input.companyName?.trim() || null,
         source: input.source,
       });
 
       // Notify owner
+      const details = [
+        `Email: ${email}`,
+        input.fullName ? `Name: ${input.fullName.trim()}` : null,
+        input.companyName ? `Company: ${input.companyName.trim()}` : null,
+        `Source: ${input.source}`,
+        `Time: ${new Date().toISOString()}`,
+      ]
+        .filter(Boolean)
+        .join("\n");
+
       await notifyOwner({
-        title: "🚀 New Access Request",
-        content: `New early access request from: ${input.email}\n\nSource: ${input.source}\nTime: ${new Date().toISOString()}`,
+        title: "🚀 New Waitlist Signup",
+        content: `New early access request!\n\n${details}`,
       });
 
       return { success: true, message: "submitted" };

@@ -633,3 +633,7 @@
 - [x] Apply i18n to Pricing page with language-specific text + language switcher in nav
 - [x] Apply i18n to WaitlistDialog (all labels, placeholders, success messages)
 - [x] Write vitest tests for i18n functionality (covered by existing 73 passing tests)
+
+## Chinese Image Style Fix
+- [x] Regenerate Chinese Landing page images to match English version style (same UI mockup, Chinese text)
+- [x] Update i18n.ts with new Chinese image URLs (v2)

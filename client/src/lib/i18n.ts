@@ -12,10 +12,10 @@ export const images = {
     featureRoom: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-deal-room-P9metY77PHf7ktVxoerFW6.webp",
   },
   zh: {
-    hero: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/hero-product-mockup-zh-YdPJsyLrP7hUEDcu3rjSMN.webp",
-    featureInsight: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-ai-insight-zh-3mcGrH94W6K5LeABHuBV7N.webp",
-    featureMap: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-stakeholder-map-zh-ZmeDo99oh3rCbgNMbXVpXJ.webp",
-    featureRoom: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-deal-room-zh-8FjDy5bF8DYPBLM9cqyNJk.webp",
+    hero: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/hero-zh-v2-Yr3zeoL6GvxY5BFEEtiM75.webp",
+    featureInsight: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-insight-zh-v2-J77WAtTPiKh5DJtmHMxAMG.webp",
+    featureMap: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-map-zh-v2-de9zM3PXqu3kAviKaigb4U.webp",
+    featureRoom: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-room-zh-v2-neQ7BTbVxHbxQGkdndgMDd.webp",
   },
 } as const;
 

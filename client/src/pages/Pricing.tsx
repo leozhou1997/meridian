@@ -21,7 +21,7 @@ const LOGO_IMG =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/meridian-logo-cropped_69e86f90.png";
 
 /* ═══════════════════════════════════════════════════════
-   PRICING PAGE
+   PRICING PAGE — LIGHT THEME
    ═══════════════════════════════════════════════════════ */
 export default function Pricing() {
   const [, navigate] = useLocation();
@@ -56,8 +56,8 @@ export default function Pricing() {
       creditsNote: t(language, "plan_pro_credits_note"),
       features: t(language, "plan_pro_features") as string[],
       icon: Sparkles,
-      gradient: "from-cyan-500 to-blue-600",
-      borderColor: "border-cyan-500/30",
+      gradient: "from-blue-600 to-indigo-600",
+      borderColor: "border-blue-200",
     },
     {
       name: t(language, "plan_enterprise_name"),
@@ -70,7 +70,7 @@ export default function Pricing() {
       features: t(language, "plan_enterprise_features") as string[],
       icon: Building2,
       gradient: "from-purple-500 to-pink-500",
-      borderColor: "border-purple-500/20",
+      borderColor: "border-slate-200",
     },
   ];
 
@@ -84,20 +84,20 @@ export default function Pricing() {
   const faqs = t(language, "faqs") as Array<{ q: string; a: string }>;
 
   return (
-    <div className="min-h-screen bg-[#060a14] text-white overflow-x-hidden">
+    <div className="min-h-screen bg-white text-slate-900 overflow-x-hidden">
       {/* ─── NAV ─────────────────────────────────────── */}
-      <nav className="fixed top-0 inset-x-0 z-50 bg-[#060a14]/90 backdrop-blur-xl border-b border-white/5 shadow-lg">
+      <nav className="fixed top-0 inset-x-0 z-50 bg-white/90 backdrop-blur-xl border-b border-slate-200/60 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <a href="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
-            <img src={LOGO_IMG} alt="Meridian" className="h-10 w-auto brightness-0 invert" />
+            <img src={LOGO_IMG} alt="Meridian" className="h-10 w-auto" />
           </a>
 
-          <div className="hidden md:flex items-center gap-8 text-sm text-slate-400">
-            <a href="/#features" className="hover:text-white transition-colors">
+          <div className="hidden md:flex items-center gap-8 text-sm text-slate-500">
+            <a href="/#features" className="hover:text-slate-900 transition-colors">
               {t(language, "nav_features")}
             </a>
-            <span className="text-white font-medium">{t(language, "nav_pricing")}</span>
-            <a href="/#team" className="hover:text-white transition-colors">
+            <span className="text-slate-900 font-medium">{t(language, "nav_pricing")}</span>
+            <a href="/#team" className="hover:text-slate-900 transition-colors">
               {t(language, "nav_team")}
             </a>
           </div>
@@ -106,7 +106,7 @@ export default function Pricing() {
             {/* Language switcher */}
             <button
               onClick={toggleLang}
-              className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white px-3 py-2 rounded-lg transition-colors"
+              className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 px-3 py-2 rounded-lg transition-colors"
               title={language === "en" ? "切换到中文" : "Switch to English"}
             >
               <Globe className="w-4 h-4" />
@@ -115,20 +115,20 @@ export default function Pricing() {
 
             <button
               onClick={() => navigate(user ? "/dashboard" : "/login")}
-              className="text-sm text-slate-300 hover:text-white px-4 py-2 rounded-lg transition-colors"
+              className="text-sm text-slate-600 hover:text-slate-900 px-4 py-2 rounded-lg transition-colors"
             >
               {user ? t(language, "nav_dashboard") : t(language, "nav_login")}
             </button>
             <button
               onClick={() => handleRequestAccess("pricing_nav")}
-              className="text-sm font-medium bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 px-5 py-2 rounded-lg transition-all shadow-lg shadow-cyan-500/20"
+              className="text-sm font-medium bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 py-2 rounded-lg transition-all shadow-lg shadow-blue-500/20"
             >
               {t(language, "nav_request_access")}
             </button>
           </div>
 
           <button
-            className="md:hidden text-slate-300 hover:text-white"
+            className="md:hidden text-slate-600 hover:text-slate-900"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -136,25 +136,25 @@ export default function Pricing() {
         </div>
 
         {mobileMenuOpen && (
-          <div className="md:hidden bg-[#0a0f1e]/95 backdrop-blur-xl border-t border-white/5 px-6 py-4 space-y-3">
-            <a href="/#features" className="block text-sm text-slate-300 hover:text-white py-2">
+          <div className="md:hidden bg-white/95 backdrop-blur-xl border-t border-slate-200/60 px-6 py-4 space-y-3">
+            <a href="/#features" className="block text-sm text-slate-600 hover:text-slate-900 py-2">
               {t(language, "nav_features")}
             </a>
-            <span className="block text-sm text-white font-medium py-2">{t(language, "nav_pricing")}</span>
-            <a href="/#team" className="block text-sm text-slate-300 hover:text-white py-2">
+            <span className="block text-sm text-slate-900 font-medium py-2">{t(language, "nav_pricing")}</span>
+            <a href="/#team" className="block text-sm text-slate-600 hover:text-slate-900 py-2">
               {t(language, "nav_team")}
             </a>
-            <hr className="border-white/5" />
+            <hr className="border-slate-200" />
             <button
               onClick={toggleLang}
-              className="flex items-center gap-1.5 text-sm text-slate-300 hover:text-white py-2"
+              className="flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900 py-2"
             >
               <Globe className="w-4 h-4" />
               {language === "en" ? "切换到中文" : "Switch to English"}
             </button>
             <button
               onClick={() => navigate(user ? "/dashboard" : "/login")}
-              className="block w-full text-left text-sm text-slate-300 hover:text-white py-2"
+              className="block w-full text-left text-sm text-slate-600 hover:text-slate-900 py-2"
             >
               {user ? t(language, "nav_dashboard") : t(language, "nav_login")}
             </button>
@@ -165,23 +165,23 @@ export default function Pricing() {
       {/* ─── HERO ────────────────────────────────────── */}
       <section className="pt-32 pb-16 md:pt-40 md:pb-20 relative">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-gradient-to-b from-cyan-500/6 via-blue-600/4 to-transparent rounded-full blur-3xl" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-gradient-to-b from-blue-50 via-indigo-50/50 to-transparent rounded-full blur-3xl" />
         </div>
 
         <div className="relative max-w-4xl mx-auto px-6 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-medium mb-8">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-600 text-xs font-medium mb-8">
             <Sparkles className="w-3.5 h-3.5" />
             {t(language, "pricing_badge")}
           </div>
 
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-display font-bold leading-[1.1] tracking-tight mb-6">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-display font-bold leading-[1.1] tracking-tight mb-6 text-slate-900">
             {t(language, "pricing_title_1")}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600">
               {t(language, "pricing_title_highlight")}
             </span>
           </h1>
 
-          <p className="text-lg md:text-xl text-slate-400 leading-relaxed max-w-2xl mx-auto">
+          <p className="text-lg md:text-xl text-slate-500 leading-relaxed max-w-2xl mx-auto">
             {t(language, "pricing_subtitle")}
           </p>
         </div>
@@ -196,14 +196,14 @@ export default function Pricing() {
               return (
                 <div
                   key={plan.name}
-                  className={`relative flex flex-col rounded-2xl border ${plan.borderColor} bg-white/[0.02] p-8 lg:p-10 transition-all duration-300 hover:border-white/10 ${
+                  className={`relative flex flex-col rounded-2xl border ${plan.borderColor} bg-white p-8 lg:p-10 transition-all duration-300 hover:shadow-lg ${
                     plan.highlight
-                      ? "ring-1 ring-cyan-500/30 shadow-xl shadow-cyan-500/5"
-                      : ""
+                      ? "ring-1 ring-blue-300 shadow-xl shadow-blue-500/10"
+                      : "shadow-sm"
                   }`}
                 >
                   {plan.badge && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 text-xs font-medium text-white shadow-lg shadow-cyan-500/20">
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-xs font-medium text-white shadow-lg shadow-blue-500/20">
                       {plan.badge}
                     </div>
                   )}
@@ -212,13 +212,13 @@ export default function Pricing() {
                     <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${plan.gradient} flex items-center justify-center mb-4`}>
                       <Icon className="w-5 h-5 text-white" />
                     </div>
-                    <h3 className="text-xl font-display font-bold mb-1">{plan.name}</h3>
+                    <h3 className="text-xl font-display font-bold text-slate-900 mb-1">{plan.name}</h3>
                     <p className="text-sm text-slate-500">{plan.tagline}</p>
                   </div>
 
                   <div className="mb-4">
                     <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-display font-bold">{plan.price}</span>
+                      <span className="text-4xl font-display font-bold text-slate-900">{plan.price}</span>
                       {plan.period && (
                         <span className="text-sm text-slate-500 ml-1">{plan.period}</span>
                       )}
@@ -227,9 +227,9 @@ export default function Pricing() {
 
                   {/* Credits callout for Pro */}
                   {plan.highlight && plan.creditsNote && (
-                    <div className="flex items-center gap-2 mb-6 px-3 py-2 rounded-lg bg-cyan-500/5 border border-cyan-500/10">
-                      <Coins className="w-4 h-4 text-cyan-400 shrink-0" />
-                      <span className="text-xs text-cyan-300">{plan.creditsNote}</span>
+                    <div className="flex items-center gap-2 mb-6 px-3 py-2 rounded-lg bg-blue-50 border border-blue-100">
+                      <Coins className="w-4 h-4 text-blue-600 shrink-0" />
+                      <span className="text-xs text-blue-700">{plan.creditsNote}</span>
                     </div>
                   )}
 
@@ -239,8 +239,8 @@ export default function Pricing() {
                     onClick={() => plan.highlight ? handleRequestAccess("pricing_plan") : handleContactSales()}
                     className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-medium text-sm transition-all mb-8 ${
                       plan.highlight
-                        ? "bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-lg shadow-cyan-500/20"
-                        : "bg-white/5 border border-white/10 hover:bg-white/10 text-white"
+                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-blue-500/20"
+                        : "bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-700"
                     }`}
                   >
                     {t(language, "request_access")}
@@ -251,9 +251,9 @@ export default function Pricing() {
                     {plan.features.map((feature, idx) => (
                       <li key={idx} className="flex items-start gap-3 text-sm">
                         <Check className={`w-4 h-4 mt-0.5 shrink-0 ${
-                          plan.highlight ? "text-cyan-400" : "text-purple-400"
+                          plan.highlight ? "text-blue-600" : "text-purple-500"
                         }`} />
-                        <span className="text-slate-300">{feature}</span>
+                        <span className="text-slate-600">{feature}</span>
                       </li>
                     ))}
                   </ul>
@@ -265,13 +265,13 @@ export default function Pricing() {
       </section>
 
       {/* ─── HOW CREDITS WORK ────────────────────────── */}
-      <section className="py-16 border-y border-white/5">
+      <section className="py-16 border-y border-slate-200/60">
         <div className="max-w-5xl mx-auto px-6">
           <div className="text-center mb-12">
-            <p className="text-sm font-medium text-cyan-400 tracking-widest uppercase mb-3">
+            <p className="text-sm font-medium text-blue-600 tracking-widest uppercase mb-3">
               {t(language, "credits_badge")}
             </p>
-            <h2 className="text-2xl md:text-3xl font-display font-bold">
+            <h2 className="text-2xl md:text-3xl font-display font-bold text-slate-900">
               {t(language, "credits_title")}
             </h2>
           </div>
@@ -279,11 +279,11 @@ export default function Pricing() {
           <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-8 text-center">
             {creditsItems.map((item) => (
               <div key={item.label} className="flex flex-col items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-white/[0.03] border border-white/5 flex items-center justify-center">
-                  <item.icon className="w-5 h-5 text-cyan-400" />
+                <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center">
+                  <item.icon className="w-5 h-5 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-white">{item.label}</p>
+                  <p className="text-sm font-medium text-slate-900">{item.label}</p>
                   <p className="text-xs text-slate-500 mt-0.5">{item.desc}</p>
                 </div>
               </div>
@@ -296,10 +296,10 @@ export default function Pricing() {
       <section id="faq" className="py-24 md:py-32">
         <div className="max-w-3xl mx-auto px-6">
           <div className="text-center mb-16">
-            <p className="text-sm font-medium text-cyan-400 tracking-widest uppercase mb-4">
+            <p className="text-sm font-medium text-blue-600 tracking-widest uppercase mb-4">
               {t(language, "faq_badge")}
             </p>
-            <h2 className="text-3xl md:text-4xl font-display font-bold leading-tight">
+            <h2 className="text-3xl md:text-4xl font-display font-bold leading-tight text-slate-900">
               {t(language, "faq_title")}
             </h2>
           </div>
@@ -308,15 +308,15 @@ export default function Pricing() {
             {faqs.map((faq, i) => (
               <div
                 key={i}
-                className="rounded-xl border border-white/5 bg-white/[0.02] overflow-hidden transition-all"
+                className="rounded-xl border border-slate-200 bg-white overflow-hidden transition-all shadow-sm"
               >
                 <button
                   onClick={() => setOpenFaq(openFaq === i ? null : i)}
                   className="w-full flex items-center justify-between px-6 py-5 text-left"
                 >
-                  <span className="text-sm font-medium text-white pr-4">{faq.q}</span>
+                  <span className="text-sm font-medium text-slate-900 pr-4">{faq.q}</span>
                   <span
-                    className={`text-slate-500 transition-transform duration-200 shrink-0 ${
+                    className={`text-slate-400 transition-transform duration-200 shrink-0 ${
                       openFaq === i ? "rotate-45" : ""
                     }`}
                   >
@@ -325,7 +325,7 @@ export default function Pricing() {
                 </button>
                 {openFaq === i && (
                   <div className="px-6 pb-5 -mt-1">
-                    <p className="text-sm text-slate-400 leading-relaxed">{faq.a}</p>
+                    <p className="text-sm text-slate-500 leading-relaxed">{faq.a}</p>
                   </div>
                 )}
               </div>
@@ -337,32 +337,32 @@ export default function Pricing() {
       {/* ─── BOTTOM CTA ──────────────────────────────── */}
       <section className="py-24 md:py-32 relative">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-t from-cyan-500/6 to-transparent rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-t from-blue-50 to-transparent rounded-full blur-3xl" />
         </div>
 
         <div className="relative max-w-2xl mx-auto px-6 text-center">
-          <h2 className="text-3xl md:text-4xl font-display font-bold leading-tight mb-6">
+          <h2 className="text-3xl md:text-4xl font-display font-bold leading-tight mb-6 text-slate-900">
             {t(language, "pricing_cta_title_1")}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
               {t(language, "pricing_cta_title_highlight")}
             </span>
             ?
           </h2>
-          <p className="text-lg text-slate-400 mb-10 max-w-lg mx-auto">
+          <p className="text-lg text-slate-500 mb-10 max-w-lg mx-auto">
             {t(language, "pricing_cta_subtitle")}
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <button
               onClick={() => handleRequestAccess("pricing_cta")}
-              className="group flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-medium px-8 py-3.5 rounded-xl transition-all shadow-xl shadow-cyan-500/20 text-base"
+              className="group flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium px-8 py-3.5 rounded-xl transition-all shadow-xl shadow-blue-500/20 text-base"
             >
               {t(language, "request_access")}
               <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
             </button>
             <button
               onClick={handleContactSales}
-              className="flex items-center gap-2 text-slate-300 hover:text-white border border-white/10 hover:border-white/20 px-8 py-3.5 rounded-xl transition-all text-base"
+              className="flex items-center gap-2 text-slate-600 hover:text-slate-900 border border-slate-300 hover:border-slate-400 px-8 py-3.5 rounded-xl transition-all text-base"
             >
               {t(language, "talk_to_sales")}
             </button>
@@ -371,27 +371,27 @@ export default function Pricing() {
       </section>
 
       {/* ─── FOOTER ──────────────────────────────────── */}
-      <footer className="border-t border-white/5 py-12">
+      <footer className="border-t border-slate-200/60 py-12 bg-slate-50">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <a href="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
-              <img src={LOGO_IMG} alt="Meridian" className="h-8 w-auto brightness-0 invert" />
+              <img src={LOGO_IMG} alt="Meridian" className="h-8 w-auto" />
             </a>
 
             <div className="flex items-center gap-6 text-sm text-slate-500">
-              <a href="/#features" className="hover:text-slate-300 transition-colors">
+              <a href="/#features" className="hover:text-slate-700 transition-colors">
                 {t(language, "nav_features")}
               </a>
-              <a href="/pricing" className="text-white font-medium">{t(language, "nav_pricing")}</a>
-              <a href="/#team" className="hover:text-slate-300 transition-colors">
+              <a href="/pricing" className="text-slate-900 font-medium">{t(language, "nav_pricing")}</a>
+              <a href="/#team" className="hover:text-slate-700 transition-colors">
                 {t(language, "nav_team")}
               </a>
-              <button onClick={() => navigate("/login")} className="hover:text-slate-300 transition-colors">
+              <button onClick={() => navigate("/login")} className="hover:text-slate-700 transition-colors">
                 {t(language, "nav_login")}
               </button>
             </div>
 
-            <p className="text-xs text-slate-600">
+            <p className="text-xs text-slate-400">
               &copy; {new Date().getFullYear()} {t(language, "footer_copyright")}
             </p>
           </div>

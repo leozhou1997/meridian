@@ -671,3 +671,13 @@
 ## Backer Info in Team Section
 - [x] EN: Add "Backed by MiraclePlus and Antler" to team section
 - [x] ZH: Add "由奇绩创坛和Antler支持，扎根深圳，服务全球出海一线" to team section
+
+## Landing Page Light Theme Conversion
+- [x] Change Landing page background from dark to light (white/off-white)
+- [x] Reverse text colors: headings to dark, body text to gray
+- [x] Adjust buttons, badges, gradients for light background
+- [x] Adjust cards (pain points, features, pricing) for light theme
+- [x] Add shadow/border to product screenshots on light background
+- [x] Adjust nav bar and logo for light background
+- [x] Keep product internal pages (Dashboard, Deal Detail etc.) dark theme unchanged
+- [x] Convert Pricing.tsx to matching light theme

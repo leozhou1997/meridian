@@ -66,7 +66,7 @@ function Counter({ end, suffix = "", duration = 2000 }: { end: number; suffix?: 
 }
 
 /* ═══════════════════════════════════════════════════════
-   LANDING PAGE
+   LANDING PAGE — LIGHT THEME
    ═══════════════════════════════════════════════════════ */
 export default function Landing() {
   const [, navigate] = useLocation();
@@ -132,16 +132,16 @@ export default function Landing() {
 
   const chipStack = language === "en"
     ? [
-        { layer: "Layer 4", title: "Action Layer", desc: "What's Next recommendations, pre-meeting briefs, risk alerts", icon: Zap, color: "from-purple-500 to-pink-500", glow: "shadow-purple-500/20", borderColor: "border-purple-500/30" },
-        { layer: "Layer 3", title: "Intelligence Layer", desc: "Deal narrative, confidence scoring, methodology grading", icon: Brain, color: "from-blue-500 to-cyan-500", glow: "shadow-blue-500/20", borderColor: "border-blue-500/30" },
-        { layer: "Layer 2", title: "Understanding Layer", desc: "Stakeholder mapping, relationship analysis, sentiment detection", icon: Users, color: "from-cyan-500 to-teal-500", glow: "shadow-cyan-500/20", borderColor: "border-cyan-500/30" },
-        { layer: "Layer 1", title: "Data Layer", desc: "Meeting transcripts, emails, notes, documents, CRM data", icon: Layers, color: "from-slate-500 to-slate-400", glow: "shadow-slate-500/10", borderColor: "border-slate-500/30" },
+        { layer: "Layer 4", title: "Action Layer", desc: "What's Next recommendations, pre-meeting briefs, risk alerts", icon: Zap, color: "from-purple-500 to-pink-500", glow: "shadow-purple-500/10", borderColor: "border-purple-200" },
+        { layer: "Layer 3", title: "Intelligence Layer", desc: "Deal narrative, confidence scoring, methodology grading", icon: Brain, color: "from-blue-500 to-cyan-500", glow: "shadow-blue-500/10", borderColor: "border-blue-200" },
+        { layer: "Layer 2", title: "Understanding Layer", desc: "Stakeholder mapping, relationship analysis, sentiment detection", icon: Users, color: "from-cyan-500 to-teal-500", glow: "shadow-cyan-500/10", borderColor: "border-cyan-200" },
+        { layer: "Layer 1", title: "Data Layer", desc: "Meeting transcripts, emails, notes, documents, CRM data", icon: Layers, color: "from-slate-500 to-slate-400", glow: "shadow-slate-500/5", borderColor: "border-slate-200" },
       ]
     : [
-        { layer: "第四层", title: "行动层", desc: "下一步建议、会前简报、风险预警", icon: Zap, color: "from-purple-500 to-pink-500", glow: "shadow-purple-500/20", borderColor: "border-purple-500/30" },
-        { layer: "第三层", title: "智能层", desc: "交易叙事、置信度评分、方法论评级", icon: Brain, color: "from-blue-500 to-cyan-500", glow: "shadow-blue-500/20", borderColor: "border-blue-500/30" },
-        { layer: "第二层", title: "理解层", desc: "决策人映射、关系分析、情感检测", icon: Users, color: "from-cyan-500 to-teal-500", glow: "shadow-cyan-500/20", borderColor: "border-cyan-500/30" },
-        { layer: "第一层", title: "数据层", desc: "会议记录、邮件、笔记、文档、CRM 数据", icon: Layers, color: "from-slate-500 to-slate-400", glow: "shadow-slate-500/10", borderColor: "border-slate-500/30" },
+        { layer: "第四层", title: "行动层", desc: "下一步建议、会前简报、风险预警", icon: Zap, color: "from-purple-500 to-pink-500", glow: "shadow-purple-500/10", borderColor: "border-purple-200" },
+        { layer: "第三层", title: "智能层", desc: "交易叙事、置信度评分、方法论评级", icon: Brain, color: "from-blue-500 to-cyan-500", glow: "shadow-blue-500/10", borderColor: "border-blue-200" },
+        { layer: "第二层", title: "理解层", desc: "决策人映射、关系分析、情感检测", icon: Users, color: "from-cyan-500 to-teal-500", glow: "shadow-cyan-500/10", borderColor: "border-cyan-200" },
+        { layer: "第一层", title: "数据层", desc: "会议记录、邮件、笔记、文档、CRM 数据", icon: Layers, color: "from-slate-500 to-slate-400", glow: "shadow-slate-500/5", borderColor: "border-slate-200" },
       ];
 
   /* ─── Team section data (locale-aware) ─── */
@@ -170,27 +170,27 @@ export default function Landing() {
     : "加入等候名单获取抢先体验资格。我们正在邀请攻克复杂、多决策人交易的精选团队。";
 
   return (
-    <div className="min-h-screen bg-[#060a14] text-white overflow-x-hidden">
+    <div className="min-h-screen bg-white text-slate-900 overflow-x-hidden">
       {/* ─── NAV ─────────────────────────────────────── */}
       <nav
         className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${
           scrolled
-            ? "bg-[#060a14]/90 backdrop-blur-xl border-b border-white/5 shadow-lg"
+            ? "bg-white/90 backdrop-blur-xl border-b border-slate-200 shadow-sm"
             : "bg-transparent"
         }`}
       >
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           {/* Logo */}
           <a href="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
-            <img src={LOGO_IMG} alt="Meridian" className="h-10 w-auto brightness-0 invert" />
+            <img src={LOGO_IMG} alt="Meridian" className="h-10 w-auto" />
           </a>
 
           {/* Desktop Nav Links */}
-          <div className="hidden md:flex items-center gap-8 text-sm text-slate-400">
-            <button onClick={() => scrollTo("features")} className="hover:text-white transition-colors">{tt("nav_features")}</button>
-            <button onClick={() => scrollTo("how-it-works")} className="hover:text-white transition-colors">{language === "en" ? "How It Works" : "工作原理"}</button>
-            <button onClick={() => scrollTo("team")} className="hover:text-white transition-colors">{tt("nav_team")}</button>
-            <button onClick={() => navigate("/pricing")} className="hover:text-white transition-colors">{tt("nav_pricing")}</button>
+          <div className="hidden md:flex items-center gap-8 text-sm text-slate-500">
+            <button onClick={() => scrollTo("features")} className="hover:text-slate-900 transition-colors">{tt("nav_features")}</button>
+            <button onClick={() => scrollTo("how-it-works")} className="hover:text-slate-900 transition-colors">{language === "en" ? "How It Works" : "工作原理"}</button>
+            <button onClick={() => scrollTo("team")} className="hover:text-slate-900 transition-colors">{tt("nav_team")}</button>
+            <button onClick={() => navigate("/pricing")} className="hover:text-slate-900 transition-colors">{tt("nav_pricing")}</button>
           </div>
 
           {/* Desktop CTA */}
@@ -198,7 +198,7 @@ export default function Landing() {
             {/* Language Switcher */}
             <button
               onClick={toggleLang}
-              className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white px-3 py-2 rounded-lg transition-colors border border-transparent hover:border-white/10"
+              className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 px-3 py-2 rounded-lg transition-colors border border-transparent hover:border-slate-200"
               title={language === "en" ? "切换到中文" : "Switch to English"}
             >
               <Globe className="w-4 h-4" />
@@ -207,13 +207,14 @@ export default function Landing() {
 
             <button
               onClick={() => navigate(user ? "/dashboard" : "/login")}
-              className="text-sm text-slate-300 hover:text-white px-4 py-2 rounded-lg transition-colors"
+              className="text-sm text-slate-600 hover:text-slate-900 px-4 py-2 rounded-lg transition-colors"
             >
               {user ? tt("nav_dashboard") : tt("nav_login")}
             </button>
+
             <button
               onClick={() => openWaitlist("nav_desktop")}
-              className="text-sm font-medium bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 px-5 py-2 rounded-lg transition-all shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/30"
+              className="text-sm font-medium bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 py-2 rounded-lg transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30"
             >
               {tt("nav_request_access")}
             </button>
@@ -221,7 +222,7 @@ export default function Landing() {
 
           {/* Mobile Menu Toggle */}
           <button
-            className="md:hidden text-slate-300 hover:text-white"
+            className="md:hidden text-slate-600 hover:text-slate-900"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -230,24 +231,24 @@ export default function Landing() {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden bg-[#0a0f1e]/95 backdrop-blur-xl border-t border-white/5 px-6 py-4 space-y-3">
-            <button onClick={() => scrollTo("features")} className="block w-full text-left text-sm text-slate-300 hover:text-white py-2">{tt("nav_features")}</button>
-            <button onClick={() => scrollTo("how-it-works")} className="block w-full text-left text-sm text-slate-300 hover:text-white py-2">{language === "en" ? "How It Works" : "工作原理"}</button>
-            <button onClick={() => scrollTo("team")} className="block w-full text-left text-sm text-slate-300 hover:text-white py-2">{tt("nav_team")}</button>
-            <button onClick={() => navigate("/pricing")} className="block w-full text-left text-sm text-slate-300 hover:text-white py-2">{tt("nav_pricing")}</button>
-            <hr className="border-white/5" />
+          <div className="md:hidden bg-white/95 backdrop-blur-xl border-t border-slate-200 px-6 py-4 space-y-3">
+            <button onClick={() => scrollTo("features")} className="block w-full text-left text-sm text-slate-600 hover:text-slate-900 py-2">{tt("nav_features")}</button>
+            <button onClick={() => scrollTo("how-it-works")} className="block w-full text-left text-sm text-slate-600 hover:text-slate-900 py-2">{language === "en" ? "How It Works" : "工作原理"}</button>
+            <button onClick={() => scrollTo("team")} className="block w-full text-left text-sm text-slate-600 hover:text-slate-900 py-2">{tt("nav_team")}</button>
+            <button onClick={() => navigate("/pricing")} className="block w-full text-left text-sm text-slate-600 hover:text-slate-900 py-2">{tt("nav_pricing")}</button>
+            <hr className="border-slate-200" />
             {/* Mobile Language Switcher */}
             <button
               onClick={toggleLang}
-              className="flex items-center gap-2 w-full text-left text-sm text-slate-300 hover:text-white py-2"
+              className="flex items-center gap-2 w-full text-left text-sm text-slate-600 hover:text-slate-900 py-2"
             >
               <Globe className="w-4 h-4" />
               {language === "en" ? "切换到中文" : "Switch to English"}
             </button>
-            <button onClick={() => navigate(user ? "/dashboard" : "/login")} className="block w-full text-left text-sm text-slate-300 hover:text-white py-2">{user ? tt("nav_dashboard") : tt("nav_login")}</button>
+            <button onClick={() => navigate(user ? "/dashboard" : "/login")} className="block w-full text-left text-sm text-slate-600 hover:text-slate-900 py-2">{user ? tt("nav_dashboard") : tt("nav_login")}</button>
             <button
               onClick={() => openWaitlist("nav_mobile")}
-              className="block w-full text-center text-sm font-medium bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-2.5 rounded-lg"
+              className="block w-full text-center text-sm font-medium bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-2.5 rounded-lg"
             >
               {tt("nav_request_access")}
             </button>
@@ -257,31 +258,31 @@ export default function Landing() {
 
       {/* ─── HERO ────────────────────────────────────── */}
       <section className="relative pt-32 pb-20 md:pt-40 md:pb-32">
-        {/* Background glow */}
+        {/* Background glow — subtle on light */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-b from-cyan-500/8 via-blue-600/5 to-transparent rounded-full blur-3xl" />
-          <div className="absolute top-20 right-1/4 w-[400px] h-[400px] bg-purple-500/5 rounded-full blur-3xl" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-b from-blue-100/60 via-indigo-50/40 to-transparent rounded-full blur-3xl" />
+          <div className="absolute top-20 right-1/4 w-[400px] h-[400px] bg-purple-100/30 rounded-full blur-3xl" />
         </div>
 
         <div className="relative max-w-7xl mx-auto px-6">
           <div className="text-center max-w-4xl mx-auto mb-16">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-medium mb-8">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-600 text-xs font-medium mb-8">
               <Sparkles className="w-3.5 h-3.5" />
               {tt("hero_badge")}
             </div>
 
             {/* Headline */}
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-bold leading-[1.1] tracking-tight mb-6">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-bold leading-[1.1] tracking-tight mb-6 text-slate-900">
               {tt("hero_title_1")}{" "}
               <br className="hidden sm:block" />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600">
                 {tt("hero_title_2")}
               </span>
             </h1>
 
             {/* Subheadline */}
-            <p className="text-lg md:text-xl text-slate-400 leading-relaxed max-w-2xl mx-auto mb-10">
+            <p className="text-lg md:text-xl text-slate-500 leading-relaxed max-w-2xl mx-auto mb-10">
               {tt("hero_subtitle")}
             </p>
 
@@ -289,14 +290,14 @@ export default function Landing() {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
               <button
                 onClick={() => openWaitlist("hero")}
-                className="group flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-medium px-8 py-3.5 rounded-xl transition-all shadow-xl shadow-cyan-500/20 hover:shadow-cyan-500/30 text-base"
+                className="group flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium px-8 py-3.5 rounded-xl transition-all shadow-xl shadow-blue-500/20 hover:shadow-blue-500/30 text-base"
               >
                 {tt("hero_cta_primary")}
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
               </button>
               <button
                 onClick={() => navigate("/login")}
-                className="flex items-center gap-2 text-slate-300 hover:text-white border border-white/10 hover:border-white/20 px-8 py-3.5 rounded-xl transition-all text-base"
+                className="flex items-center gap-2 text-slate-600 hover:text-slate-900 border border-slate-300 hover:border-slate-400 px-8 py-3.5 rounded-xl transition-all text-base"
               >
                 {tt("nav_login")}
                 <ChevronRight className="w-4 h-4" />
@@ -305,19 +306,19 @@ export default function Landing() {
 
             {/* ─── BACKED BY ─────────────────────────── */}
             <div className="flex flex-col items-center gap-3 mb-4">
-              <p className="text-xs font-medium text-slate-500 tracking-widest uppercase">
+              <p className="text-xs font-medium text-slate-400 tracking-widest uppercase">
                 {language === "en" ? "Backed by" : "投资方"}
               </p>
               <div className="flex items-center gap-8">
                 <img
                   src={MIRACLEPLUS_LOGO}
                   alt="MiraclePlus"
-                  className="h-8 md:h-9 w-auto brightness-0 invert opacity-60 hover:opacity-90 transition-opacity"
+                  className="h-8 md:h-9 w-auto opacity-50 hover:opacity-80 transition-opacity"
                 />
                 <img
                   src={ANTLER_LOGO}
                   alt="Antler"
-                  className="h-5 md:h-6 w-auto brightness-0 invert opacity-60 hover:opacity-90 transition-opacity"
+                  className="h-5 md:h-6 w-auto opacity-50 hover:opacity-80 transition-opacity"
                 />
               </div>
             </div>
@@ -325,8 +326,8 @@ export default function Landing() {
 
           {/* Hero Product Screenshot */}
           <div className="relative max-w-5xl mx-auto">
-            <div className="absolute -inset-4 bg-gradient-to-r from-cyan-500/20 via-blue-500/10 to-purple-500/20 rounded-2xl blur-2xl opacity-50" />
-            <div className="relative rounded-xl overflow-hidden border border-white/10 shadow-2xl shadow-black/50">
+            <div className="absolute -inset-4 bg-gradient-to-r from-blue-200/40 via-indigo-200/30 to-purple-200/40 rounded-2xl blur-2xl opacity-60" />
+            <div className="relative rounded-xl overflow-hidden border border-slate-200 shadow-2xl shadow-slate-900/10">
               <img
                 src={imgs.hero}
                 alt="Meridian Deal Intelligence Platform"
@@ -334,14 +335,14 @@ export default function Landing() {
                 loading="lazy"
               />
               {/* Gradient overlay at bottom */}
-              <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#060a14] to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-white to-transparent" />
             </div>
           </div>
         </div>
       </section>
 
       {/* ─── SOCIAL PROOF / STATS ────────────────────── */}
-      <section className="py-16 border-y border-white/5">
+      <section className="py-16 border-y border-slate-200">
         <div className="max-w-5xl mx-auto px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             {[
@@ -351,7 +352,7 @@ export default function Landing() {
               { value: 2, suffix: language === "en" ? "hrs" : "小时", label: tt("stat_time_saved") },
             ].map((stat) => (
               <div key={stat.label}>
-                <div className="text-3xl md:text-4xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
+                <div className="text-3xl md:text-4xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
                   <Counter end={stat.value} suffix={stat.suffix} />
                 </div>
                 <p className="text-sm text-slate-500 mt-1">{stat.label}</p>
@@ -364,14 +365,14 @@ export default function Landing() {
       {/* ─── PROBLEM STATEMENT ───────────────────────── */}
       <section className="py-24 md:py-32">
         <div className="max-w-4xl mx-auto px-6 text-center">
-          <p className="text-sm font-medium text-cyan-400 tracking-widest uppercase mb-4">
+          <p className="text-sm font-medium text-blue-600 tracking-widest uppercase mb-4">
             {language === "en" ? "The Problem" : "痛点"}
           </p>
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold leading-tight mb-8">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold leading-tight mb-8 text-slate-900">
             {problemTitle.main}{" "}
-            <span className="text-slate-500">{problemTitle.dim}</span>
+            <span className="text-slate-400">{problemTitle.dim}</span>
           </h2>
-          <p className="text-lg text-slate-400 leading-relaxed max-w-3xl mx-auto mb-16">
+          <p className="text-lg text-slate-500 leading-relaxed max-w-3xl mx-auto mb-16">
             {problemDesc}
           </p>
 
@@ -380,12 +381,12 @@ export default function Landing() {
             {painPoints.map((pain) => (
               <div
                 key={pain.title}
-                className="group p-6 rounded-xl bg-white/[0.02] border border-white/5 hover:border-cyan-500/20 transition-all duration-300"
+                className="group p-6 rounded-xl bg-slate-50 border border-slate-200 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/5 transition-all duration-300"
               >
-                <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center mb-4">
-                  <pain.icon className="w-5 h-5 text-red-400" />
+                <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center mb-4">
+                  <pain.icon className="w-5 h-5 text-red-500" />
                 </div>
-                <h3 className="font-display font-semibold text-base mb-2">{pain.title}</h3>
+                <h3 className="font-display font-semibold text-base mb-2 text-slate-900">{pain.title}</h3>
                 <p className="text-sm text-slate-500 leading-relaxed">{pain.desc}</p>
               </div>
             ))}
@@ -394,13 +395,13 @@ export default function Landing() {
       </section>
 
       {/* ─── FEATURES ────────────────────────────────── */}
-      <section id="features" className="py-24 md:py-32">
+      <section id="features" className="py-24 md:py-32 bg-slate-50">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-20">
-            <p className="text-sm font-medium text-cyan-400 tracking-widest uppercase mb-4">{tt("nav_features")}</p>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold leading-tight">
+            <p className="text-sm font-medium text-blue-600 tracking-widest uppercase mb-4">{tt("nav_features")}</p>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold leading-tight text-slate-900">
               {tt("features_title_1")}{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
                 {tt("features_title_2")}
               </span>
             </h2>
@@ -445,21 +446,21 @@ export default function Landing() {
       <section id="how-it-works" className="py-24 md:py-32 relative">
         {/* Background glow */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-cyan-500/5 rounded-full blur-3xl" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-50/60 rounded-full blur-3xl" />
         </div>
 
         <div className="relative max-w-5xl mx-auto px-6">
           <div className="text-center mb-20">
-            <p className="text-sm font-medium text-cyan-400 tracking-widest uppercase mb-4">
+            <p className="text-sm font-medium text-blue-600 tracking-widest uppercase mb-4">
               {language === "en" ? "How It Works" : "工作原理"}
             </p>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold leading-tight mb-6">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold leading-tight mb-6 text-slate-900">
               {howItWorksTitle.pre}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
                 {howItWorksTitle.highlight}
               </span>
             </h2>
-            <p className="text-lg text-slate-400 max-w-2xl mx-auto">
+            <p className="text-lg text-slate-500 max-w-2xl mx-auto">
               {howItWorksDesc}
             </p>
           </div>
@@ -474,45 +475,45 @@ export default function Landing() {
       </section>
 
       {/* ─── TEAM ────────────────────────────────────── */}
-      <section id="team" className="py-24 md:py-32">
+      <section id="team" className="py-24 md:py-32 bg-slate-50">
         <div className="max-w-3xl mx-auto px-6">
           <div className="text-center mb-12">
-            <p className="text-sm font-medium text-cyan-400 tracking-widest uppercase mb-4">{tt("team_badge")}</p>
-            <h2 className="text-3xl md:text-4xl font-display font-bold leading-tight mb-6">
+            <p className="text-sm font-medium text-blue-600 tracking-widest uppercase mb-4">{tt("team_badge")}</p>
+            <h2 className="text-3xl md:text-4xl font-display font-bold leading-tight mb-6 text-slate-900">
               {tt("team_title").split(language === "en" ? "lived the problem" : "亲历过这些问题")[0]}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
                 {language === "en" ? "lived the problem" : "亲历过这些问题"}
               </span>
               {language === "zh" ? "的人打造。" : ""}
             </h2>
           </div>
 
-          <div className="p-8 md:p-10 rounded-2xl bg-white/[0.02] border border-white/5">
-            <p className="text-lg md:text-xl text-slate-300 leading-relaxed mb-6">
+          <div className="p-8 md:p-10 rounded-2xl bg-white border border-slate-200 shadow-sm">
+            <p className="text-lg md:text-xl text-slate-700 leading-relaxed mb-6">
               {teamContent.p1}
             </p>
-            <p className="text-lg md:text-xl text-slate-300 leading-relaxed mb-6">
+            <p className="text-lg md:text-xl text-slate-700 leading-relaxed mb-6">
               {teamContent.p2}
             </p>
-            <p className="text-base text-slate-400 leading-relaxed">
+            <p className="text-base text-slate-500 leading-relaxed">
               {teamContent.p3_pre}
-              <span className="text-cyan-400 font-medium">MiraclePlus</span>
+              <span className="text-blue-600 font-medium">MiraclePlus</span>
               {teamContent.p3_mid}
-              <span className="text-cyan-400 font-medium">Antler</span>
+              <span className="text-blue-600 font-medium">Antler</span>
               {teamContent.p3_post}
             </p>
 
             {/* Backed by logos inline */}
-            <div className="flex items-center gap-6 mt-8 pt-6 border-t border-white/5">
+            <div className="flex items-center gap-6 mt-8 pt-6 border-t border-slate-200">
               <img
                 src={MIRACLEPLUS_LOGO}
                 alt="MiraclePlus"
-                className="h-6 w-auto brightness-0 invert opacity-40"
+                className="h-6 w-auto opacity-40 hover:opacity-70 transition-opacity"
               />
               <img
                 src={ANTLER_LOGO}
                 alt="Antler"
-                className="h-4 w-auto brightness-0 invert opacity-40"
+                className="h-4 w-auto opacity-40 hover:opacity-70 transition-opacity"
               />
             </div>
           </div>
@@ -522,51 +523,51 @@ export default function Landing() {
       {/* ─── CTA / REQUEST ACCESS ────────────────────── */}
       <section id="cta" className="py-24 md:py-32 relative">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-t from-cyan-500/8 to-transparent rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-t from-blue-50/60 to-transparent rounded-full blur-3xl" />
         </div>
 
         <div className="relative max-w-2xl mx-auto px-6 text-center">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold leading-tight mb-6">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold leading-tight mb-6 text-slate-900">
             {tt("cta_title_1")}{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
               {tt("cta_title_2")}
             </span>
           </h2>
-          <p className="text-lg text-slate-400 mb-10 max-w-lg mx-auto">
+          <p className="text-lg text-slate-500 mb-10 max-w-lg mx-auto">
             {waitlistSubtext}
           </p>
 
           <button
             onClick={() => openWaitlist("cta_bottom")}
-            className="group inline-flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-medium px-8 py-4 rounded-xl transition-all shadow-xl shadow-cyan-500/20 hover:shadow-cyan-500/30 text-base"
+            className="group inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium px-8 py-4 rounded-xl transition-all shadow-xl shadow-blue-500/20 hover:shadow-blue-500/30 text-base"
           >
             {tt("cta_button")}
             <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
           </button>
 
-          <p className="text-xs text-slate-600 mt-4">
+          <p className="text-xs text-slate-400 mt-4">
             {ctaSubtext}
           </p>
         </div>
       </section>
 
       {/* ─── FOOTER ──────────────────────────────────── */}
-      <footer className="border-t border-white/5 py-12">
+      <footer className="border-t border-slate-200 py-12 bg-slate-50">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <a href="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
-              <img src={LOGO_IMG} alt="Meridian" className="h-8 w-auto brightness-0 invert" />
+              <img src={LOGO_IMG} alt="Meridian" className="h-8 w-auto" />
             </a>
 
             <div className="flex items-center gap-6 text-sm text-slate-500">
-              <button onClick={() => scrollTo("features")} className="hover:text-slate-300 transition-colors">{tt("nav_features")}</button>
-              <button onClick={() => scrollTo("how-it-works")} className="hover:text-slate-300 transition-colors">{language === "en" ? "How It Works" : "工作原理"}</button>
-              <button onClick={() => scrollTo("team")} className="hover:text-slate-300 transition-colors">{tt("nav_team")}</button>
-              <button onClick={() => navigate("/pricing")} className="hover:text-slate-300 transition-colors">{tt("nav_pricing")}</button>
-              <button onClick={() => navigate("/login")} className="hover:text-slate-300 transition-colors">{tt("nav_login")}</button>
+              <button onClick={() => scrollTo("features")} className="hover:text-slate-700 transition-colors">{tt("nav_features")}</button>
+              <button onClick={() => scrollTo("how-it-works")} className="hover:text-slate-700 transition-colors">{language === "en" ? "How It Works" : "工作原理"}</button>
+              <button onClick={() => scrollTo("team")} className="hover:text-slate-700 transition-colors">{tt("nav_team")}</button>
+              <button onClick={() => navigate("/pricing")} className="hover:text-slate-700 transition-colors">{tt("nav_pricing")}</button>
+              <button onClick={() => navigate("/login")} className="hover:text-slate-700 transition-colors">{tt("nav_login")}</button>
             </div>
 
-            <p className="text-xs text-slate-600">
+            <p className="text-xs text-slate-400">
               &copy; {new Date().getFullYear()} {tt("footer_copyright")}
             </p>
           </div>
@@ -613,16 +614,16 @@ function FeatureRow({
     >
       {/* Text */}
       <div className="flex-1 max-w-lg">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-medium mb-4">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-600 text-xs font-medium mb-4">
           <Sparkles className="w-3 h-3" />
           {badge}
         </div>
-        <h3 className="text-2xl md:text-3xl font-display font-bold mb-4">{title}</h3>
-        <p className="text-slate-400 leading-relaxed mb-6">{desc}</p>
+        <h3 className="text-2xl md:text-3xl font-display font-bold mb-4 text-slate-900">{title}</h3>
+        <p className="text-slate-500 leading-relaxed mb-6">{desc}</p>
         <ul className="space-y-3">
           {bullets.map((b) => (
-            <li key={b} className="flex items-start gap-3 text-sm text-slate-300">
-              <CheckCircle2 className="w-4 h-4 text-cyan-400 mt-0.5 shrink-0" />
+            <li key={b} className="flex items-start gap-3 text-sm text-slate-700">
+              <CheckCircle2 className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
               <span>{b}</span>
             </li>
           ))}
@@ -632,11 +633,11 @@ function FeatureRow({
       {/* Image */}
       <div className="flex-1 flex justify-center">
         <div className="relative w-full max-w-lg">
-          <div className="absolute -inset-3 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 rounded-2xl blur-xl opacity-50" />
+          <div className="absolute -inset-3 bg-gradient-to-r from-blue-100/40 to-indigo-100/40 rounded-2xl blur-xl opacity-60" />
           <img
             src={image}
             alt={imageAlt}
-            className="relative w-full max-h-[420px] object-contain rounded-xl border border-white/10 shadow-2xl shadow-black/40"
+            className="relative w-full max-h-[420px] object-contain rounded-xl border border-slate-200 shadow-2xl shadow-slate-900/10"
             loading="lazy"
           />
         </div>
@@ -674,7 +675,7 @@ function ChipCard({
     >
       {/* 3D perspective chip */}
       <div
-        className={`relative p-6 rounded-xl bg-[#0c1222] border ${chip.borderColor} shadow-xl ${chip.glow} hover:scale-[1.02] transition-transform duration-300`}
+        className={`relative p-6 rounded-xl bg-white border ${chip.borderColor} shadow-lg ${chip.glow} hover:scale-[1.02] transition-transform duration-300`}
         style={{
           transform: inView
             ? `perspective(800px) rotateX(${2 - index}deg)`
@@ -690,8 +691,8 @@ function ChipCard({
           </div>
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <span className="text-[10px] font-mono text-slate-600 uppercase tracking-wider">{chip.layer}</span>
-              <h3 className="font-display font-semibold text-base">{chip.title}</h3>
+              <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">{chip.layer}</span>
+              <h3 className="font-display font-semibold text-base text-slate-900">{chip.title}</h3>
             </div>
             <p className="text-sm text-slate-500">{chip.desc}</p>
           </div>

@@ -286,6 +286,8 @@ export const accessRequests = mysqlTable("accessRequests", {
   email: varchar("email", { length: 320 }).notNull(),
   fullName: varchar("fullName", { length: 255 }),
   companyName: varchar("companyName", { length: 255 }),
+  phone: varchar("phone", { length: 50 }),
+  wechat: varchar("wechat", { length: 100 }),
   source: varchar("source", { length: 100 }).default("landing_page").notNull(),
   status: mysqlEnum("status", ["pending", "contacted", "converted", "rejected"]).default("pending").notNull(),
   notes: text("notes"),

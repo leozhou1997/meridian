@@ -723,3 +723,10 @@
 - [x] Default Landing page language to Chinese (zh)
 - [x] Deal Detail: Add "Export PDF Report" button and feature
 - [x] Dashboard: Pipeline by Stage click-to-filter interaction
+
+## Landing/Pricing Page Fixes
+- [x] Fix team location text in Chinese version (EN: removed location, ZH: 北京、上海、深圳服务站点)
+- [x] Fix Pricing page navigation bar issue (logo same as Landing, nav structure consistent)
+- [x] Fix scroll-to-top when navigating between pages (ScrollToTop component in App.tsx)
+- [x] Unify all CTA buttons (联系销售, Enterprise申请体验) to use Request Access/WaitlistDialog
+- [x] Enhance Request Access form with optional fields: WeChat, phone number

@@ -78,6 +78,13 @@
       "when": 1774773561244,
       "tag": "0010_narrow_centennial",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1774866427831,
+      "tag": "0011_wandering_shockwave",
+      "breakpoints": true
     }
   ]
 }

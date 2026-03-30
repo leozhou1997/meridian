@@ -13,6 +13,8 @@ export const landingRouter = router({
         email: z.string().email(),
         fullName: z.string().min(1).optional(),
         companyName: z.string().min(1).optional(),
+        phone: z.string().min(1).optional(),
+        wechat: z.string().min(1).optional(),
         source: z.string().optional().default("landing_page"),
       })
     )
@@ -41,6 +43,8 @@ export const landingRouter = router({
         email,
         fullName: input.fullName?.trim() || null,
         companyName: input.companyName?.trim() || null,
+        phone: input.phone?.trim() || null,
+        wechat: input.wechat?.trim() || null,
         source: input.source,
       });
 
@@ -49,6 +53,8 @@ export const landingRouter = router({
         `Email: ${email}`,
         input.fullName ? `Name: ${input.fullName.trim()}` : null,
         input.companyName ? `Company: ${input.companyName.trim()}` : null,
+        input.phone ? `Phone: ${input.phone.trim()}` : null,
+        input.wechat ? `WeChat: ${input.wechat.trim()}` : null,
         `Source: ${input.source}`,
         `Time: ${new Date().toISOString()}`,
       ]

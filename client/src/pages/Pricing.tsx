@@ -38,8 +38,9 @@ export default function Pricing() {
     setWaitlistOpen(true);
   };
 
-  const handleContactSales = () => {
-    window.location.href = "mailto:hello@meridianos.ai?subject=Enterprise%20Inquiry";
+  const handleContactSales = (source = "pricing_enterprise") => {
+    setWaitlistSource(source);
+    setWaitlistOpen(true);
   };
 
   const toggleLang = () => setLanguage(language === "en" ? "zh" : "en");
@@ -236,7 +237,7 @@ export default function Pricing() {
                   {!plan.highlight && <div className="mb-6" />}
 
                   <button
-                    onClick={() => plan.highlight ? handleRequestAccess("pricing_plan") : handleContactSales()}
+                    onClick={() => plan.highlight ? handleRequestAccess("pricing_plan") : handleContactSales("pricing_enterprise")}
                     className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-medium text-sm transition-all mb-8 ${
                       plan.highlight
                         ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-blue-500/20"
@@ -361,7 +362,7 @@ export default function Pricing() {
               <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
             </button>
             <button
-              onClick={handleContactSales}
+              onClick={() => handleContactSales("pricing_bottom_cta")}
               className="flex items-center gap-2 text-slate-600 hover:text-slate-900 border border-slate-300 hover:border-slate-400 px-8 py-3.5 rounded-xl transition-all text-base"
             >
               {t(language, "talk_to_sales")}

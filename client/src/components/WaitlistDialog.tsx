@@ -29,6 +29,8 @@ export function WaitlistDialog({
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [companyName, setCompanyName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [wechat, setWechat] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
 
@@ -48,6 +50,8 @@ export function WaitlistDialog({
       email,
       fullName: fullName || undefined,
       companyName: companyName || undefined,
+      phone: phone || undefined,
+      wechat: wechat || undefined,
       source,
     });
   };
@@ -58,6 +62,8 @@ export function WaitlistDialog({
         setEmail("");
         setFullName("");
         setCompanyName("");
+        setPhone("");
+        setWechat("");
         setSubmitted(false);
         setAlreadySubmitted(false);
       }, 300);
@@ -102,8 +108,8 @@ export function WaitlistDialog({
               </DialogDescription>
             </DialogHeader>
 
-            <form onSubmit={handleSubmit} className="space-y-4 mt-2">
-              <div className="space-y-2">
+            <form onSubmit={handleSubmit} className="space-y-3 mt-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="email" className="text-slate-300 text-sm">
                   {t(language, "waitlist_email_label")} <span className="text-red-400">*</span>
                 </Label>
@@ -118,7 +124,7 @@ export function WaitlistDialog({
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="fullName" className="text-slate-300 text-sm">
                   {t(language, "waitlist_name_label")}
                 </Label>
@@ -132,7 +138,7 @@ export function WaitlistDialog({
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="companyName" className="text-slate-300 text-sm">
                   {t(language, "waitlist_company_label")}
                 </Label>
@@ -144,6 +150,36 @@ export function WaitlistDialog({
                   onChange={(e) => setCompanyName(e.target.value)}
                   className="bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:border-cyan-500/50 focus:ring-cyan-500/20"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="phone" className="text-slate-300 text-sm">
+                    {t(language, "waitlist_phone_label")}
+                  </Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder={t(language, "waitlist_phone_placeholder")}
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:border-cyan-500/50 focus:ring-cyan-500/20"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="wechat" className="text-slate-300 text-sm">
+                    {t(language, "waitlist_wechat_label")}
+                  </Label>
+                  <Input
+                    id="wechat"
+                    type="text"
+                    placeholder={t(language, "waitlist_wechat_placeholder")}
+                    value={wechat}
+                    onChange={(e) => setWechat(e.target.value)}
+                    className="bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:border-cyan-500/50 focus:ring-cyan-500/20"
+                  />
+                </div>
               </div>
 
               <Button

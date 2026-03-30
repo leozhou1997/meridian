@@ -151,14 +151,14 @@ export default function Landing() {
         p2: "We built Meridian because we believe sales intelligence shouldn't be trapped in spreadsheets and tribal knowledge. Every deal tells a story — the relationships, the risks, the momentum. We're building the AI that reads that story and helps you write a better ending.",
         p3_pre: "Our team combines deep enterprise sales experience with AI and product engineering. We're backed by ",
         p3_mid: " and ",
-        p3_post: ", and we're based between Singapore and San Francisco.",
+        p3_post: ".",
       }
     : {
         p1: "我们在企业级销售的战壕中摸爬滚打多年——运营复杂交易、管理采购委员会、为 Pipeline Review 彻夜难眠。我们亲眼见证了最优秀的销售团队如何赢单：不是靠更多的活动，而是靠更深的理解。",
         p2: "我们创建 Meridian 是因为我们相信销售智能不应该被困在电子表格和口口相传的经验中。每笔交易都在讲述一个故事——关系、风险、势头。我们正在构建能读懂这个故事并帮助你写出更好结局的 AI。",
         p3_pre: "我们的团队融合了深厚的企业销售经验与 AI 和产品工程能力。我们获得了 ",
         p3_mid: " 和 ",
-        p3_post: " 的支持，团队分布在新加坡和旧金山之间。",
+        p3_post: " 的支持，在北京、上海、深圳设有服务站点，贴近客户一线。",
       };
 
   const ctaSubtext = language === "en"

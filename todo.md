@@ -711,3 +711,8 @@
 - [x] Fix arrow start/end points to connect to card edges in feature-map-en-light.html
 - [x] Fix arrow start/end points to connect to card edges in feature-map-zh-light.html
 - [x] Regenerate all 8 screenshots and deliver
+
+## Demo Guide & Onboarding i18n
+- [x] Audit Onboarding page for English hardcoded strings
+- [x] Add Chinese translations for all Onboarding hardcoded strings (Step X→第X步, sales stages defaults, error fallbacks)
+- [x] Create Demo guide document for Leo (DEMO_GUIDE.md)

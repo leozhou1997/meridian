@@ -45,7 +45,7 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
               </div>
               <div className="mt-2 text-center">
                 <p className={`text-xs font-medium ${isActive || isDone ? 'text-foreground' : 'text-muted-foreground'}`}>
-                  Step {step}
+                  {language === 'zh' ? `第 ${step} 步` : `Step ${step}`}
                 </p>
                 <p className={`text-xs ${isActive || isDone ? 'text-foreground' : 'text-muted-foreground'}`}>
                   {language === 'zh' ? labels[i].zh : labels[i].en}
@@ -95,9 +95,11 @@ export default function Onboarding() {
   } | null>(null);
 
   // Step 2: Sales Process
-  const [salesStages, setSalesStages] = useState([
-    'Discovery', 'Demo', 'Technical Evaluation', 'POC', 'Negotiation'
-  ]);
+  const defaultStagesEn = ['Discovery', 'Demo', 'Technical Evaluation', 'POC', 'Negotiation'];
+  const defaultStagesZh = ['需求发现', '产品演示', '技术评估', 'POC验证', '商务谈判'];
+  const [salesStages, setSalesStages] = useState(
+    language === 'zh' ? defaultStagesZh : defaultStagesEn
+  );
   const [avgDealSize, setAvgDealSize] = useState('');
   const [avgDealCycle, setAvgDealCycle] = useState('');
   const [salesTeamSize, setSalesTeamSize] = useState('');
@@ -126,7 +128,7 @@ export default function Onboarding() {
       setCompanyAnalysis(result);
       toast.success(language === 'zh' ? '公司信息分析完成！' : 'Company analysis complete!');
     } catch (err: any) {
-      toast.error(err.message || 'Analysis failed');
+      toast.error(err.message || (language === 'zh' ? '分析失败' : 'Analysis failed'));
     } finally {
       setIsAnalyzing(false);
     }
@@ -163,7 +165,7 @@ export default function Onboarding() {
       toast.success(language === 'zh' ? '公司档案已保存！欢迎使用 Meridian' : 'Company profile saved! Welcome to Meridian');
       navigate('/');
     } catch (err: any) {
-      toast.error(err.message || 'Failed to save profile');
+      toast.error(err.message || (language === 'zh' ? '保存失败' : 'Failed to save profile'));
     } finally {
       setIsSaving(false);
     }

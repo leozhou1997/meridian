@@ -681,3 +681,19 @@
 - [x] Adjust nav bar and logo for light background
 - [x] Keep product internal pages (Dashboard, Deal Detail etc.) dark theme unchanged
 - [x] Convert Pricing.tsx to matching light theme
+
+## Light Theme Mockup Screenshots
+- [x] Hero EN light: remove outer border/scrollbars, full-screen feel, relationship labels on connections
+- [x] Feature Insight EN light: ensure full content visible (no truncation)
+- [x] Feature Map EN light: add relationship labels (Reports to/Influences/Collaborates/Blocks)
+- [x] Feature Room EN light: ensure full content visible
+- [x] Create ZH versions of all 4 light mockups
+- [x] Screenshot all 8 and upload to CDN
+- [x] Update website i18n.ts with new image URLs
+
+## Mockup Fixes Round 2
+- [x] Generate 6 Chinese face professional headshots with style variation
+- [x] Full audit of ZH files: remove all English except CTO/CFO/CEO/PoC/ROI/AI terms
+- [x] Simplify relationship labels on stakeholder map to 2-3 meaningful ones near arrows (EN + ZH both simplified to 3 labels)
+- [x] Replace EN avatars with Chinese face avatars in ZH mockup files
+- [x] Retake all 8 screenshots and upload to CDN

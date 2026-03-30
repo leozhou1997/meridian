@@ -131,18 +131,7 @@ export default function Settings() {
         <CardContent>
           <div className="flex gap-3">
             <button
-              onClick={() => theme === "light" && toggleTheme?.()}
-              className={`flex-1 flex items-center justify-center gap-2 h-10 rounded-lg border text-sm font-medium transition-all ${
-                theme === "dark"
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border bg-muted/30 text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <Moon className="w-4 h-4" />
-              {t("settings.theme.dark")}
-            </button>
-            <button
-              onClick={() => theme === "dark" && toggleTheme?.()}
+              onClick={() => theme !== "light" && toggleTheme?.()}
               className={`flex-1 flex items-center justify-center gap-2 h-10 rounded-lg border text-sm font-medium transition-all ${
                 theme === "light"
                   ? "border-primary bg-primary/10 text-primary"
@@ -151,6 +140,17 @@ export default function Settings() {
             >
               <Sun className="w-4 h-4" />
               {t("settings.theme.light")}
+            </button>
+            <button
+              onClick={() => theme !== "dark" && toggleTheme?.()}
+              className={`flex-1 flex items-center justify-center gap-2 h-10 rounded-lg border text-sm font-medium transition-all ${
+                theme === "dark"
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border bg-muted/30 text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Moon className="w-4 h-4" />
+              {t("settings.theme.dark")}
             </button>
           </div>
         </CardContent>

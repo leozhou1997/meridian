@@ -1,13 +1,12 @@
 import { useState, useEffect, createContext, useContext, useRef } from 'react';
 import { useLocation, Link } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
-import { useTheme } from '@/contexts/ThemeContext';
 import { trpc } from '@/lib/trpc';
 import { formatCurrency, getConfidenceColor } from '@/lib/data';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Compass, LayoutDashboard, Users, FileText, MessageSquare,
-  Search, LogOut, ChevronDown, ChevronRight, Settings, Sun, Moon, BookOpen, Plus,
+  Search, LogOut, ChevronDown, ChevronRight, Settings, BookOpen, Plus,
   PanelLeftClose, ChevronLeft, Briefcase, Camera, Mic, StickyNote, X, Upload, Check
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -32,7 +31,6 @@ interface AppLayoutProps {
 
 export default function AppLayout({ children }: AppLayoutProps) {
   const { user, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const { t } = useLanguage();
   const [location, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
@@ -93,7 +91,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <img
                 src="https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/meridian-logo-cropped_69e86f90.png"
                 alt="Meridian"
-                className="h-7 w-auto brightness-0 invert opacity-80"
+                className="h-7 w-auto brightness-0 dark:invert opacity-80"
               />
             </div>
           </Link>
@@ -140,20 +138,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </nav>
 
           <div className="flex flex-col items-center gap-2">
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={toggleTheme}
-                  className="w-10 h-10 rounded-lg flex items-center justify-center text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all"
-                >
-                  {theme === 'dark' ? <Sun className="w-[18px] h-[18px]" /> : <Moon className="w-[18px] h-[18px]" />}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="font-display text-xs">
-                {theme === 'dark' ? t('common.lightMode') : t('common.darkMode')}
-              </TooltipContent>
-            </Tooltip>
-
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
                 <Link href="/settings">

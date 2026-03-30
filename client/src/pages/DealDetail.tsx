@@ -73,6 +73,7 @@ import { toast } from 'sonner';
 import { CompanyLogo, StakeholderAvatar } from '@/components/Avatars';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { PipelineToggleButton } from '@/components/AppLayout';
+import DealPDFExport from '@/components/DealPDFExport';
 
 type SentimentType = 'Positive' | 'Neutral' | 'Negative';
 type RoleType = 'Champion' | 'Decision Maker' | 'Influencer' | 'Blocker' | 'User' | 'Evaluator';
@@ -810,7 +811,43 @@ export default function DealDetail() {
               <Progress value={deal.confidenceScore} className="w-24 h-1.5" />
             </div>
           </div>
-          <PipelineToggleButton className="mr-2 hidden md:flex" />
+          <div className="hidden md:flex items-center gap-2 shrink-0">
+            <DealPDFExport deal={{
+              company: deal.company,
+              name: deal.name,
+              stage: deal.stage,
+              value: deal.value,
+              confidenceScore: deal.confidenceScore,
+              companyInfo: deal.companyInfo,
+              website: deal.website,
+              stakeholders: localStakeholders.map((s: any) => ({
+                name: s.name,
+                title: s.title,
+                role: s.role,
+                sentiment: s.sentiment,
+                engagement: s.engagement,
+              })),
+              snapshot: latestSnapshot ? {
+                whatsHappening: latestSnapshot.whatsHappening ?? undefined,
+                keyRisks: latestSnapshot.keyRisks as any,
+                whatsNext: latestSnapshot.whatsNext as any,
+                confidenceChange: latestSnapshot.confidenceChange ?? undefined,
+              } : null,
+              nextActions: nextActions.map((a: any) => ({
+                text: a.text,
+                dueDate: a.dueDate,
+                completed: a.completed,
+                status: a.status,
+              })),
+              interactions: localInteractions.map((m: any) => ({
+                date: m.date,
+                type: m.type,
+                keyParticipant: m.keyParticipant,
+                summary: m.summary,
+              })),
+            }} />
+            <PipelineToggleButton />
+          </div>
         </div>
       </div>
 

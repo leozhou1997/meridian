@@ -1,4 +1,5 @@
-import { Link, useLocation } from 'wouter';
+import { useState } from 'react';
+import { useLocation, Link } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { formatCurrency, getConfidenceColor, getConfidenceBg, getStageColor, formatDate } from '@/lib/data';
 import { useAuth } from '@/_core/hooks/useAuth';
@@ -49,6 +50,8 @@ export default function Dashboard() {
   }));
   const maxCount = Math.max(...stageGroups.map(g => g.count), 1);
   const firstName = user?.name?.split(' ')[0] ?? 'there';
+  const [selectedStage, setSelectedStage] = useState<string | null>(null);
+  const filteredDeals = selectedStage ? deals.filter(d => d.stage === selectedStage) : deals;
 
   if (isLoading) {
     return (
@@ -240,15 +243,27 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {stageGroups.map(group => (
-                    <div key={group.stage} className="flex items-center gap-3">
-                      <span className="text-xs text-muted-foreground w-32 shrink-0 truncate">{group.stage}</span>
+                    <div
+                      key={group.stage}
+                      className={`flex items-center gap-3 px-2 py-1 -mx-2 rounded-lg cursor-pointer transition-all ${
+                        selectedStage === group.stage
+                          ? 'bg-primary/10 ring-1 ring-primary/30'
+                          : 'hover:bg-muted/40'
+                      }`}
+                      onClick={() => setSelectedStage(selectedStage === group.stage ? null : group.stage)}
+                    >
+                      <span className={`text-xs w-32 shrink-0 truncate ${
+                        selectedStage === group.stage ? 'text-primary font-medium' : 'text-muted-foreground'
+                      }`}>{group.stage}</span>
                       <div className="flex-1">
                         <div className="h-6 bg-muted/30 rounded overflow-hidden">
                           <motion.div
                             initial={{ width: 0 }}
                             animate={{ width: `${(group.count / maxCount) * 100}%` }}
                             transition={{ duration: 0.6, delay: 0.2 }}
-                            className="h-full bg-primary/40 rounded flex items-center px-2"
+                            className={`h-full rounded flex items-center px-2 ${
+                              selectedStage === group.stage ? 'bg-primary/60' : 'bg-primary/40'
+                            }`}
                           >
                             <span className="text-[10px] font-mono font-medium text-primary-foreground">
                               {group.count}
@@ -259,6 +274,14 @@ export default function Dashboard() {
                       <span className="text-xs font-mono text-muted-foreground w-16 text-right">{formatCurrency(group.value)}</span>
                     </div>
                   ))}
+                  {selectedStage && (
+                    <button
+                      onClick={() => setSelectedStage(null)}
+                      className="text-[10px] text-primary hover:text-primary/80 transition-colors mt-1"
+                    >
+                      {language === 'zh' ? '清除筛选' : 'Clear filter'}
+                    </button>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>
@@ -271,14 +294,24 @@ export default function Dashboard() {
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-sm font-display">{t('dashboard.allDeals')}</CardTitle>
-                    <span className="text-xs text-muted-foreground">{deals.length} {t('dashboard.total')}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {selectedStage ? (
+                        <span className="text-primary font-medium">{filteredDeals.length} in {selectedStage}</span>
+                      ) : (
+                        <>{deals.length} {t('dashboard.total')}</>
+                      )}
+                    </span>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-1 p-3">
-                  {deals.length === 0 ? (
-                    <p className="text-xs text-muted-foreground text-center py-6">No deals yet</p>
+                  {filteredDeals.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-6">
+                      {selectedStage
+                        ? (language === 'zh' ? `${selectedStage} 阶段暂无 Deal` : `No deals in ${selectedStage}`)
+                        : (language === 'zh' ? '暂无 Deal' : 'No deals yet')}
+                    </p>
                   ) : (
-                    deals.slice(0, 10).map(deal => (
+                    filteredDeals.slice(0, 10).map(deal => (
                       <Link key={deal.id} href={`/deal/${deal.id}`}>
                         <div className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-muted/40 transition-all">
                           <div className={`w-2 h-2 rounded-full shrink-0 ${

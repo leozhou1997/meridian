@@ -716,3 +716,10 @@
 - [x] Audit Onboarding page for English hardcoded strings
 - [x] Add Chinese translations for all Onboarding hardcoded strings (Step X→第X步, sales stages defaults, error fallbacks)
 - [x] Create Demo guide document for Leo (DEMO_GUIDE.md)
+
+## UI/Theme + Feature Updates
+- [x] Default theme to light mode (change ThemeProvider defaultTheme from "dark" to "light")
+- [x] Move dark mode toggle from sidebar to Settings page only
+- [x] Default Landing page language to Chinese (zh)
+- [x] Deal Detail: Add "Export PDF Report" button and feature
+- [x] Dashboard: Pipeline by Stage click-to-filter interaction

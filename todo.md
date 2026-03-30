@@ -697,3 +697,17 @@
 - [x] Simplify relationship labels on stakeholder map to 2-3 meaningful ones near arrows (EN + ZH both simplified to 3 labels)
 - [x] Replace EN avatars with Chinese face avatars in ZH mockup files
 - [x] Retake all 8 screenshots and upload to CDN
+
+## Mockup Fixes Round 3
+- [x] Remove floating rel-label divs from hero-en-light.html stakeholder map
+- [x] Remove floating rel-label divs from hero-zh-light.html stakeholder map
+- [x] Remove floating rel-label divs from feature-map-en-light.html
+- [x] Remove floating rel-label divs from feature-map-zh-light.html
+- [x] Regenerate all 8 screenshots
+
+## Mockup Fixes Round 4 - Arrow Endpoints
+- [x] Fix arrow start/end points to connect to card edges (not floating in space) in hero-en-light.html
+- [x] Fix arrow start/end points to connect to card edges in hero-zh-light.html
+- [x] Fix arrow start/end points to connect to card edges in feature-map-en-light.html
+- [x] Fix arrow start/end points to connect to card edges in feature-map-zh-light.html
+- [x] Regenerate all 8 screenshots and deliver

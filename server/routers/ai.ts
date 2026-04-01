@@ -444,7 +444,15 @@ CRITICAL: All deal analysis must be from the perspective of ${sellerProfile.comp
 
       const dimensionPrompt = modelDimensions.map(d => `- **${d.label}**: ${d.description}`).join("\n");
       const lang = input.language ?? "en";
-      const langInstruction = lang === "zh" ? "\n\nIMPORTANT: You MUST respond entirely in Simplified Chinese (中文). All text in the JSON must be in Chinese." : "";
+      const langInstruction = lang === "zh" ? `\n\n❗❗❗ CRITICAL LANGUAGE REQUIREMENT ❗❗❗
+You MUST respond ENTIRELY in Simplified Chinese (中文). Every single field value in the JSON output MUST be written in Chinese.
+- whatsHappening: 必须用中文写
+- keyRisks title/detail: 必须用中文写
+- whatsNext action/rationale: 必须用中文写
+- suggestedContacts reason: 必须用中文写
+Do NOT output any English text in the JSON values. Only stakeholder names and company names may remain in their original language.
+示例 action: "与李明确认定价模型并推动内部审批"
+示例 risk title: "决策链不明确，缺乎关键支持者"` : "";
 
       // Determine data richness: do we have actual meeting transcripts/summaries?
       const meetingsWithContent = (input.meetings ?? []).filter(m => m.summary && m.summary.trim().length > 20);

@@ -112,19 +112,20 @@ type WhatsNextItem = string | { action: string; rationale: string; suggestedCont
 // ─── Status Config ──────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<ActionStatus, {
-  label: string;
+  labelEn: string;
+  labelZh: string;
   icon: typeof Check;
   color: string;
   bg: string;
   border: string;
 }> = {
-  pending: { label: 'Pending', icon: Clock, color: 'text-muted-foreground/70', bg: 'bg-muted/20', border: 'border-border/30' },
-  accepted: { label: 'To Do', icon: CircleDot, color: 'text-blue-400', bg: 'bg-blue-400/10', border: 'border-blue-400/30' },
-  in_progress: { label: 'In Progress', icon: Play, color: 'text-amber-400', bg: 'bg-amber-400/10', border: 'border-amber-400/30' },
-  done: { label: 'Done', icon: CircleCheck, color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/30' },
-  blocked: { label: 'Blocked', icon: Ban, color: 'text-red-400', bg: 'bg-red-400/10', border: 'border-red-400/30' },
-  later: { label: 'Later', icon: Pause, color: 'text-purple-400', bg: 'bg-purple-400/10', border: 'border-purple-400/30' },
-  rejected: { label: 'Dismissed', icon: Ban, color: 'text-muted-foreground/40', bg: 'bg-muted/10', border: 'border-border/20' },
+  pending: { labelEn: 'Pending', labelZh: '待处理', icon: Clock, color: 'text-muted-foreground/70', bg: 'bg-muted/20', border: 'border-border/30' },
+  accepted: { labelEn: 'To Do', labelZh: '待办', icon: CircleDot, color: 'text-blue-400', bg: 'bg-blue-400/10', border: 'border-blue-400/30' },
+  in_progress: { labelEn: 'In Progress', labelZh: '进行中', icon: Play, color: 'text-amber-400', bg: 'bg-amber-400/10', border: 'border-amber-400/30' },
+  done: { labelEn: 'Done', labelZh: '已完成', icon: CircleCheck, color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/30' },
+  blocked: { labelEn: 'Blocked', labelZh: '受阻', icon: Ban, color: 'text-red-400', bg: 'bg-red-400/10', border: 'border-red-400/30' },
+  later: { labelEn: 'Later', labelZh: '稍后', icon: Pause, color: 'text-purple-400', bg: 'bg-purple-400/10', border: 'border-purple-400/30' },
+  rejected: { labelEn: 'Dismissed', labelZh: '已忽略', icon: Ban, color: 'text-muted-foreground/40', bg: 'bg-muted/10', border: 'border-border/20' },
 };
 
 // Valid transitions from each status
@@ -152,7 +153,7 @@ function InsightHistory({ snapshots, onRestoreSuggestion }: { snapshots: Snapsho
     switch (status) {
       case 'accepted': return <span className="text-[8px] px-1 py-0.5 rounded bg-blue-400/10 text-blue-400 border border-blue-400/20">{isZh ? '已接受' : 'Accepted'}</span>;
       case 'rejected': return <span className="text-[8px] px-1 py-0.5 rounded bg-muted/30 text-muted-foreground/50 border border-border/20">{isZh ? '已忽略' : 'Dismissed'}</span>;
-      case 'later': return <span className="text-[8px] px-1 py-0.5 rounded bg-purple-400/10 text-purple-400 border border-purple-400/20">Later</span>;
+      case 'later': return <span className="text-[8px] px-1 py-0.5 rounded bg-purple-400/10 text-purple-400 border border-purple-400/20">{isZh ? '稍后' : 'Later'}</span>;
       default: return <span className="text-[8px] px-1 py-0.5 rounded bg-muted/20 text-muted-foreground/40 border border-border/15">Pending</span>;
     }
   };
@@ -164,7 +165,7 @@ function InsightHistory({ snapshots, onRestoreSuggestion }: { snapshots: Snapsho
         className="flex items-center gap-1.5 text-[10px] text-muted-foreground/60 hover:text-muted-foreground transition-colors w-full"
       >
         {showHistory ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-        <span>Insight History ({olderSnapshots.length} previous {olderSnapshots.length === 1 ? 'snapshot' : 'snapshots'})</span>
+        <span>{isZh ? `洞察历史 (${olderSnapshots.length} 条历史记录)` : `Insight History (${olderSnapshots.length} previous ${olderSnapshots.length === 1 ? 'snapshot' : 'snapshots'})`}</span>
       </button>
       {showHistory && (
         <div className="mt-2 space-y-3">
@@ -211,7 +212,7 @@ function InsightHistory({ snapshots, onRestoreSuggestion }: { snapshots: Snapsho
                   <div className="px-3 pb-3 space-y-3 border-t border-border/15">
                     {snap.whatsHappening && (
                       <div className="mt-2">
-                        <span className="text-[9px] text-blue-400/70 uppercase tracking-wider font-semibold">What Was Happening</span>
+                        <span className="text-[9px] text-blue-400/70 uppercase tracking-wider font-semibold">{isZh ? '当时动态' : 'What Was Happening'}</span>
                         <p className="text-[10px] text-foreground/60 leading-relaxed mt-1">{snap.whatsHappening}</p>
                       </div>
                     )}
@@ -219,7 +220,7 @@ function InsightHistory({ snapshots, onRestoreSuggestion }: { snapshots: Snapsho
                     {/* Show suggestions with their dispositions */}
                     {snap.whatsNext && snap.whatsNext.length > 0 && (
                       <div>
-                        <span className="text-[9px] text-emerald-400/70 uppercase tracking-wider font-semibold">Suggested Actions</span>
+                        <span className="text-[9px] text-emerald-400/70 uppercase tracking-wider font-semibold">{isZh ? '建议行动' : 'Suggested Actions'}</span>
                         <div className="mt-1 space-y-1.5">
                           {snap.whatsNext.map((item: any, idx: number) => {
                             const actionText = typeof item === 'string' ? item : item.action;
@@ -363,7 +364,7 @@ function WhatsNextCard({
 
   const statusBadge = currentStatus && currentStatus !== 'pending' ? (
     <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${STATUS_CONFIG[currentStatus].bg} ${STATUS_CONFIG[currentStatus].color} border ${STATUS_CONFIG[currentStatus].border}`}>
-      {STATUS_CONFIG[currentStatus].label}
+      {isZh ? STATUS_CONFIG[currentStatus].labelZh : STATUS_CONFIG[currentStatus].labelEn}
     </span>
   ) : null;
 
@@ -417,7 +418,7 @@ function WhatsNextCard({
           {/* Relevant Stakeholders */}
           {mentioned.length > 0 && (
             <div>
-              <div className="text-[10px] text-muted-foreground/50 uppercase tracking-wider mb-1.5">Relevant Stakeholders</div>
+              <div className="text-[10px] text-muted-foreground/50 uppercase tracking-wider mb-1.5">{isZh ? '相关利益相关者' : 'Relevant Stakeholders'}</div>
               <div className="space-y-1.5">
                 {mentioned.map(s => (
                   <button
@@ -438,7 +439,7 @@ function WhatsNextCard({
                       s.sentiment === 'Positive' ? 'bg-emerald-400/10 text-emerald-400' :
                       s.sentiment === 'Negative' ? 'bg-red-400/10 text-red-400' :
                       'bg-amber-400/10 text-amber-400'
-                    }`}>{s.sentiment}</div>
+                    }`}>{isZh ? (s.sentiment === 'Positive' ? '正面' : s.sentiment === 'Negative' ? '负面' : '中立') : s.sentiment}</div>
                   </button>
                 ))}
               </div>
@@ -450,7 +451,7 @@ function WhatsNextCard({
             <div>
               <div className="text-[10px] text-muted-foreground/50 uppercase tracking-wider mb-1.5 flex items-center gap-1">
                 <Sparkles className="w-2.5 h-2.5 text-primary/50" />
-                Suggested Contacts
+                {isZh ? '建议联系人' : 'Suggested Contacts'}
               </div>
               <div className="space-y-2">
                 {suggestedContacts.map(contact => {
@@ -470,10 +471,10 @@ function WhatsNextCard({
                       </div>
                       <div className="flex items-center gap-1.5 mt-2 ml-9">
                         {isAdded ? (
-                          <span className="flex items-center gap-1 text-[10px] text-emerald-400"><Check className="w-3 h-3" /> Added to map</span>
+                          <span className="flex items-center gap-1 text-[10px] text-emerald-400"><Check className="w-3 h-3" /> {isZh ? '已添加' : 'Added to map'}</span>
                         ) : (
                           <button onClick={(e) => { e.stopPropagation(); onAddToMap?.(contact); setAddedContacts(prev => new Set(Array.from(prev).concat(contact.name))); }} className="flex items-center gap-1 px-2 py-0.5 rounded bg-primary/15 text-primary text-[10px] font-medium hover:bg-primary/25 transition-colors">
-                            <Plus className="w-2.5 h-2.5" /> Add to Map
+                            <Plus className="w-2.5 h-2.5" /> {isZh ? '添加到地图' : 'Add to Map'}
                           </button>
                         )}
                         <a href={`https://www.linkedin.com/search/results/people/?keywords=${linkedInQuery}`} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#0077b5]/15 text-[#0077b5] text-[10px] font-medium hover:bg-[#0077b5]/25 transition-colors">
@@ -492,13 +493,13 @@ function WhatsNextCard({
           {!currentStatus && (
             <div className="flex items-center gap-1.5 pt-1">
               <button onClick={handleAccept} className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-400/10 hover:bg-emerald-400/20 text-emerald-400 text-[10.5px] font-medium transition-colors">
-                <Check className="w-3 h-3" /> Accept
+                <Check className="w-3 h-3" /> {isZh ? '接受' : 'Accept'}
               </button>
               <button onClick={handleDismiss} className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-muted/30 hover:bg-muted/50 text-muted-foreground/70 text-[10.5px] font-medium transition-colors">
-                <span className="text-[11px]">{'✕'}</span> Dismiss
+                <span className="text-[11px]">{'✕'}</span> {isZh ? '忽略' : 'Dismiss'}
               </button>
               <button onClick={handleLater} className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-purple-400/10 hover:bg-purple-400/20 text-purple-400/80 text-[10.5px] font-medium transition-colors">
-                <Pause className="w-3 h-3" /> Later
+                <Pause className="w-3 h-3" /> {isZh ? '稍后' : 'Later'}
               </button>
             </div>
           )}
@@ -506,7 +507,7 @@ function WhatsNextCard({
           {/* Status change for already-actioned items */}
           {currentStatus && existingAction && (
             <div className="pt-1">
-              <div className="text-[9px] text-muted-foreground/50 uppercase tracking-wider mb-1.5">Change Status</div>
+              <div className="text-[9px] text-muted-foreground/50 uppercase tracking-wider mb-1.5">{isZh ? '更改状态' : 'Change Status'}</div>
               <div className="flex items-center gap-1.5 flex-wrap">
                 {STATUS_TRANSITIONS[currentStatus]?.map(targetStatus => {
                   const tc = STATUS_CONFIG[targetStatus];
@@ -521,7 +522,7 @@ function WhatsNextCard({
                       className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-colors border ${tc.bg} ${tc.color} ${tc.border} hover:opacity-80`}
                     >
                       <TIcon className="w-2.5 h-2.5" />
-                      {tc.label}
+                      {isZh ? tc.labelZh : tc.labelEn}
                     </button>
                   );
                 })}
@@ -666,6 +667,8 @@ function ActionStatusDropdown({
   action: NextAction;
   onStatusChange: (id: number, status: string) => void;
 }) {
+  const { language } = useLanguage();
+  const isZh = language === 'zh';
   const [open, setOpen] = useState(false);
   const status = (action.status ?? (action.completed ? 'done' : 'accepted')) as ActionStatus;
   const config = STATUS_CONFIG[status];
@@ -679,7 +682,7 @@ function ActionStatusDropdown({
         className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-medium transition-colors border ${config.bg} ${config.color} ${config.border} hover:opacity-80`}
       >
         <Icon className="w-2.5 h-2.5" />
-        <span>{config.label}</span>
+        <span>{isZh ? config.labelZh : config.labelEn}</span>
         <ChevronDown className="w-2 h-2" />
       </button>
       {open && transitions.length > 0 && (
@@ -696,7 +699,7 @@ function ActionStatusDropdown({
                   className="w-full flex items-center gap-2 px-3 py-1.5 text-[10px] hover:bg-muted/50 transition-colors text-left"
                 >
                   <TIcon className={`w-3 h-3 ${tc.color}`} />
-                  <span className={tc.color}>{tc.label}</span>
+                  <span className={tc.color}>{isZh ? tc.labelZh : tc.labelEn}</span>
                 </button>
               );
             })}
@@ -1031,7 +1034,7 @@ export default function DealInsightPanel({
             <div className="flex items-start gap-2 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
               <div className="w-4 h-4 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0 mt-0.5"><span className="text-[10px]">{'\u26a0\ufe0f'}</span></div>
               <div className="text-[11px] text-amber-300/90 leading-relaxed">
-                <span className="font-semibold">Pre-engagement analysis.</span> This assessment is based on company profile and stakeholder roles only. Upload meeting notes or call recordings to unlock evidence-based insights.
+                {isZh ? (<><span className="font-semibold">初期评估。</span>本分析仅基于公司资料和利益相关者角色。上传会议纪要或通话录音以获取基于证据的深度洞察。</>) : (<><span className="font-semibold">Pre-engagement analysis.</span> This assessment is based on company profile and stakeholder roles only. Upload meeting notes or call recordings to unlock evidence-based insights.</>)}
               </div>
             </div>
           )}
@@ -1082,7 +1085,7 @@ export default function DealInsightPanel({
                 <div className="flex items-center gap-1.5 mb-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
                   <span className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider">{t('insight.whatsNext')}</span>
-                  <span className="text-[9px] text-muted-foreground/40 ml-auto">AI Suggested</span>
+                  <span className="text-[9px] text-muted-foreground/40 ml-auto">{isZh ? 'AI 建议' : 'AI Suggested'}</span>
                 </div>
                 {allHandled ? (
                   <div className="flex items-center gap-2 py-3 px-3 rounded-lg bg-emerald-400/5 border border-emerald-400/15">
@@ -1150,7 +1153,7 @@ export default function DealInsightPanel({
                 <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
                 <span className="text-[11px] font-semibold text-primary uppercase tracking-wider">{t('insight.nextActions')}</span>
                 {activeActions.length > 0 && (
-                  <span className="text-[9px] text-muted-foreground/50 bg-muted/30 px-1.5 py-0.5 rounded-full">{activeActions.length} active</span>
+                  <span className="text-[9px] text-muted-foreground/50 bg-muted/30 px-1.5 py-0.5 rounded-full">{activeActions.length} {isZh ? '进行中' : 'active'}</span>
                 )}
               </div>
               <button onClick={() => setAddingAction(v => !v)} className="w-5 h-5 rounded-md flex items-center justify-center hover:bg-muted/60 transition-colors text-muted-foreground hover:text-foreground border border-border/30">
@@ -1163,10 +1166,10 @@ export default function DealInsightPanel({
               <div className="mb-3 p-3 rounded-xl bg-muted/30 border border-border/30">
                 <input autoFocus value={newActionText} onChange={e => setNewActionText(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') addAction(); if (e.key === 'Escape') { setAddingAction(false); setNewActionText(''); } }}
-                  placeholder="Describe the action..." className="w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground/50 mb-2" />
+                  placeholder={isZh ? '描述行动内容...' : 'Describe the action...'} className="w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground/50 mb-2" />
                 <div className="flex items-center gap-2">
                   <input type="date" value={newActionDue} onChange={e => setNewActionDue(e.target.value)} className="flex-1 bg-transparent text-[11px] text-muted-foreground outline-none border border-border/30 rounded-md px-2 py-1" />
-                  <button onClick={addAction} className="text-[11px] px-2.5 py-1 rounded-md bg-primary text-primary-foreground font-medium">Add</button>
+                  <button onClick={addAction} className="text-[11px] px-2.5 py-1 rounded-md bg-primary text-primary-foreground font-medium">{isZh ? '添加' : 'Add'}</button>
                   <button onClick={() => { setAddingAction(false); setNewActionText(''); }} className="text-[11px] px-2 py-1 rounded-md hover:bg-muted/60 text-muted-foreground">{'\u2715'}</button>
                 </div>
               </div>
@@ -1191,7 +1194,7 @@ export default function DealInsightPanel({
                           {action.dueDate && (
                             <span className={`text-[10px] flex items-center gap-1 ${isOverdue ? 'text-red-400' : 'text-muted-foreground/60'}`}>
                               <Calendar className="w-2.5 h-2.5" />
-                              {isOverdue ? 'Overdue \u00b7 ' : ''}Due {new Date(action.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              {isZh ? (isOverdue ? '已逾期 · ' : '') + `截止 ${new Date(action.dueDate).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })}` : `${isOverdue ? 'Overdue \u00b7 ' : ''}Due ${new Date(action.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
                             </span>
                           )}
                         </div>
@@ -1208,7 +1211,7 @@ export default function DealInsightPanel({
             {/* Blocked actions */}
             {blockedActions.length > 0 && (
               <div className="mb-2">
-                <div className="text-[9px] text-red-400/60 uppercase tracking-wider font-semibold mb-1 px-2.5">Blocked</div>
+                <div className="text-[9px] text-red-400/60 uppercase tracking-wider font-semibold mb-1 px-2.5">{isZh ? '受阻' : 'Blocked'}</div>
                 <div className="space-y-1">
                   {blockedActions.map((action) => (
                     <div key={action.id} className="flex items-start gap-2 group rounded-xl px-2.5 py-2 bg-red-400/5 border border-red-400/15">
@@ -1230,7 +1233,7 @@ export default function DealInsightPanel({
             {/* Later actions */}
             {laterActions.length > 0 && (
               <div className="mb-2">
-                <div className="text-[9px] text-purple-400/60 uppercase tracking-wider font-semibold mb-1 px-2.5">Later</div>
+                <div className="text-[9px] text-purple-400/60 uppercase tracking-wider font-semibold mb-1 px-2.5">{isZh ? '稍后处理' : 'Later'}</div>
                 <div className="space-y-1">
                   {laterActions.map((action) => (
                     <div key={action.id} className="flex items-start gap-2 group rounded-xl px-2.5 py-1.5 opacity-60 hover:opacity-100 transition-opacity">
@@ -1291,7 +1294,7 @@ export default function DealInsightPanel({
         {chatMessages.length > 0 && (
           <button onClick={() => setChatOpen(v => !v)} className="w-full flex items-center justify-center gap-1 py-1 text-[10px] text-muted-foreground/60 hover:text-muted-foreground transition-colors">
             {chatOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
-            {chatOpen ? 'Hide conversation' : `${chatMessages.length} message${chatMessages.length > 1 ? 's' : ''}`}
+            {chatOpen ? (isZh ? '隐藏对话' : 'Hide conversation') : (isZh ? `${chatMessages.length} 条消息` : `${chatMessages.length} message${chatMessages.length > 1 ? 's' : ''}`)}
           </button>
         )}
         <div className="flex items-center gap-2 px-3 py-2.5">

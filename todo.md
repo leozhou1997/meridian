@@ -835,3 +835,19 @@
 - [x] AI refresh: What's Next now shows immediately via insightOverrides
 - [ ] Stakeholder hover highlight: code is correct, needs browser verification
 - [x] Dashboard "平均置信度" already translated in LanguageContext
+## Remaining i18n Fixes (April 2 - Round 2)
+- [x] Deal Room timeline: WHAT'S HAPPENING, WHAT'S NEXT, KEY RISKS labels, AI Deal Insight, AI Analysis tag (already done in previous session)
+- [x] StakeholderMap: most strings already translated in previous session
+- [x] DealInsightPanel: Accept/Dismiss/Later buttons translated to Chinese
+- [x] DealInsightPanel: RELEVANT STAKEHOLDERS, sentiment labels, AI Suggested badge, Insight History, status labels all translated
+- [x] DealInsightPanel: all remaining English strings (Blocked, Later, active count, Hide conversation, Overdue/Due, Add button, placeholder) translated
+- [ ] AI prompt: enforce full Chinese output for whatsNext action titles and risk details (strengthened, needs verification)
+
+## Deal Room Refactor (April 2)
+- [ ] DB: Add `date` column to dealStrategyNotes table
+- [ ] Backend: Update strategy notes CRUD to support date field
+- [ ] Frontend: Unify "Add to Deal Room" dialog with full fields (date, key participants, duration) matching edit dialog
+- [ ] Frontend: Add date field to Deal Strategy notes creation/editing UI
+- [ ] Frontend: Show internal strategy notes as nodes on Deal Room timeline (with date-based positioning)
+- [ ] Frontend: Visual distinction on timeline - internal (strategy) vs external (client interactions)
+- [ ] Frontend: Click internal strategy node → jump to Deal Strategy tab

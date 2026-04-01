@@ -62,6 +62,8 @@ type Meeting = {
   keyParticipant: string | null;
   summary: string | null;
   duration: number | null;
+  attachmentUrl?: string | null;
+  title?: string | null;
 };
 
 type Deal = {
@@ -291,6 +293,8 @@ function WhatsNextCard({
   onStatusChange,
   dealCompany,
   existingActions,
+  meetings,
+  onMeetingClick,
 }: {
   item: WhatsNextItem;
   stakeholders: Stakeholder[];
@@ -303,6 +307,8 @@ function WhatsNextCard({
   onStatusChange?: (actionId: number, status: string) => void;
   dealCompany?: string;
   existingActions?: NextAction[];
+  meetings?: Meeting[];
+  onMeetingClick?: (tab: string) => void;
 }) {
   const { language } = useLanguage();
   const isZh = language === 'zh';
@@ -394,6 +400,8 @@ function WhatsNextCard({
             stakeholders={stakeholders}
             onHover={onStakeholderHover}
             onClick={onStakeholderClick}
+            meetings={meetings}
+            onMeetingClick={onMeetingClick}
           />
         </span>
         <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
@@ -410,7 +418,7 @@ function WhatsNextCard({
           <div className="flex items-start gap-2">
             <Sparkles className="w-3 h-3 text-primary/60 shrink-0 mt-0.5" />
             {rationale
-              ? <p className="text-[11.5px] text-foreground/70 leading-relaxed italic">{rationale}</p>
+              ? <p className="text-[11.5px] text-foreground/70 leading-relaxed italic"><StakeholderLinkedText text={rationale} stakeholders={stakeholders} onHover={onStakeholderHover} onClick={onStakeholderClick} meetings={meetings} onMeetingClick={onMeetingClick} /></p>
               : <p className="text-[11.5px] text-muted-foreground/40 leading-relaxed italic">{isZh ? '运行「刷新分析」生成详细理由。' : 'Run Refresh Analysis to generate detailed rationale.'}</p>
             }
           </div>
@@ -535,21 +543,35 @@ function WhatsNextCard({
   );
 }
 
-// ─── StakeholderLinkedText ───────────────────────────────────────────────────
+// ─── StakeholderLinkedText (with meeting reference support) ─────────────────
 
 function StakeholderLinkedText({
   text,
   stakeholders,
   onHover,
   onClick,
+  meetings,
+  onMeetingClick,
 }: {
   text: string;
   stakeholders: Stakeholder[];
   onHover?: (id: number | null) => void;
   onClick?: (id: number) => void;
+  meetings?: Meeting[];
+  onMeetingClick?: (tab: string) => void;
 }) {
-  if (!stakeholders.length) return <span>{text}</span>;
+  const { language } = useLanguage();
+  const isZh = language === 'zh';
+  const [hoveredMeeting, setHoveredMeeting] = useState<Meeting | null>(null);
+  const [popoverPos, setPopoverPos] = useState<{ x: number; y: number } | null>(null);
+  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  if (!text) return <span></span>;
+
+  // Check if text contains CJK characters
+  const hasCJK = /[\u4e00-\u9fff\u3400-\u4dbf]/.test(text);
+
+  // Build stakeholder terms
   const titleTerms = stakeholders
     .filter(s => s.title)
     .flatMap(s => {
@@ -562,30 +584,137 @@ function StakeholderLinkedText({
 
   const names = stakeholders.flatMap(s => {
     const parts = [s.name];
-    const firstName = s.name.split(' ')[0];
-    if (firstName && firstName.length > 2) parts.push(firstName);
+    if (!hasCJK) {
+      const firstName = s.name.split(' ')[0];
+      if (firstName && firstName.length > 2) parts.push(firstName);
+    }
     return parts;
   });
 
-  const allTerms = [...names, ...titleTerms].filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => b.length - a.length);
+  // Build meeting reference terms: "会议1", "会议 1", "Meeting 1", etc.
+  const sortedMeetings = [...(meetings ?? [])].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const meetingTermMap = new Map<string, Meeting>();
+  sortedMeetings.forEach((m, idx) => {
+    const num = idx + 1;
+    meetingTermMap.set(`会议${num}`, m);
+    meetingTermMap.set(`会议 ${num}`, m);
+    meetingTermMap.set(`Meeting ${num}`, m);
+    meetingTermMap.set(`meeting ${num}`, m);
+    meetingTermMap.set(`Meeting${num}`, m);
+  });
+
+  const stakeholderTerms = [...names, ...titleTerms].filter((v, i, a) => a.indexOf(v) === i);
+  const meetingTerms = Array.from(meetingTermMap.keys());
+  const allTerms = [...meetingTerms, ...stakeholderTerms].sort((a, b) => b.length - a.length);
+  
+  if (!allTerms.length) return <span>{text}</span>;
+
   const escaped = allTerms.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-  const regex = new RegExp(`\\b(${escaped.join('|')})\\b`, 'g');
-  const parts = text.split(regex);
+  const parts = text.split(new RegExp(`(${escaped.join('|')})`, 'g'));
+
+  const handleMeetingHover = (e: React.MouseEvent, meeting: Meeting) => {
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    const rect = (e.target as HTMLElement).getBoundingClientRect();
+    setPopoverPos({ x: rect.left + rect.width / 2, y: rect.bottom + 8 });
+    setHoveredMeeting(meeting);
+  };
+
+  const handleMeetingLeave = () => {
+    hoverTimeoutRef.current = setTimeout(() => {
+      setHoveredMeeting(null);
+      setPopoverPos(null);
+    }, 200);
+  };
+
+  const handlePopoverEnter = () => {
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+  };
+
+  const handlePopoverLeave = () => {
+    setHoveredMeeting(null);
+    setPopoverPos(null);
+  };
 
   return (
-    <span>
+    <span className="relative">
       {parts.map((part, i) => {
+        // Check if it's a meeting reference
+        const meeting = meetingTermMap.get(part);
+        if (meeting) {
+          return (
+            <span key={i}
+              className="text-amber-600 dark:text-amber-400 underline decoration-wavy decoration-amber-400/50 underline-offset-2 cursor-pointer hover:text-amber-700 dark:hover:text-amber-300 transition-colors font-medium"
+              onMouseEnter={(e) => handleMeetingHover(e, meeting)}
+              onMouseLeave={handleMeetingLeave}
+              onClick={() => onMeetingClick?.('timeline')}>
+              {part}
+            </span>
+          );
+        }
+        // Check if it's a stakeholder name
         const stakeholder = stakeholders.find(
           s => s.name === part || s.name.startsWith(part + ' ') || (s.title === part) || (s.title?.includes(part) && /\b(C[A-Z]O|VP|SVP|EVP|CPO|CMO|CRO)\b/.test(part))
         );
-        if (!stakeholder) return <span key={i}>{part}</span>;
-        return (
-          <span key={i} className="text-primary underline decoration-dotted underline-offset-2 cursor-pointer hover:text-primary/80 transition-colors font-medium"
-            onMouseEnter={() => onHover?.(stakeholder.id)} onMouseLeave={() => onHover?.(null)} onClick={() => onClick?.(stakeholder.id)}>
-            {part}
-          </span>
-        );
+        if (stakeholder) {
+          return (
+            <span key={i} className="text-blue-700 dark:text-blue-400 underline decoration-dotted underline-offset-2 cursor-pointer hover:text-blue-900 dark:hover:text-blue-300 transition-colors font-medium"
+              onMouseEnter={() => onHover?.(stakeholder.id)} onMouseLeave={() => onHover?.(null)} onClick={() => onClick?.(stakeholder.id)}>
+              {part}
+            </span>
+          );
+        }
+        return <span key={i}>{part}</span>;
       })}
+      {/* Meeting hover popover */}
+      {hoveredMeeting && popoverPos && (
+        <div
+          className="fixed z-[9999] w-80 bg-popover text-popover-foreground border border-border rounded-xl shadow-2xl overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200"
+          style={{ left: Math.min(popoverPos.x - 160, window.innerWidth - 340), top: popoverPos.y }}
+          onMouseEnter={handlePopoverEnter}
+          onMouseLeave={handlePopoverLeave}
+        >
+          {/* Header */}
+          <div className="px-3 py-2 bg-amber-50 dark:bg-amber-950/30 border-b border-border/50">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">
+                {hoveredMeeting.title || hoveredMeeting.type}
+              </span>
+              <span className="text-[9px] text-muted-foreground">
+                {new Date(hoveredMeeting.date).toLocaleDateString(isZh ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </span>
+            </div>
+            {hoveredMeeting.keyParticipant && (
+              <div className="text-[10px] text-muted-foreground mt-0.5">
+                {isZh ? '参与人：' : 'Participants: '}{hoveredMeeting.keyParticipant}
+              </div>
+            )}
+          </div>
+          {/* Attachment preview */}
+          {hoveredMeeting.attachmentUrl && (
+            <div className="px-3 pt-2">
+              <img src={hoveredMeeting.attachmentUrl} alt="" className="w-full max-h-40 object-cover rounded-md border border-border/30" />
+            </div>
+          )}
+          {/* Summary */}
+          {hoveredMeeting.summary && (
+            <div className="px-3 py-2">
+              <p className="text-[11px] text-foreground/80 leading-relaxed line-clamp-4">
+                {hoveredMeeting.summary.substring(0, 200)}{hoveredMeeting.summary.length > 200 ? '...' : ''}
+              </p>
+            </div>
+          )}
+          {/* Footer */}
+          <div className="px-3 py-1.5 border-t border-border/30 bg-muted/20">
+            <button
+              onClick={() => onMeetingClick?.('timeline')}
+              className="text-[10px] text-primary hover:text-primary/80 font-medium flex items-center gap-1"
+            >
+              <ArrowRight className="w-3 h-3" />
+              {isZh ? '在交易室中查看' : 'View in Deal Room'}
+            </button>
+          </div>
+        </div>
+      )}
     </span>
   );
 }
@@ -593,12 +722,14 @@ function StakeholderLinkedText({
 // ─── KeyRiskCard ────────────────────────────────────────────────────────────
 
 function KeyRiskCard({
-  risk, stakeholders, onStakeholderHover, onStakeholderClick,
+  risk, stakeholders, onStakeholderHover, onStakeholderClick, meetings, onMeetingClick,
 }: {
   risk: KeyRiskItem | string;
   stakeholders: Stakeholder[];
   onStakeholderHover?: (id: number | null) => void;
   onStakeholderClick?: (id: number) => void;
+  meetings?: Meeting[];
+  onMeetingClick?: (tab: string) => void;
 }) {
   const { language } = useLanguage();
   const isZh = language === 'zh';
@@ -616,7 +747,7 @@ function KeyRiskCard({
       <button className="w-full flex items-start gap-2.5 px-3 py-2.5 text-left hover:bg-red-500/10 transition-colors group" onClick={() => setExpanded(e => !e)}>
         <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
         <span className="flex-1 text-[12px] text-foreground/85 leading-snug">
-          <StakeholderLinkedText text={title} stakeholders={stakeholders} onHover={onStakeholderHover} onClick={onStakeholderClick} />
+          <StakeholderLinkedText text={title} stakeholders={stakeholders} onHover={onStakeholderHover} onClick={onStakeholderClick} meetings={meetings} onMeetingClick={onMeetingClick} />
         </span>
         <div className="shrink-0 mt-0.5 text-muted-foreground/40 group-hover:text-muted-foreground/70 transition-colors">
           {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
@@ -626,11 +757,11 @@ function KeyRiskCard({
         <div className="px-3 pb-3 pt-1 border-t border-red-500/15 space-y-3">
           <div className="flex items-start gap-2">
             <Sparkles className="w-3 h-3 text-red-400/60 shrink-0 mt-0.5" />
-            {detail ? <p className="text-[11.5px] text-foreground/70 leading-relaxed italic">{detail}</p> : <p className="text-[11.5px] text-muted-foreground/40 leading-relaxed italic">{isZh ? '重新运行「刷新分析」生成详细风险分析。' : 'Re-run Refresh Analysis to generate detailed risk analysis.'}</p>}
+            {detail ? <p className="text-[11.5px] text-foreground/70 leading-relaxed italic"><StakeholderLinkedText text={detail} stakeholders={stakeholders} onHover={onStakeholderHover} onClick={onStakeholderClick} meetings={meetings} onMeetingClick={onMeetingClick} /></p> : <p className="text-[11.5px] text-muted-foreground/40 leading-relaxed italic">{isZh ? '重新运行「刷新分析」生成详细风险分析。' : 'Re-run Refresh Analysis to generate detailed risk analysis.'}</p>}
           </div>
           {mentioned.length > 0 && (
             <div>
-              <div className="text-[10px] text-muted-foreground/50 uppercase tracking-wider mb-1.5">Relevant Stakeholders</div>
+              <div className="text-[10px] text-muted-foreground/50 uppercase tracking-wider mb-1.5">{isZh ? '相关利益方' : 'Relevant Stakeholders'}</div>
               <div className="space-y-1.5">
                 {mentioned.map(s => (
                   <button key={s.id} className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg bg-card/60 border border-border/30 hover:border-red-400/30 hover:bg-card/80 transition-all text-left"
@@ -873,9 +1004,9 @@ export default function DealInsightPanel({
         <div className="flex items-center justify-between mb-1">
           <span className="text-[9px] text-muted-foreground/60 uppercase tracking-wider">{t('insight.confidenceTrend')}</span>
           <span className="text-[9px] text-muted-foreground/60">
-            {new Date(sorted[0].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            {new Date(sorted[0].date).toLocaleDateString(isZh ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' })}
             {' \u2192 '}
-            {new Date(sorted[sorted.length - 1].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            {new Date(sorted[sorted.length - 1].date).toLocaleDateString(isZh ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' })}
           </span>
         </div>
         <svg width="100%" viewBox={`0 0 ${W} ${H}`} className="overflow-visible">
@@ -887,7 +1018,12 @@ export default function DealInsightPanel({
           </defs>
           <polygon points={areaPoints} fill={`url(#cg-insight-${deal.id})`} />
           <polyline points={points} fill="none" stroke={lineColor} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-          {scores.map((v, i) => (<circle key={i} cx={toX(i)} cy={toY(v)} r="2.5" fill={lineColor} />))}
+          {scores.map((v, i) => (
+            <g key={i}>
+              <circle cx={toX(i)} cy={toY(v)} r="2.5" fill={lineColor} />
+              <title>{new Date(sorted[i].date).toLocaleDateString(isZh ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' })}: {v}%</title>
+            </g>
+          ))}
         </svg>
       </div>
     );
@@ -1047,7 +1183,7 @@ export default function DealInsightPanel({
                 <span className="text-[11px] font-semibold text-blue-400 uppercase tracking-wider">{t('insight.whatsHappening')}</span>
               </div>
               <p className="text-[12.5px] text-foreground/85 leading-relaxed">
-                <StakeholderLinkedText text={whatsHappening} stakeholders={deal.stakeholders} onHover={onStakeholderHover} onClick={onStakeholderClick} />
+                <StakeholderLinkedText text={whatsHappening} stakeholders={deal.stakeholders} onHover={onStakeholderHover} onClick={onStakeholderClick} meetings={deal.meetings} onMeetingClick={setActiveTab} />
               </p>
             </div>
           )}
@@ -1061,7 +1197,7 @@ export default function DealInsightPanel({
               </div>
               <div className="space-y-2">
                 {keyRisks.map((risk, i) => (
-                  <KeyRiskCard key={i} risk={risk} stakeholders={deal.stakeholders} onStakeholderHover={onStakeholderHover} onStakeholderClick={onStakeholderClick} />
+                  <KeyRiskCard key={i} risk={risk} stakeholders={deal.stakeholders} onStakeholderHover={onStakeholderHover} onStakeholderClick={onStakeholderClick} meetings={deal.meetings} onMeetingClick={setActiveTab} />
                 ))}
               </div>
             </div>
@@ -1104,6 +1240,8 @@ export default function DealInsightPanel({
                         stakeholders={deal.stakeholders}
                         onStakeholderHover={onStakeholderHover}
                         onStakeholderClick={onStakeholderClick}
+                        meetings={deal.meetings}
+                        onMeetingClick={setActiveTab}
                         dealCompany={deal.name}
                         existingActions={nextActions}
                         onStatusChange={(actionId, status) => updateActionStatus?.(actionId, status)}

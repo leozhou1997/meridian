@@ -109,13 +109,13 @@ describe("strategyNotes", () => {
     ).rejects.toThrow();
   });
 
-  it("rejects empty content", async () => {
-    await expect(
-      caller.strategyNotes.create({
-        dealId: 1,
-        category: "pricing",
-        content: "",
-      })
-    ).rejects.toThrow();
+  it("allows empty content for new notes (filled during editing)", async () => {
+    const note = await caller.strategyNotes.create({
+      dealId: 1,
+      category: "pricing",
+      content: "",
+    });
+    expect(note.content).toBe("");
+    expect(note.category).toBe("pricing");
   });
 });

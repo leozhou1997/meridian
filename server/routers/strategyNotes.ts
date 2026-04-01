@@ -25,7 +25,7 @@ export const strategyNotesRouter = router({
       dealId: z.number(),
       title: z.string().optional(),
       category: z.enum(STRATEGY_CATEGORIES).default("other"),
-      content: z.string().min(1),
+      content: z.string().default(""),
       date: z.string().or(z.date()).transform(d => new Date(d)).optional(),
     }))
     .mutation(async ({ ctx, input }) => {

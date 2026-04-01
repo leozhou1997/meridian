@@ -854,33 +854,33 @@
 
 ## Major Tasks (April 2 - Overnight)
 ### Task 1: Import Screenshot Demo Data
-- [ ] Read README_AGENT_PROMPT.md and unzip BuilderX_Demo_Screenshots.zip
-- [ ] Upload screenshots to CDN via manus-upload-file --webdev
-- [ ] Update demo meeting records to reference screenshot URLs (inline preview, not download)
-- [ ] Ensure inline preview of screenshots in timeline MeetingNode
+- [x] Read README_AGENT_PROMPT.md and unzip BuilderX_Demo_Screenshots.zip
+- [x] Upload screenshots to CDN via manus-upload-file --webdev (12 screenshots)
+- [x] Update demo meeting records with attachmentUrl + WeChat/Email types
+- [x] Inline preview of screenshots in timeline MeetingNode (collapsed thumbnail + expanded full view)
 
 ### Task 2: Deal Health Trend Line
-- [ ] Rename "赢单置信度" to "交易健康度" everywhere
-- [ ] Generate fluctuating confidence data points from snapshots
-- [ ] Replace flat line chart with proper up/down trend line
+- [x] Rename "赢单置信度" to "交易健康度" everywhere (LanguageContext EN+ZH)
+- [x] Generate fluctuating confidence data points (8 for 包钢 42-75%, 7 for 江铜 35-65%)
+- [x] Sparkline shows real up/down trend with locale-aware dates and hover tooltips
 
 ### Task 3: Stakeholder Name Highlighting
-- [ ] Restore name highlighting in AI insight text (当前动态, 下一步建议)
-- [ ] Names matching stakeholder map get underline + deep blue color
-- [ ] Hover on name highlights corresponding person on map
+- [x] Restore name highlighting in AI insight text (当前动态, 下一步建议)
+- [x] Names matching stakeholder map get underline + deep blue color
+- [x] Hover on name highlights corresponding person on map
 
 ### Task 4: Meeting Reference Hover Preview
-- [ ] AI text referencing "会议1" etc. shows hover popover with inline attachment preview
-- [ ] Popover displays meeting summary + inline screenshot/PDF preview
-- [ ] Click jumps to Deal Room timeline
+- [x] AI text referencing "会议1" etc. shows hover popover with inline attachment preview
+- [x] Popover displays meeting summary + inline screenshot/PDF preview
+- [x] Click jumps to Deal Room timeline
 
 ### Task 5: Profile Page i18n + Brief Formatting
-- [ ] Translate: WHO THEY ARE, BUSINESS CONTEXT, RELATIONSHIP STATUS, PERSONAL TALKING POINTS, DEAL CONTEXT, AI-GENERATED BRIEF
-- [ ] Translate: Decision Maker, High Engagement, Positive/Neutral/Negative, Regenerate
-- [ ] Fix Brief markdown rendering (bold, formatting)
-- [ ] Translate Situation: label
+- [x] Translate: WHO THEY ARE, BUSINESS CONTEXT, RELATIONSHIP STATUS, PERSONAL TALKING POINTS, DEAL CONTEXT, AI-GENERATED BRIEF
+- [x] Translate: Decision Maker, High Engagement, Positive/Neutral/Negative, Regenerate
+- [x] Fix Brief markdown rendering (bold, formatting)
+- [x] Translate Situation: label
 
 ### Remaining
-- [ ] Deal Strategy notes: add title + date fields to creation/editing UI
+- [x] Deal Strategy notes: add title + date fields to creation/editing UI
 - [ ] Sync Transcripts page Add dialog with unified fields
 - [ ] Verify AI Chinese output enforcement

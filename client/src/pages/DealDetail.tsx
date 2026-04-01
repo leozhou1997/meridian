@@ -134,6 +134,18 @@ const roleConfig: Record<RoleType, { bg: string; text: string; border: string }>
   'Evaluator':      { bg: 'bg-orange-500/10',  text: 'text-orange-400',  border: 'border-orange-500/30'  },
 };
 
+const ROLE_ZH: Record<string, string> = {
+  'Champion': '内部支持者',
+  'Decision Maker': '决策者',
+  'Influencer': '影响者',
+  'Blocker': '阻碍者',
+  'User': '终端用户',
+  'Evaluator': '评估者',
+};
+function translateRole(role: string, isZh: boolean): string {
+  return isZh ? (ROLE_ZH[role] || role) : role;
+}
+
 // ─── Mobile Pre-Meeting Summary Card ─────────────────────────────────────────
 function MobileSummaryCard({
   deal, latestSnapshot, nextActions, interactions
@@ -411,20 +423,21 @@ export default function DealDetail() {
   // Deal Strategy notes (DB-backed)
   const strategyNotes = strategyNotesData as StrategyNote[];
   const [editingStrategyId, setEditingStrategyId] = useState<number | null>(null);
-  const [editingStrategyDraft, setEditingStrategyDraft] = useState<{ category: StrategyNote['category']; content: string } | null>(null);
+  const [editingStrategyDraft, setEditingStrategyDraft] = useState<{ category: StrategyNote['category']; content: string; title: string; date: string } | null>(null);
 
   const addStrategyNote = () => {
-    createStrategyNoteMutation.mutate({ dealId, category: 'internal', content: '' }, {
+    const today = new Date().toISOString().split('T')[0];
+    createStrategyNoteMutation.mutate({ dealId, category: 'internal', content: '', title: '', date: today }, {
       onSuccess: (created) => {
         setEditingStrategyId(created.id);
-        setEditingStrategyDraft({ category: created.category as StrategyNote['category'], content: created.content });
+        setEditingStrategyDraft({ category: created.category as StrategyNote['category'], content: created.content, title: created.title ?? '', date: created.date ? new Date(created.date).toISOString().split('T')[0] : today });
       },
     });
   };
 
   const saveStrategyNote = (id: number) => {
     if (editingStrategyDraft) {
-      updateStrategyNoteMutation.mutate({ id, ...editingStrategyDraft });
+      updateStrategyNoteMutation.mutate({ id, category: editingStrategyDraft.category, content: editingStrategyDraft.content, title: editingStrategyDraft.title, date: editingStrategyDraft.date });
     }
     setEditingStrategyId(null);
     setEditingStrategyDraft(null);
@@ -1061,24 +1074,39 @@ export default function DealDetail() {
                         <CardContent className="p-4">
                           {isEditing ? (
                             <div className="space-y-3">
+                              {/* Title */}
+                              <input
+                                type="text"
+                                value={editingStrategyDraft?.title ?? ''}
+                                onChange={e => setEditingStrategyDraft(prev => ({ ...(prev ?? { category: note.category, content: note.content, title: '', date: '' }), title: e.target.value }))}
+                                placeholder={isZh ? '策略笔记标题（如：内部价格策略讨论）' : 'Strategy note title (e.g., Internal pricing strategy discussion)'}
+                                className="w-full text-sm font-medium bg-background border border-border/50 rounded-md px-2.5 py-1.5 text-foreground"
+                                autoFocus
+                              />
+                              {/* Category + Date row */}
                               <div className="flex items-center gap-2">
                                 <select
                                   value={draftCat}
-                                  onChange={e => setEditingStrategyDraft(prev => ({ ...(prev ?? { category: note.category, content: note.content }), category: e.target.value as StrategyNote['category'] }))}
+                                  onChange={e => setEditingStrategyDraft(prev => ({ ...(prev ?? { category: note.category, content: note.content, title: note.title ?? '', date: note.date ? new Date(note.date).toISOString().split('T')[0] : '' }), category: e.target.value as StrategyNote['category'] }))}
                                   className="flex-1 text-xs bg-background border border-border/50 rounded-md px-2.5 py-1.5 text-foreground"
                                 >
                                   {STRATEGY_CATEGORIES.map(cat => (
                                     <option key={cat.value} value={cat.value}>{cat.label}</option>
                                   ))}
                                 </select>
+                                <input
+                                  type="date"
+                                  value={editingStrategyDraft?.date ?? ''}
+                                  onChange={e => setEditingStrategyDraft(prev => ({ ...(prev ?? { category: note.category, content: note.content, title: '', date: '' }), date: e.target.value }))}
+                                  className="text-xs bg-background border border-border/50 rounded-md px-2.5 py-1.5 text-foreground"
+                                />
                               </div>
                               <textarea
                                 value={draftContent}
-                                onChange={e => setEditingStrategyDraft(prev => ({ ...(prev ?? { category: note.category, content: note.content }), content: e.target.value }))}
+                                onChange={e => setEditingStrategyDraft(prev => ({ ...(prev ?? { category: note.category, content: note.content, title: note.title ?? '', date: note.date ? new Date(note.date).toISOString().split('T')[0] : '' }), content: e.target.value }))}
                                 placeholder={isZh ? '描述此交易的内部策略、背景或约束条件...' : 'Describe the internal strategy, context, or constraints for this deal...'}
                                 rows={5}
                                 className="w-full text-xs bg-background border border-border/50 rounded-md px-2.5 py-2 text-foreground resize-y leading-relaxed"
-                                autoFocus
                               />
                               <div className="flex gap-2">
                                 <button
@@ -1101,18 +1129,25 @@ export default function DealDetail() {
                                 <Lightbulb className="w-3.5 h-3.5 text-muted-foreground/60" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1.5">
+                                <div className="flex items-center gap-2 mb-1">
                                   <span className={`text-[10px] font-semibold ${catConfig.color}`}>{catConfig.label}</span>
-                                  <span className="text-[10px] text-muted-foreground/50">· {formatDate(String(note.updatedAt))}</span>
+                                  {note.date ? (
+                                    <span className="text-[10px] text-muted-foreground/50">· {new Date(note.date).toLocaleDateString(isZh ? 'zh-CN' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                                  ) : (
+                                    <span className="text-[10px] text-muted-foreground/50">· {formatDate(String(note.updatedAt))}</span>
+                                  )}
                                   <div className="ml-auto">
                                     <button
-                                      onClick={() => { setEditingStrategyId(note.id); setEditingStrategyDraft({ category: note.category, content: note.content }); }}
+                                      onClick={() => { setEditingStrategyId(note.id); setEditingStrategyDraft({ category: note.category, content: note.content, title: note.title ?? '', date: note.date ? new Date(note.date).toISOString().split('T')[0] : '' }); }}
                                       className="w-6 h-6 rounded flex items-center justify-center hover:bg-muted transition-colors"
                                     >
                                       <Pencil className="w-3 h-3 text-muted-foreground/50" />
                                     </button>
                                   </div>
                                 </div>
+                                {note.title && (
+                                  <p className="text-xs font-medium text-foreground mb-1">{note.title}</p>
+                                )}
                                 {note.content ? (
                                   <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap">{note.content}</p>
                                 ) : (
@@ -1254,14 +1289,14 @@ export default function DealDetail() {
                       <div className="space-y-4">
                         {/* Who they are */}
                         <div>
-                          <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Who They Are</div>
+                          <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">{isZh ? '人物信息' : 'Who They Are'}</div>
                           <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/20 border border-border/20">
                             <StakeholderAvatar name={s.name} avatarUrl={s.avatar} size="md" />
                             <div>
                               <div className="text-sm font-semibold">{s.name}</div>
                               <div className="text-xs text-muted-foreground">{s.title} · {deal.company}</div>
                               <div className="flex gap-1 mt-1">
-                                {roles.map(r => <span key={r} className="text-[9px] px-1.5 py-0.5 rounded bg-muted/40 text-muted-foreground">{r}</span>)}
+                                {roles.map(r => <span key={r} className="text-[9px] px-1.5 py-0.5 rounded bg-muted/40 text-muted-foreground">{translateRole(r, isZh)}</span>)}
                               </div>
                             </div>
                           </div>
@@ -1270,26 +1305,26 @@ export default function DealDetail() {
                         {/* Business context */}
                         {s.keyInsights && (
                           <div>
-                            <div className="text-[9px] font-semibold text-status-info uppercase tracking-wider mb-1.5">Business Context</div>
+                            <div className="text-[9px] font-semibold text-status-info uppercase tracking-wider mb-1.5">{isZh ? '业务背景' : 'Business Context'}</div>
                             <p className="text-xs text-foreground/80 leading-relaxed bg-muted/15 rounded-lg p-3">{s.keyInsights}</p>
                           </div>
                         )}
 
                         {/* Relationship status */}
                         <div>
-                          <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Relationship Status</div>
+                          <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{isZh ? '关系状态' : 'Relationship Status'}</div>
                           <div className="flex items-center gap-3 text-xs">
                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
                               s.sentiment === 'Positive' ? 'bg-emerald-500/15 text-emerald-400' :
                               s.sentiment === 'Negative' ? 'bg-red-500/15 text-red-400' :
                               'bg-amber-500/15 text-amber-400'
-                            }`}>{s.sentiment}</span>
-                            <span className="text-muted-foreground">{s.engagement} Engagement</span>
-                            {lastMeeting && <span className="text-muted-foreground">Last met: {formatDate(typeof lastMeeting.date === 'string' ? lastMeeting.date : new Date(lastMeeting.date).toISOString())}</span>}
+                            }`}>{isZh ? (s.sentiment === 'Positive' ? '支持' : s.sentiment === 'Negative' ? '反对' : '中立') : s.sentiment}</span>
+                            <span className="text-muted-foreground">{isZh ? (s.engagement === 'High' ? '高参与度' : s.engagement === 'Medium' ? '中参与度' : '低参与度') : `${s.engagement} Engagement`}</span>
+                            {lastMeeting && <span className="text-muted-foreground">{isZh ? '上次会面：' : 'Last met: '}{formatDate(typeof lastMeeting.date === 'string' ? lastMeeting.date : new Date(lastMeeting.date).toISOString())}</span>}
                           </div>
                           {lastMeeting && (
                             <p className="text-[11px] text-muted-foreground/70 mt-2 leading-relaxed">
-                              <span className="font-medium text-muted-foreground">Last interaction:</span> {lastMeeting.summary}
+                              <span className="font-medium text-muted-foreground">{isZh ? '上次互动：' : 'Last interaction:'}</span> {lastMeeting.summary}
                             </p>
                           )}
                         </div>
@@ -1299,7 +1334,7 @@ export default function DealDetail() {
                           <div>
                             <div className="text-[9px] font-semibold text-rose-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
                               <Heart className="w-2.5 h-2.5" />
-                              Personal Talking Points
+                              {isZh ? '个人话题要点' : 'Personal Talking Points'}
                             </div>
                             {signals.length > 0 && (
                               <div className="space-y-1.5 mb-2">
@@ -1320,7 +1355,7 @@ export default function DealDetail() {
                         {/* Pending actions */}
                         {pendingActions.length > 0 && (
                           <div>
-                            <div className="text-[9px] font-semibold text-primary uppercase tracking-wider mb-1.5">Open Actions</div>
+                            <div className="text-[9px] font-semibold text-primary uppercase tracking-wider mb-1.5">{isZh ? '待办事项' : 'Open Actions'}</div>
                             <div className="space-y-1">
                               {pendingActions.map(a => (
                                 <div key={a.id} className="flex items-start gap-2 text-[11px] text-foreground/80">
@@ -1328,7 +1363,7 @@ export default function DealDetail() {
                                     a.priority === 'high' ? 'border-status-danger/60' : 'border-border/60'
                                   }`} />
                                   <span className="leading-snug">{a.text}</span>
-                                  {a.dueDate && <span className="text-[9px] text-muted-foreground/60 shrink-0">Due {new Date(a.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
+                                  {a.dueDate && <span className="text-[9px] text-muted-foreground/60 shrink-0">{isZh ? '截止 ' : 'Due '}{new Date(a.dueDate).toLocaleDateString(isZh ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' })}</span>}
                                 </div>
                               ))}
                             </div>
@@ -1337,14 +1372,14 @@ export default function DealDetail() {
 
                         {/* Deal context */}
                         <div className="border-t border-border/30 pt-3">
-                          <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Deal Context</div>
+                          <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{isZh ? '交易背景' : 'Deal Context'}</div>
                           <div className="grid grid-cols-3 gap-2">
                             <div className="bg-muted/20 rounded-lg p-2">
-                              <div className="text-[9px] text-muted-foreground mb-0.5">Stage</div>
+                              <div className="text-[9px] text-muted-foreground mb-0.5">{isZh ? '阶段' : 'Stage'}</div>
                               <div className="text-[11px] font-medium">{deal.stage}</div>
                             </div>
                             <div className="bg-muted/20 rounded-lg p-2">
-                              <div className="text-[9px] text-muted-foreground mb-0.5">Confidence</div>
+                              <div className="text-[9px] text-muted-foreground mb-0.5">{isZh ? '健康度' : 'Health'}</div>
                               <div className={`text-[11px] font-semibold font-mono ${getConfidenceColor(deal.confidenceScore)}`}>{deal.confidenceScore}%</div>
                             </div>
                             <div className="bg-muted/20 rounded-lg p-2">
@@ -1354,7 +1389,7 @@ export default function DealDetail() {
                           </div>
                           {latestSnapshot && (
                             <p className="text-[11px] text-muted-foreground/70 mt-2 leading-relaxed">
-                              <span className="font-medium text-muted-foreground">Situation:</span> {latestSnapshot.whatsHappening}
+                              <span className="font-medium text-muted-foreground">{isZh ? '当前情况：' : 'Situation:'}</span> {latestSnapshot.whatsHappening}
                             </p>
                           )}
                         </div>
@@ -1364,7 +1399,7 @@ export default function DealDetail() {
                           <div className="flex items-center justify-between mb-2">
                             <div className="text-[9px] font-semibold text-amber-400 uppercase tracking-wider flex items-center gap-1">
                               <Sparkles className="w-2.5 h-2.5" />
-                              AI-Generated Brief
+                              {isZh ? 'AI 生成简报' : 'AI-Generated Brief'}
                             </div>
                             <button
                               onClick={() => handleGenerateAIBrief(s)}
@@ -1372,9 +1407,9 @@ export default function DealDetail() {
                               className="flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25 transition-colors disabled:opacity-50"
                             >
                               {aiBriefLoading ? (
-                                <><div className="w-2.5 h-2.5 border border-amber-400 border-t-transparent rounded-full animate-spin" />Generating...</>
+                                <><div className="w-2.5 h-2.5 border border-amber-400 border-t-transparent rounded-full animate-spin" />{isZh ? '生成中...' : 'Generating...'}</>
                               ) : (
-                                <><Sparkles className="w-2.5 h-2.5" />{aiBriefText ? 'Regenerate' : 'Generate Brief'}</>
+                                <><Sparkles className="w-2.5 h-2.5" />{aiBriefText ? (isZh ? '重新生成' : 'Regenerate') : (isZh ? '生成简报' : 'Generate Brief')}</>
                               )}
                             </button>
                           </div>
@@ -1385,11 +1420,11 @@ export default function DealDetail() {
                           ) : aiBriefLoading ? (
                             <div className="flex items-center gap-2 text-[11px] text-muted-foreground/60 py-3">
                               <div className="w-3 h-3 border border-amber-400/50 border-t-transparent rounded-full animate-spin" />
-                              Generating brief for {s.name}...
+                              {isZh ? `正在为 ${s.name} 生成简报...` : `Generating brief for ${s.name}...`}
                             </div>
                           ) : (
                             <p className="text-[10px] text-muted-foreground/60 italic">
-                              Click "Generate Brief" to get an AI-crafted narrative brief based on all available context for {s.name}.
+                              {isZh ? `点击「生成简报」，基于 ${s.name} 的所有上下文生成 AI 叙事简报。` : `Click "Generate Brief" to get an AI-crafted narrative brief based on all available context for ${s.name}.`}
                             </p>
                           )}
                         </div>
@@ -1449,7 +1484,7 @@ export default function DealDetail() {
                   {/* ── Decision Stance (single select) ── */}
                   <div className="mb-4">
                     <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                      Decision Stance
+                      {isZh ? '决策立场' : 'Decision Stance'}
                     </div>
                     {isEditingProfile ? (
                       <div className="flex gap-2">
@@ -1491,7 +1526,7 @@ export default function DealDetail() {
                   {/* ── Role (multi-select) ── */}
                   <div className="mb-4">
                     <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                      Role {isEditingProfile && <span className="text-muted-foreground/60 normal-case font-normal">(select all that apply)</span>}
+                      {isZh ? '角色' : 'Role'} {isEditingProfile && <span className="text-muted-foreground/60 normal-case font-normal">{isZh ? '(可多选)' : '(select all that apply)'}</span>}
                     </div>
                     {isEditingProfile ? (
                       <div className="grid grid-cols-2 gap-1.5">
@@ -1509,7 +1544,7 @@ export default function DealDetail() {
                               }`}
                             >
                               {isActive && <Check className="w-2.5 h-2.5 shrink-0" />}
-                              {role}
+                              {translateRole(role, isZh)}
                             </button>
                           );
                         })}
@@ -1527,7 +1562,7 @@ export default function DealDetail() {
                                 key={role}
                                 className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-medium border ${cfg.bg} ${cfg.text} ${cfg.border}`}
                               >
-                                {role}
+                                {translateRole(role, isZh)}
                               </span>
                             );
                           });
@@ -1539,9 +1574,9 @@ export default function DealDetail() {
                   {/* Engagement */}
                   {!isEditingProfile && (
                     <div className="mb-4">
-                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Engagement</div>
+                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{isZh ? '参与度' : 'Engagement'}</div>
                       <Badge variant="outline" className="text-[10px]">
-                        {selectedStakeholder.engagement} Engagement
+                        {isZh ? ({'High': '高', 'Medium': '中', 'Low': '低'}[selectedStakeholder.engagement] || selectedStakeholder.engagement) + '参与度' : selectedStakeholder.engagement + ' Engagement'}
                       </Badge>
                     </div>
                   )}
@@ -1549,7 +1584,7 @@ export default function DealDetail() {
                   {/* Key Insights */}
                   {selectedStakeholder.keyInsights && !isEditingProfile && (
                     <div className="mb-4">
-                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Key Insights</div>
+                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{isZh ? '关键洞察' : 'Key Insights'}</div>
                       <p className="text-xs text-foreground/80 leading-relaxed">{selectedStakeholder.keyInsights}</p>
                     </div>
                   )}
@@ -1564,7 +1599,7 @@ export default function DealDetail() {
                         {/* Section header */}
                         <div className="flex items-center gap-1.5 mb-3">
                           <Heart className="w-3 h-3 text-rose-400" />
-                          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Know Your Stakeholder</span>
+                          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{isZh ? '了解你的利益相关方' : 'Know Your Stakeholder'}</span>
                         </div>
 
                         {/* AI-extracted signals */}
@@ -1572,7 +1607,7 @@ export default function DealDetail() {
                           <div className="mb-3">
                             <div className="flex items-center gap-1 mb-1.5">
                               <Sparkles className="w-2.5 h-2.5 text-amber-400" />
-                              <span className="text-[9px] font-medium text-amber-400/80 uppercase tracking-wider">AI Signals</span>
+                              <span className="text-[9px] font-medium text-amber-400/80 uppercase tracking-wider">{isZh ? 'AI 信号' : 'AI Signals'}</span>
                             </div>
                             <div className="space-y-1.5">
                               {signals.map(sig => (
@@ -1590,7 +1625,7 @@ export default function DealDetail() {
                                       [sid]: (prev[sid] ?? []).filter(s => s.id !== sig.id)
                                     }))}
                                     className="opacity-0 group-hover:opacity-100 w-4 h-4 flex items-center justify-center text-muted-foreground/50 hover:text-destructive transition-all"
-                                    title="Remove signal"
+                                    title={isZh ? '删除信号' : 'Remove signal'}
                                   >
                                     <X className="w-3 h-3" />
                                   </button>
@@ -1605,7 +1640,7 @@ export default function DealDetail() {
                           <div className="flex items-center justify-between mb-1.5">
                             <div className="flex items-center gap-1">
                               <StickyNote className="w-2.5 h-2.5 text-muted-foreground/60" />
-                              <span className="text-[9px] font-medium text-muted-foreground/60 uppercase tracking-wider">Personal Notes</span>
+                              <span className="text-[9px] font-medium text-muted-foreground/60 uppercase tracking-wider">{isZh ? '个人笔记' : 'Personal Notes'}</span>
                             </div>
                             {!editingPersonalNotes ? (
                               <button
@@ -1616,7 +1651,7 @@ export default function DealDetail() {
                                 className="text-[9px] text-primary/70 hover:text-primary flex items-center gap-0.5 transition-colors"
                               >
                                 <Pencil className="w-2.5 h-2.5" />
-                                {notes ? 'Edit' : 'Add'}
+                                {notes ? (isZh ? '编辑' : 'Edit') : (isZh ? '添加' : 'Add')}
                               </button>
                             ) : (
                               <div className="flex items-center gap-1.5">
@@ -1628,13 +1663,13 @@ export default function DealDetail() {
                                   }}
                                   className="text-[9px] text-emerald-400 hover:text-emerald-300 font-medium transition-colors"
                                 >
-                                  Save
+                                  {isZh ? '保存' : 'Save'}
                                 </button>
                                 <button
                                   onClick={() => setEditingPersonalNotes(false)}
                                   className="text-[9px] text-muted-foreground/50 hover:text-muted-foreground transition-colors"
                                 >
-                                  Cancel
+                                  {isZh ? '取消' : 'Cancel'}
                                 </button>
                               </div>
                             )}
@@ -1643,7 +1678,7 @@ export default function DealDetail() {
                             <textarea
                               value={personalNotesDraft}
                               onChange={e => setPersonalNotesDraft(e.target.value)}
-                              placeholder="Add personal context — hobbies, family mentions, communication style, things to remember before your next meeting..."
+                              placeholder={isZh ? '添加个人背景信息 — 爱好、家庭情况、沟通风格、下次会议前需要记住的事项...' : 'Add personal context \u2014 hobbies, family mentions, communication style, things to remember before your next meeting...'}
                               className="w-full min-h-[80px] text-xs p-2 rounded-lg bg-muted/30 border border-border/50 text-foreground/80 placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 resize-none transition-colors"
                               autoFocus
                             />
@@ -1657,7 +1692,7 @@ export default function DealDetail() {
                               }}
                               className="w-full text-left text-[10px] text-muted-foreground/40 italic p-2 rounded-lg border border-dashed border-border/30 hover:border-border/50 hover:text-muted-foreground/60 transition-colors"
                             >
-                              + Add personal notes about {selectedStakeholder.name.split(' ')[0]}...
+                              {isZh ? `+ 添加关于${selectedStakeholder.name}的个人笔记...` : `+ Add personal notes about ${selectedStakeholder.name.split(' ')[0]}...`}
                             </button>
                           )}
                         </div>
@@ -1668,7 +1703,7 @@ export default function DealDetail() {
                   {/* Contact */}
                   {selectedStakeholder.email && !isEditingProfile && (
                     <div className="mb-4">
-                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Contact</div>
+                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{isZh ? '联系方式' : 'Contact'}</div>
                       <p className="text-xs text-primary">{selectedStakeholder.email}</p>
                     </div>
                   )}
@@ -1676,7 +1711,7 @@ export default function DealDetail() {
                   {/* Related Interactions */}
                   {!isEditingProfile && (
                     <div className="border-t border-border/30 pt-3">
-                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Related Interactions</div>
+                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">{isZh ? '相关互动' : 'Related Interactions'}</div>
                       {deal.meetings
                         .filter(i => i.keyParticipant === selectedStakeholder.name)
                         .map(interaction => (
@@ -1746,14 +1781,14 @@ export default function DealDetail() {
                 <div className="px-5 py-4 space-y-4">
                   {/* Who they are */}
                   <div>
-                    <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Who They Are</div>
+                    <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">{isZh ? '人物信息' : 'Who They Are'}</div>
                     <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/20 border border-border/20">
                       <StakeholderAvatar name={s.name} avatarUrl={s.avatar} size="md" />
                       <div>
                         <div className="text-sm font-semibold">{s.name}</div>
                         <div className="text-xs text-muted-foreground">{s.title} · {deal.company}</div>
                         <div className="flex gap-1 mt-1">
-                          {roles.map(r => <span key={r} className="text-[9px] px-1.5 py-0.5 rounded bg-muted/40 text-muted-foreground">{r}</span>)}
+                          {roles.map(r => <span key={r} className="text-[9px] px-1.5 py-0.5 rounded bg-muted/40 text-muted-foreground">{translateRole(r, isZh)}</span>)}
                         </div>
                       </div>
                     </div>
@@ -1762,26 +1797,26 @@ export default function DealDetail() {
                   {/* Business context */}
                   {s.keyInsights && (
                     <div>
-                      <div className="text-[9px] font-semibold text-status-info uppercase tracking-wider mb-1.5">Business Context</div>
+                      <div className="text-[9px] font-semibold text-status-info uppercase tracking-wider mb-1.5">{isZh ? '业务背景' : 'Business Context'}</div>
                       <p className="text-xs text-foreground/80 leading-relaxed bg-muted/15 rounded-lg p-3">{s.keyInsights}</p>
                     </div>
                   )}
 
                   {/* Relationship status */}
                   <div>
-                    <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Relationship Status</div>
+                    <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{isZh ? '关系状态' : 'Relationship Status'}</div>
                     <div className="flex items-center gap-3 text-xs">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
                         s.sentiment === 'Positive' ? 'bg-emerald-500/15 text-emerald-400' :
                         s.sentiment === 'Negative' ? 'bg-red-500/15 text-red-400' :
                         'bg-amber-500/15 text-amber-400'
-                      }`}>{s.sentiment}</span>
-                      <span className="text-muted-foreground">{s.engagement} Engagement</span>
-                      {lastMeeting && <span className="text-muted-foreground">Last met: {formatDate(typeof lastMeeting.date === 'string' ? lastMeeting.date : new Date(lastMeeting.date).toISOString())}</span>}
+                      }`}>{isZh ? ({'Positive': '支持', 'Neutral': '中立', 'Negative': '反对'}[s.sentiment] || s.sentiment) : s.sentiment}</span>
+                      <span className="text-muted-foreground">{isZh ? ({'High': '高', 'Medium': '中', 'Low': '低'}[s.engagement] || s.engagement) + '参与度' : s.engagement + ' Engagement'}</span>
+                      {lastMeeting && <span className="text-muted-foreground">{isZh ? '最近会面：' : 'Last met: '}{formatDate(typeof lastMeeting.date === 'string' ? lastMeeting.date : new Date(lastMeeting.date).toISOString())}</span>}
                     </div>
                     {lastMeeting && (
                       <p className="text-[11px] text-muted-foreground/70 mt-2 leading-relaxed">
-                        <span className="font-medium text-muted-foreground">Last interaction:</span> {lastMeeting.summary}
+                        <span className="font-medium text-muted-foreground">{isZh ? '上次互动：' : 'Last interaction:'}</span> {lastMeeting.summary}
                       </p>
                     )}
                   </div>
@@ -1791,7 +1826,7 @@ export default function DealDetail() {
                     <div>
                       <div className="text-[9px] font-semibold text-rose-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
                         <Heart className="w-2.5 h-2.5" />
-                        Personal Talking Points
+                        {isZh ? '个人话题要点' : 'Personal Talking Points'}
                       </div>
                       {signals.length > 0 && (
                         <div className="space-y-1.5 mb-2">
@@ -1808,11 +1843,10 @@ export default function DealDetail() {
                       )}
                     </div>
                   )}
-
                   {/* Pending actions for this stakeholder */}
                   {pendingActions.length > 0 && (
                     <div>
-                      <div className="text-[9px] font-semibold text-primary uppercase tracking-wider mb-1.5">Open Actions</div>
+                      <div className="text-[9px] font-semibold text-primary uppercase tracking-wider mb-1.5">{isZh ? '待办事项' : 'Open Actions'}</div>
                       <div className="space-y-1">
                         {pendingActions.map(a => (
                           <div key={a.id} className="flex items-start gap-2 text-[11px] text-foreground/80">
@@ -1820,7 +1854,7 @@ export default function DealDetail() {
                               a.priority === 'high' ? 'border-status-danger/60' : 'border-border/60'
                             }`} />
                             <span className="leading-snug">{a.text}</span>
-                            {a.dueDate && <span className="text-[9px] text-muted-foreground/60 shrink-0">Due {new Date(a.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
+                            {a.dueDate && <span className="text-[9px] text-muted-foreground/60 shrink-0">{isZh ? '截止 ' : 'Due '}{new Date(a.dueDate).toLocaleDateString(isZh ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' })}</span>}
                           </div>
                         ))}
                       </div>
@@ -1829,24 +1863,24 @@ export default function DealDetail() {
 
                   {/* Deal context */}
                   <div className="border-t border-border/30 pt-3">
-                    <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Deal Context</div>
+                    <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{isZh ? '交易背景' : 'Deal Context'}</div>
                     <div className="grid grid-cols-3 gap-2">
                       <div className="bg-muted/20 rounded-lg p-2">
-                        <div className="text-[9px] text-muted-foreground mb-0.5">Stage</div>
+                        <div className="text-[9px] text-muted-foreground mb-0.5">{isZh ? '阶段' : 'Stage'}</div>
                         <div className="text-[11px] font-medium">{deal.stage}</div>
                       </div>
                       <div className="bg-muted/20 rounded-lg p-2">
-                        <div className="text-[9px] text-muted-foreground mb-0.5">Confidence</div>
+                        <div className="text-[9px] text-muted-foreground mb-0.5">{isZh ? '健康度' : 'Confidence'}</div>
                         <div className={`text-[11px] font-semibold font-mono ${getConfidenceColor(deal.confidenceScore)}`}>{deal.confidenceScore}%</div>
                       </div>
                       <div className="bg-muted/20 rounded-lg p-2">
-                        <div className="text-[9px] text-muted-foreground mb-0.5">ACV</div>
+                        <div className="text-[9px] text-muted-foreground mb-0.5">{isZh ? '年合同额' : 'ACV'}</div>
                         <div className="text-[11px] font-semibold font-mono">{formatCurrency(deal.value)}</div>
                       </div>
                     </div>
                     {latestSnapshot && (
                       <p className="text-[11px] text-muted-foreground/70 mt-2 leading-relaxed">
-                        <span className="font-medium text-muted-foreground">Situation:</span> {latestSnapshot.whatsHappening}
+                        <span className="font-medium text-muted-foreground">{isZh ? '当前情况：' : 'Situation:'}</span> {latestSnapshot.whatsHappening}
                       </p>
                     )}
                   </div>
@@ -1856,7 +1890,7 @@ export default function DealDetail() {
                     <div className="flex items-center justify-between mb-2">
                       <div className="text-[9px] font-semibold text-amber-400 uppercase tracking-wider flex items-center gap-1">
                         <Sparkles className="w-2.5 h-2.5" />
-                        AI-Generated Brief
+                        {isZh ? 'AI 生成简报' : 'AI-Generated Brief'}
                       </div>
                       <button
                         onClick={() => handleGenerateAIBrief(s)}
@@ -1864,9 +1898,9 @@ export default function DealDetail() {
                         className="flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25 transition-colors disabled:opacity-50"
                       >
                         {aiBriefLoading ? (
-                          <><div className="w-2.5 h-2.5 border border-amber-400 border-t-transparent rounded-full animate-spin" />Generating...</>
+                          <><div className="w-2.5 h-2.5 border border-amber-400 border-t-transparent rounded-full animate-spin" />{isZh ? '生成中...' : 'Generating...'}</>
                         ) : (
-                          <><Sparkles className="w-2.5 h-2.5" />{aiBriefText ? 'Regenerate' : 'Generate Brief'}</>
+                          <><Sparkles className="w-2.5 h-2.5" />{aiBriefText ? (isZh ? '重新生成' : 'Regenerate') : (isZh ? '生成简报' : 'Generate Brief')}</>
                         )}
                       </button>
                     </div>
@@ -1876,7 +1910,7 @@ export default function DealDetail() {
                       </div>
                     ) : (
                       <p className="text-[10px] text-muted-foreground/60 italic">
-                        Click "Generate Brief" to get an AI-crafted narrative brief based on all available context for {s.name}.
+                        {isZh ? `点击“生成简报”获取基于${s.name}所有可用上下文的 AI 叙述性简报。` : `Click "Generate Brief" to get an AI-crafted narrative brief based on all available context for ${s.name}.`}
                       </p>
                     )}
                   </div>

@@ -9,6 +9,7 @@
  *        (type dropdown, date, duration, notes textarea) stored in local state per deal
  */
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Stakeholder, Deal, Interaction, Meeting } from '@/lib/data';
 import { getRoleColor } from '@/lib/data';
@@ -48,7 +49,7 @@ export interface Connection {
 
 type HeatWindow = 'L7D' | 'L14D' | 'L30D';
 
-const CONNECTION_TYPES: { value: ConnectionType; label: string; color: string; dash?: string }[] = [
+const CONNECTION_TYPES_EN: { value: ConnectionType; label: string; color: string; dash?: string }[] = [
   { value: 'reports_to',   label: 'Reports To',   color: 'rgba(99,130,255,0.85)',  dash: 'none' },
   { value: 'influences',   label: 'Influences',   color: 'rgba(16,185,129,0.85)',  dash: 'none' },
   { value: 'collaborates', label: 'Collaborates', color: 'rgba(245,158,11,0.85)',  dash: '6 3' },
@@ -481,6 +482,14 @@ const NODE_W_MOBILE = 72;
 const NODE_H_MOBILE = 82;
 
 export default function StakeholderMap({ deal, onStakeholderClick, onStakeholdersChange, onBuyingStagesChange, highlightedStakeholderId, initialZoom, isMobile = false }: StakeholderMapProps) {
+  const { language } = useLanguage();
+  const isZh = language === 'zh';
+  const CONNECTION_TYPES = isZh ? [
+    { value: 'reports_to' as ConnectionType,   label: '汇报给',   color: 'rgba(99,130,255,0.85)',  dash: 'none' },
+    { value: 'influences' as ConnectionType,   label: '影响',     color: 'rgba(16,185,129,0.85)',  dash: 'none' },
+    { value: 'collaborates' as ConnectionType, label: '协作',     color: 'rgba(245,158,11,0.85)',  dash: '6 3' },
+    { value: 'blocks' as ConnectionType,       label: '阻碍',     color: 'rgba(239,68,68,0.9)',    dash: '4 3' },
+  ] : CONNECTION_TYPES_EN;
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerW, setContainerW] = useState(0); // 0 = not yet measured
   const [mode, setMode] = useState<'view' | 'edit'>('view');
@@ -718,7 +727,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     const updated = [version, ...mapHistory];
     setMapHistory(updated);
     saveHistory(currentDealId, updated);
-    toast.success('Map saved — version snapshot created');
+    toast.success(isZh ? '地图已保存 — 已创建版本快照' : 'Map saved — version snapshot created');
   };
 
   const handleRestoreVersion = (version: MapVersion) => {
@@ -731,7 +740,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     setConnections(c);
     setLocalInteractions(li);
     setShowHistory(false);
-    toast.success(`Restored: ${version.label}`);
+    toast.success(isZh ? `已恢复: ${version.label}` : `Restored: ${version.label}`);
   };
 
   const handleReset = () => {
@@ -797,7 +806,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
       const startY = e.clientY;
       const onMove = (mv: MouseEvent) => {
         if (Math.abs(mv.clientX - startX) > 8 || Math.abs(mv.clientY - startY) > 8) {
-          toast('Switch to Edit mode to rearrange cards', { id: 'edit-hint', duration: 2500 });
+          toast(isZh ? '切换到编辑模式以调整卡片位置' : 'Switch to Edit mode to rearrange cards', { id: 'edit-hint', duration: 2500 });
           window.removeEventListener('mousemove', onMove);
           window.removeEventListener('mouseup', onUp);
         }
@@ -903,7 +912,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
         toast('Connection removed');
       } else {
         setConnections(prev => [...prev, { id: nanoid(8), from: connectingFrom, to: sid, type: pendingConnType }]);
-        toast(`"${pendingConnType.replace('_', ' ')}" connection added`);
+        toast(isZh ? '关系已添加' : `"${pendingConnType.replace('_', ' ')}" connection added`);
       }
       setConnectingFrom(null);
       return;
@@ -970,7 +979,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     };
     setLocalInteractions(prev => [newI, ...prev]);
     setEditingInteraction(newI.id);
-    toast('New interaction added — fill in the details');
+    toast(isZh ? '已添加新互动记录 — 请填写详情' : 'New interaction added — fill in the details');
   };
 
   const deleteInteraction = (id: string) => {
@@ -1003,7 +1012,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
     onStakeholdersChange?.(updated);
     setPositions(prev => [...prev, { id: newS.id, x: 20, y: 20 + prev.length * (NODE_H + 20) }]);
     setNewlyAddedId(String(newS.id));
-    toast('New stakeholder added — click to edit their profile');
+    toast(isZh ? '已添加新人物 — 点击编辑资料' : 'New stakeholder added — click to edit their profile');
   };
 
   const handleRemoveStakeholder = (id: string, e: React.MouseEvent) => {
@@ -1029,19 +1038,21 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
       return reroutingConn.end === 'from' ? { ...c, from: stakeholderId } : { ...c, to: stakeholderId };
     }));
     setReroutingConn(null);
-    toast('Connection re-routed');
+    toast(isZh ? '关系已重新路由' : 'Connection re-routed');
   };
 
   const connConfig = (type: ConnectionType) => CONNECTION_TYPES.find(t => t.value === type) ?? CONNECTION_TYPES[0];
   const stageOrder = Array.isArray(deal.buyingStages) ? deal.buyingStages : [];
-  const ALL_ROLES = ['Champion', 'Decision Maker', 'Influencer', 'Blocker', 'User', 'Evaluator'];
+  const ALL_ROLES = isZh
+    ? ['Champion 关键支持者', 'Decision Maker 决策者', 'Influencer 影响者', 'Blocker 反对者', 'User 用户', 'Evaluator 评估者']
+    : ['Champion', 'Decision Maker', 'Influencer', 'Blocker', 'User', 'Evaluator'];
 
   return (
     <div className="relative h-full w-full" ref={containerRef}>
       {/* Concentric circle ring labels — only shown in Circles mode */}
       {viewLayout === 'concentric' && (
         <div className="absolute top-2 left-3 z-10 flex items-center gap-3 text-[10px] bg-card/80 backdrop-blur-sm rounded-md px-3 py-2 border border-border/30">
-          {RING_LABELS.map((label, i) => {
+          {(isZh ? ['决策者', '影响者', '反对者'] : RING_LABELS).map((label, i) => {
             const ringBaseColors = ['#6382ff', '#10b981', '#ef4444'];
             const isHovered = hoveredRingIdx === i;
             return (
@@ -1084,7 +1095,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                 viewLayout === 'concentric' ? 'bg-card text-foreground' : 'text-muted-foreground'
               }`}
             >
-              <Layers className="w-3 h-3" /> Circles
+              <Layers className="w-3 h-3" /> {isZh ? '影响力圈' : 'Circles'}
             </button>
             <button
               onClick={() => handleLayoutSwitch('stages')}
@@ -1092,7 +1103,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                 viewLayout === 'stages' ? 'bg-card text-foreground' : 'text-muted-foreground'
               }`}
             >
-              <LayoutGrid className="w-3 h-3" /> Stages
+              <LayoutGrid className="w-3 h-3" /> {isZh ? '采购阶段' : 'Stages'}
             </button>
           </div>
           {/* Zoom + Reset */}
@@ -1136,7 +1147,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                 viewLayout === 'concentric' ? 'bg-card text-foreground' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <Layers className="w-3 h-3" /> Circles
+              <Layers className="w-3 h-3" /> {isZh ? '影响力圈' : 'Circles'}
             </button>
             <button
               onClick={() => handleLayoutSwitch('stages')}
@@ -1144,7 +1155,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                 viewLayout === 'stages' ? 'bg-card text-foreground' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <LayoutGrid className="w-3 h-3" /> Stages
+              <LayoutGrid className="w-3 h-3" /> {isZh ? '采购阶段' : 'Stages'}
             </button>
           </div>
           <div className="flex rounded-lg overflow-hidden border border-border/50 bg-muted/80">
@@ -1154,7 +1165,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                 mode === 'view' ? 'bg-card text-foreground' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <Eye className="w-3 h-3" /> View
+              <Eye className="w-3 h-3" /> {isZh ? '查看' : 'View'}
             </button>
             <button
               onClick={() => setMode('edit')}
@@ -1162,7 +1173,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                 mode === 'edit' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <Edit2 className="w-3 h-3" /> Edit
+              <Edit2 className="w-3 h-3" /> {isZh ? '编辑' : 'Edit'}
             </button>
           </div>
           <div className="flex gap-1">
@@ -1195,7 +1206,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
             <button onClick={handleSave}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-[10px] font-medium hover:bg-emerald-700 transition-colors shadow-md"
             >
-              <Save className="w-3 h-3" /> Save Map
+              <Save className="w-3 h-3" /> {isZh ? '保存地图' : 'Save Map'}
             </button>
             <button
               onClick={() => setShowHistory(h => !h)}
@@ -1203,12 +1214,12 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                 showHistory ? 'bg-primary text-primary-foreground' : 'bg-muted border border-border/50 hover:bg-muted/80'
               }`}
             >
-              <Clock className="w-3 h-3" /> History {mapHistory.length > 0 && `(${mapHistory.length})`}
+              <Clock className="w-3 h-3" /> {isZh ? '历史记录' : 'History'} {mapHistory.length > 0 && `(${mapHistory.length})`}
             </button>
             <button onClick={handleAddStakeholder}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-[10px] font-medium hover:bg-primary/90 transition-colors shadow-md"
             >
-              <Plus className="w-3 h-3" /> Add Person
+              <Plus className="w-3 h-3" /> {isZh ? '添加人物' : 'Add Person'}
             </button>
             <div className="flex flex-col gap-1">
               <button
@@ -1221,7 +1232,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                 }`}
               >
                 {connectingFrom ? <Link2Off className="w-3 h-3" /> : <Link2 className="w-3 h-3" />}
-                {connectingFrom ? 'Cancel Link' : 'Draw Link'}
+                {connectingFrom ? (isZh ? '取消连线' : 'Cancel Link') : (isZh ? '绘制关系' : 'Draw Link')}
               </button>
               <AnimatePresence>
                 {connectingFrom && (
@@ -1347,7 +1358,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                       onClick={() => handleRestoreVersion(v)}
                       className="shrink-0 text-[9px] px-2 py-1 rounded bg-muted hover:bg-primary/20 hover:text-primary transition-colors font-medium"
                     >
-                      Restore
+                      {isZh ? '恢复' : 'Restore'}
                     </button>
                   </div>
                 ))
@@ -1887,7 +1898,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                     <div className="border-t border-border/20 mt-1.5 pt-1">
                       <div className="flex items-center justify-between">
                         <span className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider">
-                          {interactions.length} interaction{interactions.length !== 1 ? 's' : ''}
+                          {isZh ? `${interactions.length} 次互动` : `${interactions.length} interaction${interactions.length !== 1 ? 's' : ''}`}
                         </span>
                         {isCardHovered && (
                           <button
@@ -1897,10 +1908,10 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                               setAddModalStakeholder(stakeholder);
                             }}
                             onMouseDown={(e) => e.stopPropagation()}
-                            title="Add content for this person"
+                            title={isZh ? '添加内容' : 'Add content for this person'}
                           >
                             <Plus className="w-3 h-3" />
-                            <span>Add</span>
+                            <span>{isZh ? '添加' : 'Add'}</span>
                           </button>
                         )}
                       </div>
@@ -1935,7 +1946,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                               ))}
                               {interactions.length > 3 && (
                                 <div className="text-[8px] text-muted-foreground/50 text-center">
-                                  +{interactions.length - 3} more
+                                  {isZh ? `还有 ${interactions.length - 3} 条` : `+${interactions.length - 3} more`}
                                 </div>
                               )}
                             </div>
@@ -1958,8 +1969,8 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
           <div className="bg-card border border-border rounded-xl shadow-2xl w-[440px] max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 py-4 border-b border-border/30">
               <div>
-                <h3 className="font-display text-sm font-semibold">Add Content</h3>
-                <p className="text-[10px] text-muted-foreground mt-0.5">For {addModalStakeholder.name} — {addModalStakeholder.title}</p>
+                <h3 className="font-display text-sm font-semibold">{isZh ? '添加内容' : 'Add Content'}</h3>
+                <p className="text-[10px] text-muted-foreground mt-0.5">{isZh ? `为 ${addModalStakeholder.name}` : `For ${addModalStakeholder.name}`} — {addModalStakeholder.title}</p>
               </div>
               <button onClick={() => setAddModalStakeholder(null)} className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-muted transition-colors">
                 <X className="w-4 h-4" />
@@ -1979,7 +1990,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
                 };
                 setLocalInteractions(prev => [newI, ...prev]);
                 setAddModalStakeholder(null);
-                toast.success(`Added to ${addModalStakeholder.name}'s interactions`);
+                toast.success(isZh ? `已添加到 ${addModalStakeholder.name} 的互动记录` : `Added to ${addModalStakeholder.name}'s interactions`);
               }}
               onCancel={() => setAddModalStakeholder(null)}
             />
@@ -2002,7 +2013,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
           </div>
         ))}
         <div className="w-px h-3 bg-border/40 mx-0.5" />
-        {[{ color: '#10b981', label: 'Positive' }, { color: '#f59e0b', label: 'Neutral' }, { color: '#ef4444', label: 'Negative' }].map(s => (
+        {[{ color: '#10b981', label: isZh ? '支持' : 'Positive' }, { color: '#f59e0b', label: isZh ? '中立' : 'Neutral' }, { color: '#ef4444', label: isZh ? '反对' : 'Negative' }].map(s => (
           <div key={s.label} className="flex items-center gap-1.5">
             <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.color }} />
             <span>{s.label}</span>
@@ -2011,7 +2022,7 @@ export default function StakeholderMap({ deal, onStakeholderClick, onStakeholder
         <div className="w-px h-3 bg-border/40 mx-0.5" />
          <div className="flex items-center gap-1.5">
           <Flame className="w-3 h-3 text-orange-400" />
-          <span>Heat = {heatWindow} touchpoints</span>
+          <span>{isZh ? `活跃度 = ${heatWindow} 触点` : `Heat = ${heatWindow} touchpoints`}</span>
         </div>
       </div>
     </div>
@@ -2032,18 +2043,27 @@ function AddInteractionForm({ stakeholder, onSubmit, onCancel }: {
   onSubmit: (type: string, title: string, description: string) => void;
   onCancel: () => void;
 }) {
+  const { language } = useLanguage();
+  const isZh = language === 'zh';
   const [selectedType, setSelectedType] = useState<string>('meeting');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [fileName, setFileName] = useState('');
 
-  const selected = CONTENT_TYPES.find(t => t.value === selectedType)!;
+  const CONTENT_TYPES_LOCAL = isZh ? [
+    { value: 'meeting', label: '会议纪要', icon: MessageSquare, desc: '记录会议纪要或粘贴会议记录' },
+    { value: 'screenshot', label: '截图', icon: Image, desc: '上传对话截图或图片' },
+    { value: 'document', label: '文档 / PDF', icon: FileText, desc: '附加 PDF、方案或文档' },
+    { value: 'recording', label: '音视频', icon: Mic, desc: '上传录音或视频文件' },
+    { value: 'note', label: '快速笔记', icon: Pencil, desc: '添加自由文本笔记' },
+  ] as const : CONTENT_TYPES;
+  const selected = CONTENT_TYPES_LOCAL.find(t => t.value === selectedType)!;
 
   return (
     <div className="p-5 space-y-4">
       {/* Type selector */}
       <div className="grid grid-cols-5 gap-1.5">
-        {CONTENT_TYPES.map(ct => {
+        {CONTENT_TYPES_LOCAL.map(ct => {
           const Icon = ct.icon;
           const isActive = selectedType === ct.value;
           return (
@@ -2067,12 +2087,12 @@ function AddInteractionForm({ stakeholder, onSubmit, onCancel }: {
 
       {/* Title */}
       <div>
-        <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Title</label>
+        <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{isZh ? '标题' : 'Title'}</label>
         <input
           type="text"
           value={title}
           onChange={e => setTitle(e.target.value)}
-          placeholder={selectedType === 'meeting' ? 'e.g. Discovery Call with VP Sales' : 'Brief title...'}
+          placeholder={selectedType === 'meeting' ? (isZh ? '例如：与副总的探索性通话' : 'e.g. Discovery Call with VP Sales') : (isZh ? '简要标题...' : 'Brief title...')}
           className="w-full mt-1 text-xs bg-background border border-border/50 rounded-md px-3 py-2 text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-primary/50"
         />
       </div>
@@ -2080,14 +2100,14 @@ function AddInteractionForm({ stakeholder, onSubmit, onCancel }: {
       {/* Content area - varies by type */}
       {(selectedType === 'screenshot' || selectedType === 'document' || selectedType === 'recording') ? (
         <div>
-          <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">File</label>
+          <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{isZh ? '文件' : 'File'}</label>
           <div className="mt-1 border-2 border-dashed border-border/40 rounded-lg p-6 text-center hover:border-primary/30 transition-colors cursor-pointer">
             <Upload className="w-6 h-6 mx-auto text-muted-foreground/40 mb-2" />
             {fileName ? (
               <p className="text-xs text-foreground">{fileName}</p>
             ) : (
               <>
-                <p className="text-xs text-muted-foreground">Drop file here or click to browse</p>
+                <p className="text-xs text-muted-foreground">{isZh ? '拖放文件或点击浏览' : 'Drop file here or click to browse'}</p>
                 <p className="text-[10px] text-muted-foreground/50 mt-1">
                   {selectedType === 'screenshot' ? 'PNG, JPG, WebP' : selectedType === 'document' ? 'PDF, DOCX' : 'MP3, WAV, MP4, WebM'}
                 </p>
@@ -2107,12 +2127,12 @@ function AddInteractionForm({ stakeholder, onSubmit, onCancel }: {
       ) : (
         <div>
           <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-            {selectedType === 'meeting' ? 'Meeting Notes / Transcript' : 'Note'}
+            {selectedType === 'meeting' ? (isZh ? '会议纪要 / 记录' : 'Meeting Notes / Transcript') : (isZh ? '笔记' : 'Note')}
           </label>
           <textarea
             value={description}
             onChange={e => setDescription(e.target.value)}
-            placeholder={selectedType === 'meeting' ? 'Paste meeting notes or key takeaways...' : 'Write your note...'}
+            placeholder={selectedType === 'meeting' ? (isZh ? '粘贴会议纪要或关键要点...' : 'Paste meeting notes or key takeaways...') : (isZh ? '写下你的笔记...' : 'Write your note...')}
             rows={4}
             className="w-full mt-1 text-xs bg-background border border-border/50 rounded-md px-3 py-2 text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none leading-relaxed"
           />
@@ -2125,7 +2145,7 @@ function AddInteractionForm({ stakeholder, onSubmit, onCancel }: {
           onClick={onCancel}
           className="px-3 py-1.5 text-xs rounded-md border border-border/50 text-muted-foreground hover:bg-muted/30 transition-colors"
         >
-          Cancel
+          {isZh ? '取消' : 'Cancel'}
         </button>
         <button
           onClick={() => onSubmit(selectedType === 'meeting' ? 'Follow-up' : 'Email', title || selected.label, description || fileName || '')}
@@ -2133,7 +2153,7 @@ function AddInteractionForm({ stakeholder, onSubmit, onCancel }: {
           className="px-4 py-1.5 text-xs rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
         >
           <Send className="w-3 h-3" />
-          Save
+          {isZh ? '保存' : 'Save'}
         </button>
       </div>
     </div>

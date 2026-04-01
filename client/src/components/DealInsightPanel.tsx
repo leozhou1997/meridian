@@ -757,6 +757,7 @@ export default function DealInsightPanel({
   const [insightOverrides, setInsightOverrides] = useState<{
     whatsHappening?: string;
     keyRisks?: KeyRiskItem[] | string[];
+    whatsNext?: WhatsNextItem[];
     updatedAt?: Date;
   }>({});
   const [insightDataLevel, setInsightDataLevel] = useState<'early-stage' | 'evidence-based' | null>(null);
@@ -767,6 +768,7 @@ export default function DealInsightPanel({
       setInsightOverrides({
         whatsHappening: data.whatsHappening,
         keyRisks: data.keyRisks,
+        whatsNext: data.whatsNext as WhatsNextItem[],
         updatedAt: new Date(),
       });
       setInsightDataLevel(data.dataLevel as 'early-stage' | 'evidence-based');
@@ -831,7 +833,7 @@ export default function DealInsightPanel({
 
   const whatsHappening: string | null | undefined = insightOverrides.whatsHappening ?? latestSnapshot?.whatsHappening;
   const keyRisks: (KeyRiskItem | string)[] = (insightOverrides.keyRisks ?? latestSnapshot?.keyRisks ?? []) as (KeyRiskItem | string)[];
-  const whatsNextRaw = latestSnapshot?.whatsNext ?? null;
+  const whatsNextRaw = insightOverrides.whatsNext ?? latestSnapshot?.whatsNext ?? null;
   const wasUpdatedByChat = !!insightOverrides.updatedAt;
 
   // Group next actions by status for the management section

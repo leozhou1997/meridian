@@ -105,19 +105,23 @@ type StrategyNote = {
   updatedAt: Date | string;
 };
 
-const STRATEGY_CATEGORIES: { value: StrategyNote['category']; label: string; color: string }[] = [
-  { value: 'pricing',       label: 'Pricing Flexibility', color: 'text-emerald-400' },
-  { value: 'relationship',  label: 'Relationship Strategy', color: 'text-blue-400' },
-  { value: 'competitive',   label: 'Competitive Intel', color: 'text-amber-400' },
-  { value: 'internal',      label: 'Internal Alignment', color: 'text-purple-400' },
-  { value: 'other',         label: 'Other', color: 'text-muted-foreground' },
-];
+function getStrategyCategories(isZh: boolean): { value: StrategyNote['category']; label: string; color: string }[] {
+  return [
+    { value: 'pricing',       label: isZh ? '价格策略' : 'Pricing Flexibility', color: 'text-emerald-400' },
+    { value: 'relationship',  label: isZh ? '关系策略' : 'Relationship Strategy', color: 'text-blue-400' },
+    { value: 'competitive',   label: isZh ? '竞争情报' : 'Competitive Intel', color: 'text-amber-400' },
+    { value: 'internal',      label: isZh ? '内部对齐' : 'Internal Alignment', color: 'text-purple-400' },
+    { value: 'other',         label: isZh ? '其他' : 'Other', color: 'text-muted-foreground' },
+  ];
+}
 
-const sentimentConfig: Record<SentimentType, { label: string; dot: string; bg: string; text: string; border: string }> = {
-  Positive: { label: 'Positive', dot: '#10b981', bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/30' },
-  Neutral:  { label: 'Neutral',  dot: '#f59e0b', bg: 'bg-amber-500/10',   text: 'text-amber-400',   border: 'border-amber-500/30'  },
-  Negative: { label: 'Negative', dot: '#ef4444', bg: 'bg-red-500/10',     text: 'text-red-400',     border: 'border-red-500/30'    },
-};
+function getSentimentConfig(isZh: boolean): Record<SentimentType, { label: string; dot: string; bg: string; text: string; border: string }> {
+  return {
+    Positive: { label: isZh ? '支持' : 'Positive', dot: '#10b981', bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/30' },
+    Neutral:  { label: isZh ? '中立' : 'Neutral',  dot: '#f59e0b', bg: 'bg-amber-500/10',   text: 'text-amber-400',   border: 'border-amber-500/30'  },
+    Negative: { label: isZh ? '反对' : 'Negative', dot: '#ef4444', bg: 'bg-red-500/10',     text: 'text-red-400',     border: 'border-red-500/30'    },
+  };
+}
 
 const roleConfig: Record<RoleType, { bg: string; text: string; border: string }> = {
   'Champion':       { bg: 'bg-blue-500/10',    text: 'text-blue-400',    border: 'border-blue-500/30'    },
@@ -219,6 +223,8 @@ export default function DealDetail() {
   const dealId = params?.id ? Number(params.id) : 0;
   const { t, language } = useLanguage();
   const isZh = language === 'zh';
+  const STRATEGY_CATEGORIES = getStrategyCategories(isZh);
+  const sentimentConfig = getSentimentConfig(isZh);
 
   // ── Real API queries ──────────────────────────────────────────────────────
   const { data: dealData, isLoading: dealLoading } = trpc.deals.get.useQuery(
@@ -1006,16 +1012,16 @@ export default function DealDetail() {
               <div className="p-6 max-w-3xl">
                 <div className="flex items-start justify-between mb-5">
                   <div>
-                    <h3 className="font-display text-sm font-semibold">Deal Strategy</h3>
+                    <h3 className="font-display text-sm font-semibold">{isZh ? '交易策略' : 'Deal Strategy'}</h3>
                     <p className="text-[10px] text-muted-foreground mt-0.5 max-w-sm leading-relaxed">
-                      Internal strategy notes for this deal — pricing flexibility, relationship plays, competitive intel, and internal alignment. These notes inform the AI agent’s recommendations.
+                      {isZh ? '本交易的内部策略笔记 — 价格空间、关系策略、竞争情报和内部对齐。这些笔记将作为 AI 分析建议的输入。' : 'Internal strategy notes for this deal \u2014 pricing flexibility, relationship plays, competitive intel, and internal alignment. These notes inform the AI agent\'s recommendations.'}
                     </p>
                   </div>
                   <button
                     onClick={addStrategyNote}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors shrink-0"
                   >
-                    <Plus className="w-3 h-3" /> Add Note
+                    <Plus className="w-3 h-3" /> {isZh ? '添加笔记' : 'Add Note'}
                   </button>
                 </div>
 
@@ -1112,15 +1118,15 @@ export default function DealDetail() {
                       <div className="w-12 h-12 rounded-2xl bg-muted/30 flex items-center justify-center mx-auto mb-3">
                         <Target className="w-6 h-6 opacity-30" />
                       </div>
-                      <p className="text-sm font-medium">No strategy notes yet</p>
+                      <p className="text-sm font-medium">{isZh ? '暂无策略笔记' : 'No strategy notes yet'}</p>
                       <p className="text-xs mt-1 max-w-xs mx-auto leading-relaxed">
-                        Add internal context like pricing flexibility, strategic priority, or relationship plays — the AI agent will use these to tailor its recommendations.
+                        {isZh ? '添加内部上下文，如价格空间、战略优先级或关系策略 — AI 将利用这些信息定制建议。' : 'Add internal context like pricing flexibility, strategic priority, or relationship plays \u2014 the AI agent will use these to tailor its recommendations.'}
                       </p>
                       <button
                         onClick={addStrategyNote}
                         className="mt-4 flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors mx-auto"
                       >
-                        <Plus className="w-3 h-3" /> Add First Strategy Note
+                        <Plus className="w-3 h-3" /> {isZh ? '添加第一条策略笔记' : 'Add First Strategy Note'}
                       </button>
                     </div>
                   )}
@@ -2035,6 +2041,76 @@ export default function DealDetail() {
       >
         <Users className="w-5 h-5" />
       </button>
+      {/* ── Meeting Edit Modal ── */}
+      {editingInteractionId !== null && (() => {
+        const meeting = localInteractions.find(m => m.id === editingInteractionId);
+        if (!meeting) return null;
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setEditingInteractionId(null)}>
+            <div className="bg-card border border-border rounded-xl shadow-2xl w-[520px] max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between p-4 border-b border-border/30">
+                <h3 className="text-sm font-semibold">{isZh ? '编辑记录' : 'Edit Meeting'}</h3>
+                <button onClick={() => setEditingInteractionId(null)} className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-muted">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="p-4 space-y-4">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">{isZh ? '类型' : 'Type'}</label>
+                  <select
+                    value={meeting.type}
+                    onChange={e => updateInteraction(meeting.id, { type: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm"
+                  >
+                    {INTERACTION_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">{isZh ? '日期' : 'Date'}</label>
+                  <input
+                    type="date"
+                    value={typeof meeting.date === 'string' ? meeting.date.slice(0, 10) : new Date(meeting.date).toISOString().slice(0, 10)}
+                    onChange={e => updateInteraction(meeting.id, { date: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">{isZh ? '关键参与人' : 'Key Participant'}</label>
+                  <input
+                    type="text"
+                    value={meeting.keyParticipant ?? ''}
+                    onChange={e => updateInteraction(meeting.id, { keyParticipant: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">{isZh ? '时长 (分钟)' : 'Duration (min)'}</label>
+                  <input
+                    type="number"
+                    value={meeting.duration ?? 30}
+                    onChange={e => updateInteraction(meeting.id, { duration: parseInt(e.target.value) || 30 })}
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">{isZh ? '会议纪要 / 内容' : 'Meeting Notes / Content'}</label>
+                  <textarea
+                    value={meeting.summary ?? ''}
+                    onChange={e => updateInteraction(meeting.id, { summary: e.target.value })}
+                    rows={8}
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm resize-y"
+                  />
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <button onClick={() => setEditingInteractionId(null)} className="px-4 py-2 rounded-lg text-sm text-muted-foreground hover:bg-muted/50">
+                    {isZh ? '关闭' : 'Close'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

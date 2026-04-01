@@ -822,3 +822,16 @@
 - [x] Update DealDetail.tsx to use API instead of local useState
 - [x] Integrate strategy notes into AI insight generation prompt (generateDealInsight, chatWithDeal)
 - [x] Write vitest tests for strategy notes (6 tests passing)
+
+## Bug Fixes (April 2 - Demo Prep)
+- [ ] Deal Room page i18n: title, subtitle, tab labels (AI Insights, Notes & Media, Sales Actions)
+- [ ] Deal Room dialog i18n: "Add to Deal Room", CONTENT TYPE, TITLE, MEETING NOTES / TRANSCRIPT CONTENT, Cancel, Add to Timeline
+- [x] Deal Room page i18n: title, subtitle, tab labels, dialog all translated
+- [x] Deal Room: timeline records click-to-expand works; added edit modal for meetings
+- [x] Deal Strategy page: all strings translated to Chinese
+- [x] Stakeholder Map: Stages view fixed (buyingStages data was missing, now seeded)
+- [x] Stakeholder Map edit buttons i18n: all buttons translated
+- [x] Stakeholder sentiment labels i18n: all translated
+- [x] AI refresh: What's Next now shows immediately via insightOverrides
+- [ ] Stakeholder hover highlight: code is correct, needs browser verification
+- [x] Dashboard "平均置信度" already translated in LanguageContext

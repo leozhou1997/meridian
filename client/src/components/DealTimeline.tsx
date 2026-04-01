@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatDate, getConfidenceColor, getConfidenceBg } from '@/lib/data';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -89,43 +90,50 @@ function formatKeyRisk(risk: { title: string; detail: string; stakeholders: stri
   return risk.title;
 }
 
-const CONTENT_TYPE_CONFIG: Record<string, { icon: any; label: string; color: string }> = {
-  note: { icon: StickyNote, label: 'Note', color: 'text-blue-400' },
-  screenshot: { icon: Image, label: 'Screenshot', color: 'text-purple-400' },
-  pdf: { icon: FileText, label: 'PDF Document', color: 'text-red-400' },
-  video: { icon: Video, label: 'Video/Recording', color: 'text-amber-400' },
-  audio: { icon: Mic, label: 'Audio Recording', color: 'text-green-400' },
-  action: { icon: Send, label: 'Sales Action', color: 'text-cyan-400' },
-};
+function getContentTypeConfig(isZh: boolean): Record<string, { icon: any; label: string; color: string }> {
+  return {
+    note: { icon: StickyNote, label: isZh ? '笔记' : 'Note', color: 'text-blue-400' },
+    screenshot: { icon: Image, label: isZh ? '截图' : 'Screenshot', color: 'text-purple-400' },
+    pdf: { icon: FileText, label: isZh ? 'PDF 文档' : 'PDF Document', color: 'text-red-400' },
+    video: { icon: Video, label: isZh ? '视频/录制' : 'Video/Recording', color: 'text-amber-400' },
+    audio: { icon: Mic, label: isZh ? '录音' : 'Audio Recording', color: 'text-green-400' },
+    action: { icon: Send, label: isZh ? '销售动作' : 'Sales Action', color: 'text-cyan-400' },
+  };
+}
 
-const TIER_CONFIG = {
-  insight: { label: 'AI Insights', icon: Sparkles, color: 'text-primary', bg: 'bg-primary/10', border: 'border-primary/20' },
-  note: { label: 'Notes & Media', icon: Paperclip, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
-  action: { label: 'Sales Actions', icon: Send, color: 'text-cyan-400', bg: 'bg-cyan-500/10', border: 'border-cyan-500/20' },
-};
+function getTierConfig(isZh: boolean) {
+  return {
+    insight: { label: isZh ? 'AI 洞察' : 'AI Insights', icon: Sparkles, color: 'text-primary', bg: 'bg-primary/10', border: 'border-primary/20' },
+    note: { label: isZh ? '笔记与媒体' : 'Notes & Media', icon: Paperclip, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
+    action: { label: isZh ? '销售动作' : 'Sales Actions', icon: Send, color: 'text-cyan-400', bg: 'bg-cyan-500/10', border: 'border-cyan-500/20' },
+  };
+}
 
 // ─── Upload Dialog ──────────────────────────────────────────────────────────
 
 function UploadDialog({ onClose, onAdd }: { onClose: () => void; onAdd: (item: ContentItem) => void }) {
+  const { language } = useLanguage();
+  const isZh = language === 'zh';
   const [uploadType, setUploadType] = useState<ContentItem['type']>('note');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const CONTENT_TYPE_CONFIG = getContentTypeConfig(isZh);
 
   const uploadTypes: { value: ContentItem['type']; label: string; icon: any; accept?: string }[] = [
-    { value: 'note', label: 'Meeting Notes', icon: MessageSquare },
-    { value: 'audio', label: 'Audio / Video', icon: Mic, accept: 'audio/*,video/*' },
-    { value: 'screenshot', label: 'Screenshot', icon: Image, accept: 'image/*' },
-    { value: 'pdf', label: 'PDF Document', icon: File, accept: '.pdf' },
-    { value: 'action', label: 'Sales Action', icon: Send },
+    { value: 'note', label: isZh ? '会议纪要' : 'Meeting Notes', icon: MessageSquare },
+    { value: 'audio', label: isZh ? '音视频' : 'Audio / Video', icon: Mic, accept: 'audio/*,video/*' },
+    { value: 'screenshot', label: isZh ? '截图' : 'Screenshot', icon: Image, accept: 'image/*' },
+    { value: 'pdf', label: isZh ? 'PDF 文档' : 'PDF Document', icon: File, accept: '.pdf' },
+    { value: 'action', label: isZh ? '销售动作' : 'Sales Action', icon: Send },
   ];
 
   const needsFile = ['audio', 'video', 'screenshot', 'pdf'].includes(uploadType);
   const category: ContentItem['category'] = uploadType === 'action' ? 'action' : 'note';
 
   const handleSubmit = () => {
-    if (!title.trim()) { toast.error('Please enter a title'); return; }
+    if (!title.trim()) { toast.error(isZh ? '请输入标题' : 'Please enter a title'); return; }
     const item: ContentItem = {
       id: `content-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       type: uploadType,
@@ -138,14 +146,14 @@ function UploadDialog({ onClose, onAdd }: { onClose: () => void; onAdd: (item: C
     };
     onAdd(item);
     onClose();
-    toast.success(`${CONTENT_TYPE_CONFIG[uploadType]?.label || 'Item'} added to timeline`);
+    toast.success(isZh ? `${CONTENT_TYPE_CONFIG[uploadType]?.label || '项目'}已添加到时间线` : `${CONTENT_TYPE_CONFIG[uploadType]?.label || 'Item'} added to timeline`);
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-card border border-border rounded-xl shadow-2xl w-[520px] max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-border/30">
-          <h3 className="font-display text-sm font-semibold">Add to Deal Room</h3>
+          <h3 className="font-display text-sm font-semibold">{isZh ? '添加到交易室' : 'Add to Deal Room'}</h3>
           <button onClick={onClose} className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-muted transition-colors">
             <X className="w-4 h-4" />
           </button>
@@ -154,7 +162,7 @@ function UploadDialog({ onClose, onAdd }: { onClose: () => void; onAdd: (item: C
         <div className="p-5 space-y-4">
           {/* Type selector */}
           <div>
-            <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-2 block">Content Type</label>
+            <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-2 block">{isZh ? '内容类型' : 'Content Type'}</label>
             <div className="grid grid-cols-3 gap-2">
               {uploadTypes.map(ut => {
                 const Icon = ut.icon;
@@ -179,11 +187,11 @@ function UploadDialog({ onClose, onAdd }: { onClose: () => void; onAdd: (item: C
 
           {/* Title */}
           <div>
-            <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-1.5 block">Title</label>
+            <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-1.5 block">{isZh ? '标题' : 'Title'}</label>
             <input
               value={title}
               onChange={e => setTitle(e.target.value)}
-              placeholder={uploadType === 'action' ? 'e.g., Sent pricing proposal to CFO' : 'e.g., Discovery call with VP Engineering'}
+              placeholder={uploadType === 'action' ? (isZh ? '例如：向CFO发送报价方案' : 'e.g., Sent pricing proposal to CFO') : (isZh ? '例如：与技术副总裁的探索会议' : 'e.g., Discovery call with VP Engineering')}
               className="w-full bg-muted/30 border border-border/30 rounded-lg px-3 py-2 text-sm outline-none focus:border-primary/40 transition-colors placeholder:text-muted-foreground/40"
             />
           </div>
@@ -191,12 +199,12 @@ function UploadDialog({ onClose, onAdd }: { onClose: () => void; onAdd: (item: C
           {/* Description / Content */}
           <div>
             <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-1.5 block">
-              {uploadType === 'note' ? 'Meeting Notes / Transcript Content' : uploadType === 'action' ? 'Action Details' : 'Description (optional)'}
+              {uploadType === 'note' ? (isZh ? '会议纪要 / 转录内容' : 'Meeting Notes / Transcript Content') : uploadType === 'action' ? (isZh ? '动作详情' : 'Action Details') : (isZh ? '描述（可选）' : 'Description (optional)')}
             </label>
             <textarea
               value={description}
               onChange={e => setDescription(e.target.value)}
-              placeholder={uploadType === 'note' ? 'Paste meeting transcript or notes here...' : 'Add details...'}
+              placeholder={uploadType === 'note' ? (isZh ? '粘贴会议转录或笔记...' : 'Paste meeting transcript or notes here...') : (isZh ? '添加详情...' : 'Add details...')}
               rows={uploadType === 'note' ? 8 : 3}
               className="w-full bg-muted/30 border border-border/30 rounded-lg px-3 py-2 text-sm outline-none focus:border-primary/40 transition-colors placeholder:text-muted-foreground/40 resize-none"
             />
@@ -205,7 +213,7 @@ function UploadDialog({ onClose, onAdd }: { onClose: () => void; onAdd: (item: C
           {/* File upload */}
           {needsFile && (
             <div>
-              <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-1.5 block">File Upload</label>
+              <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-1.5 block">{isZh ? '文件上传' : 'File Upload'}</label>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -226,7 +234,7 @@ function UploadDialog({ onClose, onAdd }: { onClose: () => void; onAdd: (item: C
                 ) : (
                   <>
                     <Upload className="w-4 h-4" />
-                    <span>Click to upload or drag and drop</span>
+                    <span>{isZh ? '点击上传或拖拽文件' : 'Click to upload or drag and drop'}</span>
                   </>
                 )}
               </button>
@@ -242,13 +250,13 @@ function UploadDialog({ onClose, onAdd }: { onClose: () => void; onAdd: (item: C
 
         <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-border/30">
           <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm text-muted-foreground hover:bg-muted/50 transition-colors">
-            Cancel
+            {isZh ? '取消' : 'Cancel'}
           </button>
           <button
             onClick={handleSubmit}
             className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
           >
-            Add to Timeline
+            {isZh ? '添加到时间线' : 'Add to Timeline'}
           </button>
         </div>
       </div>
@@ -259,9 +267,11 @@ function UploadDialog({ onClose, onAdd }: { onClose: () => void; onAdd: (item: C
 // ─── Snapshot Node (Tier 1: AI Insights) ────────────────────────────────────
 
 function SnapshotNode({ snapshot, isExpanded, onToggle }: { snapshot: SnapshotData; isExpanded: boolean; onToggle: () => void }) {
+  const { language } = useLanguage();
+  const isZh = language === 'zh';
   const source = snapshot.aiGenerated 
-    ? (snapshot.interactionType || 'AI Analysis')
-    : 'Initial Assessment';
+    ? (snapshot.interactionType || (isZh ? 'AI 分析' : 'AI Analysis'))
+    : (isZh ? '初始评估' : 'Initial Assessment');
 
   return (
     <div className="cursor-pointer group" onClick={onToggle}>
@@ -274,7 +284,7 @@ function SnapshotNode({ snapshot, isExpanded, onToggle }: { snapshot: SnapshotDa
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-[11px] font-semibold text-foreground">AI Deal Insight</span>
+                  <span className="text-[11px] font-semibold text-foreground">{isZh ? 'AI 交易洞察' : 'AI Deal Insight'}</span>
                   <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-primary/5 text-primary border-primary/20">
                     {source}
                   </Badge>
@@ -313,7 +323,7 @@ function SnapshotNode({ snapshot, isExpanded, onToggle }: { snapshot: SnapshotDa
                     <div>
                       <div className="flex items-center gap-1.5 mb-1">
                         <Activity className="w-3 h-3 text-blue-400" />
-                        <span className="text-[10px] font-semibold text-blue-400 uppercase tracking-wider">What's Happening</span>
+                        <span className="text-[10px] font-semibold text-blue-400 uppercase tracking-wider">{isZh ? '当前动态' : "What's Happening"}</span>
                       </div>
                       <p className="text-[11px] text-foreground/80 leading-relaxed pl-4.5">{snapshot.whatsHappening}</p>
                     </div>
@@ -322,7 +332,7 @@ function SnapshotNode({ snapshot, isExpanded, onToggle }: { snapshot: SnapshotDa
                     <div>
                       <div className="flex items-center gap-1.5 mb-1">
                         <ArrowRight className="w-3 h-3 text-green-400" />
-                        <span className="text-[10px] font-semibold text-green-400 uppercase tracking-wider">What's Next</span>
+                        <span className="text-[10px] font-semibold text-green-400 uppercase tracking-wider">{isZh ? '下一步计划' : "What's Next"}</span>
                       </div>
                       <div className="space-y-1.5 pl-4.5">
                         {snapshot.whatsNext.map((item, i) => (
@@ -340,7 +350,7 @@ function SnapshotNode({ snapshot, isExpanded, onToggle }: { snapshot: SnapshotDa
                     <div>
                       <div className="flex items-center gap-1.5 mb-1">
                         <AlertTriangle className="w-3 h-3 text-red-400" />
-                        <span className="text-[10px] font-semibold text-red-400 uppercase tracking-wider">Key Risks</span>
+                        <span className="text-[10px] font-semibold text-red-400 uppercase tracking-wider">{isZh ? '关键风险' : 'Key Risks'}</span>
                       </div>
                       <div className="space-y-1.5 pl-4.5">
                         {(snapshot.keyRisks as any[]).map((risk, i) => (
@@ -367,6 +377,8 @@ function MeetingNode({ meeting, isExpanded, onToggle, onEdit, onDelete }: {
   meeting: MeetingData; isExpanded: boolean; onToggle: () => void;
   onEdit?: (id: number) => void; onDelete?: (id: number) => void;
 }) {
+  const { language } = useLanguage();
+  const isZh = language === 'zh';
   const tc = getInteractionTypeColor(meeting.type);
 
   return (
@@ -422,31 +434,31 @@ function MeetingNode({ meeting, isExpanded, onToggle, onEdit, onDelete }: {
                       <div className="flex items-center gap-1.5 mb-1.5">
                         <FileText className="w-3 h-3 text-muted-foreground" />
                         <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                          {meeting.transcriptUrl ? 'Transcript Summary' : 'Meeting Notes'}
+                          {meeting.transcriptUrl ? (isZh ? '转录摘要' : 'Transcript Summary') : (isZh ? '会议纪要' : 'Meeting Notes')}
                         </span>
                       </div>
                       <p className="text-[11px] text-foreground/80 leading-relaxed whitespace-pre-wrap">{meeting.summary}</p>
                     </div>
                   ) : (
-                    <p className="text-[10px] text-muted-foreground/50 italic">No notes recorded for this meeting</p>
+                    <p className="text-[10px] text-muted-foreground/50 italic">{isZh ? '本次会议未记录笔记' : 'No notes recorded for this meeting'}</p>
                   )}
                   {meeting.transcriptUrl && (
                     <div className="mt-2 p-2 rounded-md bg-muted/30 border border-border/20">
                       <div className="flex items-center gap-1.5">
                         <Upload className="w-3 h-3 text-primary" />
-                        <span className="text-[10px] text-primary font-medium">Full transcript available</span>
+                        <span className="text-[10px] text-primary font-medium">{isZh ? '完整转录可查看' : 'Full transcript available'}</span>
                       </div>
                     </div>
                   )}
                   <div className="flex gap-2 mt-3">
                     {onEdit && (
                       <button onClick={(e) => { e.stopPropagation(); onEdit(meeting.id); }} className="flex items-center gap-1 px-2 py-1 rounded-md bg-muted/50 text-[10px] text-muted-foreground hover:bg-muted transition-colors">
-                        <Pencil className="w-2.5 h-2.5" /> Edit
+                        <Pencil className="w-2.5 h-2.5" /> {isZh ? '编辑' : 'Edit'}
                       </button>
                     )}
                     {onDelete && (
                       <button onClick={(e) => { e.stopPropagation(); onDelete(meeting.id); }} className="flex items-center gap-1 px-2 py-1 rounded-md bg-destructive/10 text-[10px] text-destructive hover:bg-destructive/20 transition-colors">
-                        <Trash2 className="w-2.5 h-2.5" /> Delete
+                        <Trash2 className="w-2.5 h-2.5" /> {isZh ? '删除' : 'Delete'}
                       </button>
                     )}
                   </div>
@@ -465,6 +477,10 @@ function MeetingNode({ meeting, isExpanded, onToggle, onEdit, onDelete }: {
 function ContentNode({ item, isExpanded, onToggle, onDelete }: {
   item: ContentItem; isExpanded: boolean; onToggle: () => void; onDelete: (id: string) => void;
 }) {
+  const { language } = useLanguage();
+  const isZh = language === 'zh';
+  const CONTENT_TYPE_CONFIG = getContentTypeConfig(isZh);
+  const TIER_CONFIG = getTierConfig(isZh);
   const config = CONTENT_TYPE_CONFIG[item.type] || CONTENT_TYPE_CONFIG.note;
   const Icon = config.icon;
   const tierConfig = TIER_CONFIG[item.category];
@@ -515,12 +531,12 @@ function ContentNode({ item, isExpanded, onToggle, onDelete }: {
                       <span className="text-[10px] text-foreground/70 font-medium">{item.fileName}</span>
                       {item.type === 'audio' && (
                         <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-amber-500/10 text-amber-400 border-amber-500/20 ml-auto">
-                          Pending transcription
+                          {isZh ? '待转录' : 'Pending transcription'}
                         </Badge>
                       )}
                       {item.type === 'pdf' && (
                         <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-amber-500/10 text-amber-400 border-amber-500/20 ml-auto">
-                          Pending extraction
+                          {isZh ? '待提取' : 'Pending extraction'}
                         </Badge>
                       )}
                     </div>
@@ -543,6 +559,8 @@ function ContentNode({ item, isExpanded, onToggle, onDelete }: {
 // ─── Main Timeline Component ─────────────────────────────────────────────────
 
 export default function DealTimeline({ snapshots, meetings, companyInfo, companyName, onAddMeeting, onEditMeeting, onDeleteMeeting }: DealTimelineProps) {
+  const { language } = useLanguage();
+  const isZh = language === 'zh';
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [showUpload, setShowUpload] = useState(false);
   const [contentItems, setContentItems] = useState<ContentItem[]>([]);
@@ -563,7 +581,7 @@ export default function DealTimeline({ snapshots, meetings, companyInfo, company
 
   const deleteContent = (id: string) => {
     setContentItems(prev => prev.filter(c => c.id !== id));
-    toast.success('Item removed');
+    toast.success(isZh ? '已删除' : 'Item removed');
   };
 
   // Merge and sort events chronologically (newest first)
@@ -614,26 +632,26 @@ export default function DealTimeline({ snapshots, meetings, companyInfo, company
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="font-display text-sm font-semibold">Deal Room</h3>
+            <h3 className="font-display text-sm font-semibold">{isZh ? '交易室' : 'Deal Room'}</h3>
             <p className="text-[10px] text-muted-foreground mt-0.5">
-              All deal-related content in one place
+              {isZh ? '所有交易相关内容集中管理' : 'All deal-related content in one place'}
             </p>
           </div>
           <button
             onClick={() => setShowUpload(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
           >
-            <Plus className="w-3 h-3" /> Add
+            <Plus className="w-3 h-3" /> {isZh ? '添加' : 'Add'}
           </button>
         </div>
 
         {/* 3-Tier Filter Tabs */}
         <div className="flex items-center gap-2 mb-5">
           {[
-            { key: 'all' as const, label: 'All', count: events.length },
-            { key: 'insight' as const, label: 'AI Insights', count: insightCount, icon: Sparkles },
-            { key: 'note' as const, label: 'Notes & Media', count: noteCount, icon: Paperclip },
-            { key: 'action' as const, label: 'Sales Actions', count: actionCount, icon: Send },
+            { key: 'all' as const, label: isZh ? '全部' : 'All', count: events.length },
+            { key: 'insight' as const, label: isZh ? 'AI 洞察' : 'AI Insights', count: insightCount, icon: Sparkles },
+            { key: 'note' as const, label: isZh ? '笔记与媒体' : 'Notes & Media', count: noteCount, icon: Paperclip },
+            { key: 'action' as const, label: isZh ? '销售动作' : 'Sales Actions', count: actionCount, icon: Send },
           ].map(f => {
             const Icon = f.icon;
             const isActive = activeFilter === f.key;
@@ -667,8 +685,8 @@ export default function DealTimeline({ snapshots, meetings, companyInfo, company
                     <Globe className="w-4 h-4 text-primary" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-display font-semibold">{companyName || 'Company'} Overview</h4>
-                    <p className="text-[9px] text-muted-foreground">Account intelligence baseline</p>
+                    <h4 className="text-xs font-display font-semibold">{companyName || (isZh ? '公司' : 'Company')} {isZh ? '概览' : 'Overview'}</h4>
+                    <p className="text-[9px] text-muted-foreground">{isZh ? '客户情报基线' : 'Account intelligence baseline'}</p>
                   </div>
                 </div>
                 <p className="text-[11px] text-muted-foreground leading-relaxed">{companyInfo}</p>
@@ -682,12 +700,12 @@ export default function DealTimeline({ snapshots, meetings, companyInfo, company
           <div className="text-center py-16 text-muted-foreground/60">
             <Layers className="w-10 h-10 mx-auto mb-3 opacity-20" />
             <p className="text-sm font-medium">
-              {activeFilter === 'all' ? 'No activity yet' : `No ${activeFilter === 'insight' ? 'AI insights' : activeFilter === 'note' ? 'notes or media' : 'sales actions'} yet`}
+              {activeFilter === 'all' ? (isZh ? '暂无活动' : 'No activity yet') : (isZh ? '暂无内容' : `No ${activeFilter === 'insight' ? 'AI insights' : activeFilter === 'note' ? 'notes or media' : 'sales actions'} yet`)}
             </p>
             <p className="text-xs mt-1">
               {activeFilter === 'all'
-                ? 'Upload meeting transcripts, add notes, or run an analysis to build the deal room'
-                : 'Click "+ Add" to start adding items'}
+                ? (isZh ? '上传会议记录、添加笔记或运行分析来构建交易室' : 'Upload meeting transcripts, add notes, or run an analysis to build the deal room')
+                : (isZh ? '点击“+ 添加”开始添加内容' : 'Click "+ Add" to start adding items')}
             </p>
           </div>
         ) : (
@@ -743,7 +761,7 @@ export default function DealTimeline({ snapshots, meetings, companyInfo, company
               <div className="relative z-10 ml-1 w-8 h-8 rounded-full bg-muted/80 border border-border/40 flex items-center justify-center">
                 <Sparkles className="w-4 h-4 text-muted-foreground/40" />
               </div>
-              <p className="text-[10px] text-muted-foreground/40 ml-3">Deal created</p>
+              <p className="text-[10px] text-muted-foreground/40 ml-3">{isZh ? '交易创建' : 'Deal created'}</p>
             </div>
           </div>
         )}

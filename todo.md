@@ -741,3 +741,26 @@
 
 ## Mobile Navigation Fix
 - [x] Add Settings entry to mobile bottom nav bar (logout, theme toggle, language switch)
+
+## Prompt Management Backend
+- [x] Audit all AI prompts in codebase (8 features: brief_generation, signal_extraction, deal_insight_evidence, deal_insight_early, deal_chat, company_profile_analysis, stakeholder_generation, initial_deal_insight)
+- [x] promptTemplates DB schema already existed (reused)
+- [x] CRUD tRPC procedures already existed (reused: getPrompts, updatePrompt, setActivePrompt)
+- [x] Build admin UI: PromptManager component in AdminPlayground "Prompt 管理" tab with variable docs
+- [x] Refactor all 6 hardcoded AI prompts to read from DB with fallback defaults
+- [x] Seed all 8 prompts into DB
+
+## Knowledge Base Document Management Refactor
+- [ ] Refactor KB to support file uploads (PDF, Excel, Docx)
+- [ ] Add file upload endpoint with S3 storage
+- [ ] AI reads uploaded document content
+- [ ] Pure text becomes description/notes on documents, not the main content
+- [ ] Visual polish for KB page
+
+## Full Chinese Localization
+- [ ] Audit all pages for remaining English text
+- [ ] Translate all hardcoded English strings
+- [ ] Ensure AI-generated content outputs in Chinese when language is set to zh
+- [ ] Fix Settings page subtitle and other missed strings
+- [ ] Fix Dashboard overdue actions banner English text
+- [ ] Fix mobile Quick Capture English text

@@ -3,8 +3,9 @@ import { trpc } from '@/lib/trpc';
 import { motion } from 'framer-motion';
 import {
   Play, ThumbsUp, ThumbsDown, Edit3, Clock, Zap, ChevronDown, ChevronUp,
-  BarChart3, Sparkles, Save, Plus, CheckCircle
+  BarChart3, Sparkles, Save, Plus, CheckCircle, FileText
 } from 'lucide-react';
+import PromptManager from '@/components/PromptManager';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -127,6 +128,10 @@ export default function AdminPlayground() {
                   {logs.length}
                 </Badge>
               )}
+            </TabsTrigger>
+            <TabsTrigger value="prompts">
+              <FileText className="w-3.5 h-3.5 mr-1.5" />
+              Prompt 管理
             </TabsTrigger>
           </TabsList>
 
@@ -387,6 +392,10 @@ export default function AdminPlayground() {
                 </div>
               )}
             </div>
+          </TabsContent>
+          {/* ── Prompt Templates Tab ── */}
+          <TabsContent value="prompts">
+            <PromptManager />
           </TabsContent>
         </Tabs>
       </motion.div>

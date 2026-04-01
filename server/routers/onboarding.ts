@@ -10,6 +10,7 @@ import {
   createSnapshot,
   getOrCreateDefaultTenant,
   createKbDocument,
+  getActivePrompt,
 } from "../db";
 
 // ─── Analyze Company URL (for onboarding — YOUR company) ────────────────────
@@ -31,7 +32,8 @@ export const onboardingRouter = router({
     .mutation(async ({ ctx, input }) => {
       const tenant = await getOrCreateDefaultTenant(ctx.user.id, ctx.user.name ?? "User");
 
-      const systemPrompt = `You are an expert business analyst specializing in B2B company profiling. Given a company website URL, produce a detailed, specific analysis that a sales team can immediately use.
+      const dbPrompt = await getActivePrompt('company_analysis');
+      const systemPrompt = dbPrompt?.systemPrompt ?? `You are an expert business analyst specializing in B2B company profiling. Given a company website URL, produce a detailed, specific analysis that a sales team can immediately use.
 
 CRITICAL RULES:
 - Be SPECIFIC, not generic. Instead of "provides solutions", say exactly WHAT they sell.
@@ -207,7 +209,9 @@ ${companyProfile.knowledgeBaseText ? `- Knowledge Base: ${companyProfile.knowled
 ` : '';
 
       // 3. Use AI to generate stakeholders
-      const stakeholderPrompt = `You are an expert B2B sales strategist who has mapped buying committees at Fortune 500 companies. Generate a realistic buying committee for a complex enterprise deal.
+      const dbStakeholderPrompt = await getActivePrompt('stakeholder_generation');
+      const stakeholderPrompt = dbStakeholderPrompt?.systemPrompt ?? `You are an expert B2B sales strategist who has mapped buying committees at Fortune 500 companies. Generate a realistic buying committee for a complex enterprise deal.`;
+      const fullStakeholderPrompt = `${stakeholderPrompt}
 
 ${sellerContext}
 
@@ -251,7 +255,7 @@ Think about: Who in this company would be involved in evaluating and purchasing 
       try {
         const response = await invokeLLM({
           messages: [
-            { role: "system", content: stakeholderPrompt },
+            { role: "system", content: fullStakeholderPrompt },
             { role: "user", content: stakeholderUserPrompt },
           ],
         });
@@ -292,7 +296,9 @@ Think about: Who in this company would be involved in evaluating and purchasing 
 
       // 5. Generate initial AI insights
       try {
-        const insightPrompt = `You are Meridian, a veteran B2B sales strategist. Generate initial deal intelligence for a brand-new opportunity. This is Day 1 — the rep just added this deal and needs a clear opening strategy.
+        const dbInsightPrompt = await getActivePrompt('initial_deal_insight');
+        const baseInsightPrompt = dbInsightPrompt?.systemPrompt ?? `You are Meridian, a veteran B2B sales strategist. Generate initial deal intelligence for a brand-new opportunity. This is Day 1 — the rep just added this deal and needs a clear opening strategy.`;
+        const insightPrompt = `${baseInsightPrompt}
 
 ${sellerContext}
 
@@ -366,7 +372,9 @@ You are analyzing a potential customer for this seller:
 Identify how the target company connects to the seller's offerings.
 ` : '';
 
-      const systemPrompt = `You are an expert B2B sales intelligence analyst. Given a target company URL, produce a detailed analysis that helps a sales team understand this prospect and plan their approach.
+      const dbTargetPrompt = await getActivePrompt('target_company_analysis');
+      const systemPrompt = dbTargetPrompt?.systemPrompt ?? `You are an expert B2B sales intelligence analyst. Given a target company URL, produce a detailed analysis that helps a sales team understand this prospect and plan their approach.`;
+      const fullSystemPrompt = `${systemPrompt}
 ${sellerContext}
 
 CRITICAL RULES:
@@ -391,7 +399,7 @@ Return ONLY the JSON, no markdown, no explanation.`;
 
       const response = await invokeLLM({
         messages: [
-          { role: "system", content: systemPrompt },
+          { role: "system", content: fullSystemPrompt },
           { role: "user", content: `Analyze this target company in detail: ${input.url}\n\nBe extremely specific about what this company does. A reader should understand their exact business, products, and market position after reading your analysis.` },
         ],
       });

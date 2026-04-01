@@ -25,6 +25,7 @@ vi.mock("./db", () => ({
   updateCompanyProfile: vi.fn(),
   getCompanyProfile: vi.fn(),
   createKbDocument: vi.fn(),
+  getActivePrompt: vi.fn().mockResolvedValue(null),
 }));
 
 import { invokeLLM } from "./_core/llm";

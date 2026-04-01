@@ -421,7 +421,9 @@ CRITICAL: All deal analysis must be from the perspective of ${sellerProfile.comp
 
       if (dataLevel === 'evidence-based') {
         // ── EVIDENCE-BASED MODE: Ground everything in transcript data ──
-        systemPrompt = `You are Meridian, a veteran B2B enterprise sales strategist. You analyze deals STRICTLY based on evidence from meeting transcripts and recorded interactions.${sellerContext}
+        const dbPromptEvidence = await getActivePrompt('deal_insight_evidence');
+        const baseEvidencePrompt = dbPromptEvidence?.systemPrompt ?? `You are Meridian, a veteran B2B enterprise sales strategist. You analyze deals STRICTLY based on evidence from meeting transcripts and recorded interactions.`;
+        systemPrompt = `${baseEvidencePrompt}${sellerContext}
 
 You are analyzing this deal through the **${modelName}** sales framework.
 The ${modelName} framework dimensions:
@@ -459,7 +461,9 @@ Rules:
 - Return ONLY JSON, no markdown.`;
       } else {
         // ── EARLY-STAGE MODE: Only company + stakeholder info, no transcripts ──
-        systemPrompt = `You are Meridian, a B2B sales strategist. This is an EARLY-STAGE deal with NO meeting transcripts yet. You can only work with the company profile and identified stakeholders.${sellerContext}
+        const dbPromptEarly = await getActivePrompt('deal_insight_early');
+        const baseEarlyPrompt = dbPromptEarly?.systemPrompt ?? `You are Meridian, a B2B sales strategist. This is an EARLY-STAGE deal with NO meeting transcripts yet. You can only work with the company profile and identified stakeholders.`;
+        systemPrompt = `${baseEarlyPrompt}${sellerContext}
 
 You are evaluating this deal through the **${modelName}** framework.
 The ${modelName} dimensions:
@@ -645,7 +649,8 @@ ${stakeholderSummary}`;
         ? `\n\nIMPORTANT: You have access to meeting transcripts/notes below. Ground your advice in this evidence. If the rep asks about something not covered in the meetings, say so.`
         : `\n\nNOTE: No meeting transcripts are available for this deal yet. Be transparent about this limitation. If the rep shares new information verbally, that becomes the first real evidence — treat it accordingly.`;
 
-      const systemPrompt = `You are Meridian, a veteran sales strategist acting as the rep's trusted advisor. You've seen hundreds of complex B2B deals and you pattern-match instantly.
+      const dbChatPrompt = await getActivePrompt('deal_chat');
+      const baseChatPrompt = dbChatPrompt?.systemPrompt ?? `You are Meridian, a veteran sales strategist acting as the rep's trusted advisor. You've seen hundreds of complex B2B deals and you pattern-match instantly.
 
 Your role:
 - When the rep shares NEW information ("Met with CFO yesterday", "Budget approved"): Immediately assess how this changes the deal dynamics. What doors does it open? What risks does it create? Update insights if the change is material.
@@ -653,7 +658,8 @@ Your role:
 - When the rep asks WHAT TO DO: Give a specific play with a named person, a concrete action, and an expected outcome. Ground your recommendation in what the meetings revealed.
 - When the rep CORRECTS you: Acknowledge the correction, explain what you got wrong and why, then revise your assessment.
 
-CRITICAL: Only reference information that comes from the meeting evidence, stakeholder data, or what the rep tells you directly. Do NOT fabricate meeting outcomes or stakeholder quotes.${evidenceNote}
+CRITICAL: Only reference information that comes from the meeting evidence, stakeholder data, or what the rep tells you directly. Do NOT fabricate meeting outcomes or stakeholder quotes.`;
+      const systemPrompt = `${baseChatPrompt}${evidenceNote}
 
 Tone: Direct, confident, peer-to-peer. Like a senior AE giving advice over coffee. 2-4 sentences max for analysis. Use bullet points sparingly.
 

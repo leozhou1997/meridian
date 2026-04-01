@@ -773,3 +773,19 @@
 - [x] Run test with filled variables, show output with latency/token stats
 - [x] Auto-log test runs to AI Logs (feature: template_test:feature_name)
 - [x] Localize PromptManager component (Chinese/English)
+
+## Localization Round 2 - Remaining English Text Fix
+- [x] Fix Dashboard greeting: user name shows "Demo" instead of updated name
+- [x] Fix Dashboard subtitle: onboarding message "Deal" → "交易" in Chinese mode
+- [x] Localize Stakeholders page: title "Stakeholder Directory", subtitle, all labels
+- [x] Localize Deal Room page: title, subtitle, stat labels, buttons, sort tabs
+- [x] Localize Deal Room dialog: title, labels, content type buttons, Cancel button
+- [x] Localize Ask Meridian page: subtitle, placeholder, all suggestion cards
+- [x] Localize Deals page: "新建 Deal" → "新建交易"
+- [ ] Localize Settings/MEDDIC: framework description, dimension names (deferred - industry standard terms)
+- [x] Localize Transcripts sort labels (Data Density, A-Z, Recent)
+
+## Multilingual AI Prompt Architecture Research
+- [x] Research best practices for multilingual LLM prompt design
+- [x] Provide expert recommendation on prompt vs output translation strategy
+- [x] Document decision for Meridian's approach

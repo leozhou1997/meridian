@@ -87,6 +87,7 @@ function DealSummaryCard({ deal, interactions, stakeholderCount, snapshotCount, 
   onToggle: () => void;
 }) {
   const { language } = useLanguage();
+  const isZh = language === 'zh';
   const lastInteraction = interactions.length > 0
     ? interactions.reduce((a, b) => new Date(a.date) > new Date(b.date) ? a : b)
     : null;
@@ -120,37 +121,37 @@ function DealSummaryCard({ deal, interactions, stakeholderCount, snapshotCount, 
             <div className="flex items-center gap-3 text-[10px] text-muted-foreground/70 flex-wrap">
               <span className="flex items-center gap-1">
                 <MessageSquare className="w-3 h-3" />
-                {interactions.length} interaction{interactions.length !== 1 ? 's' : ''}
+                {isZh ? `${interactions.length} 次互动` : `${interactions.length} interaction${interactions.length !== 1 ? 's' : ''}`}
               </span>
               <span className="flex items-center gap-1">
                 <Users className="w-3 h-3" />
-                {stakeholderCount} contact{stakeholderCount !== 1 ? 's' : ''}
+                {isZh ? `${stakeholderCount} 位联系人` : `${stakeholderCount} contact${stakeholderCount !== 1 ? 's' : ''}`}
               </span>
               <span className="flex items-center gap-1">
                 <Sparkles className="w-3 h-3" />
-                {snapshotCount} analysis
+                {isZh ? `${snapshotCount} 次分析` : `${snapshotCount} analysis`}
               </span>
               <span className="flex items-center gap-1">
                 <CheckCircle className="w-3 h-3" />
-                {actionCount} action{actionCount !== 1 ? 's' : ''}
+                {isZh ? `${actionCount} 个行动` : `${actionCount} action${actionCount !== 1 ? 's' : ''}`}
               </span>
               {withTranscript > 0 && (
                 <span className="flex items-center gap-1">
                   <FileText className="w-3 h-3" />
-                  {withTranscript} transcript{withTranscript !== 1 ? 's' : ''}
+                  {isZh ? `${withTranscript} 份记录` : `${withTranscript} transcript${withTranscript !== 1 ? 's' : ''}`}
                 </span>
               )}
               <span className="flex items-center gap-1">
                 <Clock className="w-3 h-3" />
-                {totalMinutes > 60 ? `${Math.round(totalMinutes / 60)}h` : `${totalMinutes}m`} recorded
+                {isZh ? `已录制 ${totalMinutes > 60 ? `${Math.round(totalMinutes / 60)}h` : `${totalMinutes}m`}` : `${totalMinutes > 60 ? `${Math.round(totalMinutes / 60)}h` : `${totalMinutes}m`} recorded`}
               </span>
             </div>
 
             {/* Density bars */}
             <div className="mt-2 space-y-0.5">
-              <DensityBar label="Interactions" count={interactions.length} max={maxInteractions} color="bg-blue-400" />
-              <DensityBar label="Stakeholders" count={stakeholderCount} max={Math.max(stakeholderCount, 8)} color="bg-purple-400" />
-              <DensityBar label="Transcripts" count={withTranscript} max={interactions.length || 1} color="bg-emerald-400" />
+              <DensityBar label={isZh ? '互动' : 'Interactions'} count={interactions.length} max={maxInteractions} color="bg-blue-400" />
+              <DensityBar label={isZh ? '利益相关者' : 'Stakeholders'} count={stakeholderCount} max={Math.max(stakeholderCount, 8)} color="bg-purple-400" />
+              <DensityBar label={isZh ? '记录' : 'Transcripts'} count={withTranscript} max={interactions.length || 1} color="bg-emerald-400" />
             </div>
           </div>
 
@@ -194,7 +195,7 @@ function DealSummaryCard({ deal, interactions, stakeholderCount, snapshotCount, 
 
               {interactions.length === 0 && (
                 <div className="px-4 py-6 text-center text-xs text-muted-foreground/60">
-                  No interactions recorded yet.
+                  {isZh ? '暂无互动记录。' : 'No interactions recorded yet.'}
                 </div>
               )}
             </div>
@@ -208,6 +209,8 @@ function DealSummaryCard({ deal, interactions, stakeholderCount, snapshotCount, 
 // ─── Interaction Row ────────────────────────────────────────────────────────
 
 function InteractionRow({ interaction, dealName, dealLogo }: { interaction: any; dealName: string; dealLogo: string | null }) {
+  const { language } = useLanguage();
+  const isZh = language === 'zh';
   const [showTranscript, setShowTranscript] = useState(false);
 
   return (
@@ -246,7 +249,7 @@ function InteractionRow({ interaction, dealName, dealLogo }: { interaction: any;
                 onClick={() => setShowTranscript(true)}
                 className="flex items-center gap-1 text-[10px] text-primary/70 hover:text-primary transition-colors px-1.5 py-0.5 rounded hover:bg-primary/10"
               >
-                <Eye className="w-3 h-3" /> View
+                <Eye className="w-3 h-3" /> {isZh ? '查看' : 'View'}
               </button>
             )}
           </div>
@@ -270,13 +273,13 @@ function InteractionRow({ interaction, dealName, dealLogo }: { interaction: any;
             </div>
             {interaction.summary && (
               <div>
-                <p className="text-xs font-display font-semibold text-muted-foreground mb-1 uppercase tracking-wider">Summary</p>
+                <p className="text-xs font-display font-semibold text-muted-foreground mb-1 uppercase tracking-wider">{isZh ? '摘要' : 'Summary'}</p>
                 <p className="text-sm leading-relaxed">{interaction.summary}</p>
               </div>
             )}
             {interaction.transcriptUrl && (
               <div>
-                <p className="text-xs font-display font-semibold text-muted-foreground mb-1 uppercase tracking-wider">Full Transcript</p>
+                <p className="text-xs font-display font-semibold text-muted-foreground mb-1 uppercase tracking-wider">{isZh ? '完整记录' : 'Full Transcript'}</p>
                 <ScrollArea className="h-[300px] rounded-md border border-border/50 p-3">
                   <pre className="text-xs font-mono whitespace-pre-wrap leading-relaxed text-foreground/80">
                     {interaction.transcriptUrl}
@@ -420,14 +423,14 @@ export default function Transcripts() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
           <div>
-            <h1 className="font-display text-xl md:text-2xl font-bold mb-1">Deal Room</h1>
+            <h1 className="font-display text-xl md:text-2xl font-bold mb-1">{isZh ? '交易室' : 'Deal Room'}</h1>
             <p className="text-muted-foreground text-xs md:text-sm">
-              Unified view of all deal activity, interactions, and data density across your pipeline.
+              {isZh ? '统一查看所有交易活动、互动记录和数据密度。' : 'Unified view of all deal activity, interactions, and data density across your pipeline.'}
             </p>
           </div>
           <Button className="font-display text-xs gap-2 shrink-0 w-full sm:w-auto" onClick={() => setShowUpload(true)}>
             <Plus className="w-3.5 h-3.5" />
-            Add to Deal Room
+            {isZh ? '添加到交易室' : 'Add to Deal Room'}
           </Button>
 
           {/* New unified Add to Deal Room dialog */}
@@ -435,7 +438,7 @@ export default function Transcripts() {
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowUpload(false)}>
               <div className="bg-card border border-border rounded-xl shadow-2xl w-[520px] max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between px-5 py-4 border-b border-border/30">
-                  <h3 className="font-display text-sm font-semibold">Add to Deal Room</h3>
+                  <h3 className="font-display text-sm font-semibold">{isZh ? '添加到交易室' : 'Add to Deal Room'}</h3>
                   <button onClick={() => setShowUpload(false)} className="w-6 h-6 rounded-md flex items-center justify-center hover:bg-muted transition-colors">
                     <X className="w-4 h-4" />
                   </button>
@@ -444,7 +447,7 @@ export default function Transcripts() {
                 <div className="p-5 space-y-4">
                   {/* Deal selector */}
                   <div>
-                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-1.5 block">Deal</label>
+                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-1.5 block">{isZh ? '交易' : 'Deal'}</label>
                     <Select value={addDealId} onValueChange={setAddDealId}>
                       <SelectTrigger className="h-9 text-xs">
                         <SelectValue placeholder={isZh ? '选择交易...' : 'Select deal...'} />
@@ -459,14 +462,14 @@ export default function Transcripts() {
 
                   {/* Content type selector */}
                   <div>
-                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-2 block">Content Type</label>
+                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-2 block">{isZh ? '内容类型' : 'Content Type'}</label>
                     <div className="grid grid-cols-3 gap-2">
                       {[
                         { value: 'note' as const, label: isZh ? '会议笔记' : 'Meeting Notes', icon: MessageSquare },
-                        { value: 'audio' as const, label: 'Audio / Video', icon: Upload },
-                        { value: 'screenshot' as const, label: 'Screenshot', icon: Eye },
-                        { value: 'pdf' as const, label: 'PDF Document', icon: FileText },
-                        { value: 'action' as const, label: 'Sales Action', icon: CheckCircle },
+                        { value: 'audio' as const, label: isZh ? '音视频' : 'Audio / Video', icon: Upload },
+                        { value: 'screenshot' as const, label: isZh ? '截图' : 'Screenshot', icon: Eye },
+                        { value: 'pdf' as const, label: isZh ? 'PDF 文档' : 'PDF Document', icon: FileText },
+                        { value: 'action' as const, label: isZh ? '销售行动' : 'Sales Action', icon: CheckCircle },
                       ].map(ct => (
                         <button
                           key={ct.value}
@@ -486,7 +489,7 @@ export default function Transcripts() {
 
                   {/* Title */}
                   <div>
-                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-1.5 block">Title</label>
+                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-1.5 block">{isZh ? '标题' : 'Title'}</label>
                     <Input
                       value={addTitle}
                       onChange={e => setAddTitle(e.target.value)}
@@ -510,7 +513,7 @@ export default function Transcripts() {
                 </div>
 
                 <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-border/30">
-                  <Button variant="outline" size="sm" onClick={() => setShowUpload(false)} className="text-xs font-display">Cancel</Button>
+                  <Button variant="outline" size="sm" onClick={() => setShowUpload(false)} className="text-xs font-display">{isZh ? '取消' : 'Cancel'}</Button>
                   <Button
                     size="sm"
                     className="text-xs font-display"
@@ -549,19 +552,19 @@ export default function Transcripts() {
         {/* Global stats */}
         <div className="grid grid-cols-4 gap-3 mb-5">
           <div className="rounded-lg border border-border/40 bg-card/50 px-3 py-2.5">
-            <div className="text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-0.5">Deals</div>
+            <div className="text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-0.5">{isZh ? '交易' : 'Deals'}</div>
             <div className="text-lg font-display font-bold">{deals.length}</div>
           </div>
           <div className="rounded-lg border border-border/40 bg-card/50 px-3 py-2.5">
-            <div className="text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-0.5">Interactions</div>
+            <div className="text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-0.5">{isZh ? '互动' : 'Interactions'}</div>
             <div className="text-lg font-display font-bold">{totalInteractions}</div>
           </div>
           <div className="rounded-lg border border-border/40 bg-card/50 px-3 py-2.5">
-            <div className="text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-0.5">Transcripts</div>
+            <div className="text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-0.5">{isZh ? '记录' : 'Transcripts'}</div>
             <div className="text-lg font-display font-bold">{totalTranscripts}</div>
           </div>
           <div className="rounded-lg border border-border/40 bg-card/50 px-3 py-2.5">
-            <div className="text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-0.5">Time Recorded</div>
+            <div className="text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-0.5">{isZh ? '录制时长' : 'Time Recorded'}</div>
             <div className="text-lg font-display font-bold">{totalMinutes > 60 ? `${Math.round(totalMinutes / 60)}h` : `${totalMinutes}m`}</div>
           </div>
         </div>
@@ -578,10 +581,10 @@ export default function Transcripts() {
             />
           </div>
           <div className="flex items-center gap-1 bg-muted/30 rounded-lg p-0.5">
-            {([['activity', 'Recent'], ['density', 'Data Density'], ['name', 'A-Z']] as const).map(([key, label]) => (
+            {([['activity', isZh ? '最近' : 'Recent'], ['density', isZh ? '数据密度' : 'Data Density'], ['name', 'A-Z']] as [string, string][]).map(([key, label]) => (
               <button
                 key={key}
-                onClick={() => setSortBy(key)}
+                onClick={() => setSortBy(key as any)}
                 className={`text-[10px] px-2.5 py-1 rounded-md transition-colors ${sortBy === key ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
               >
                 {label}

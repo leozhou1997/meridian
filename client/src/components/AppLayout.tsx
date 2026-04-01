@@ -31,7 +31,7 @@ interface AppLayoutProps {
 
 export default function AppLayout({ children }: AppLayoutProps) {
   const { user, logout } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [location, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedStages, setExpandedStages] = useState<Set<string>>(
@@ -192,7 +192,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 </button>
               </TooltipTrigger>
               <TooltipContent side="right" className="font-display text-xs">
-                Show Deal Switcher
+                {t('pipeline.show') || 'Show Deal Switcher'}
               </TooltipContent>
             </Tooltip>
           )}
@@ -306,7 +306,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                                             <span className="text-[10px] font-mono text-muted-foreground ml-1">{formatCurrency(deal.value ?? 0)}</span>
                                           </div>
                                           <div className="flex items-center justify-between mt-0.5">
-                                            <span className="text-[10px] text-muted-foreground">Day {deal.daysInStage ?? 0}</span>
+                                            <span className="text-[10px] text-muted-foreground">{language === 'zh' ? `第 ${deal.daysInStage ?? 0} 天` : `Day ${deal.daysInStage ?? 0}`}</span>
                                             <span className={`text-[10px] font-mono font-medium ${getConfidenceColor(deal.confidenceScore ?? 0)}`}>
                                               {deal.confidenceScore ?? 0}%
                                             </span>

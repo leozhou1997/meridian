@@ -42,10 +42,12 @@ export default function Settings() {
     },
   });
 
+  const utils = trpc.useUtils();
   const updateNameMutation = trpc.auth.updateProfile.useMutation({
     onSuccess: () => {
       setNameSaved(true);
       toast.success(t("settings.saved"));
+      utils.auth.me.invalidate(); // refresh user name across the app
       setTimeout(() => setNameSaved(false), 2000);
     },
     onError: (err) => {
@@ -266,7 +268,7 @@ export default function Settings() {
                     <div key={member.id} className="flex items-center gap-3 py-1.5">
                       <img src={avatarUrl} alt={member.name ?? ""} className="w-8 h-8 rounded-full shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">{member.name ?? "Unknown"}</p>
+                        <p className="text-sm font-medium text-foreground truncate">{member.name ?? (isZh ? '未知' : 'Unknown')}</p>
                         <p className="text-xs text-muted-foreground truncate">{member.email ?? ""}</p>
                       </div>
                       <div className={`flex items-center gap-1 text-xs font-medium ${color}`}>

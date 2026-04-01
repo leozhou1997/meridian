@@ -386,9 +386,11 @@ export default function Stakeholders() {
 
         {/* Header */}
         <div className="mb-6">
-          <h1 className="font-display text-2xl font-bold mb-1">Stakeholder Directory</h1>
+          <h1 className="font-display text-2xl font-bold mb-1">{isZh ? '利益相关者目录' : 'Stakeholder Directory'}</h1>
           <p className="text-muted-foreground text-sm">
-            Manage {totalStakeholders} contacts across {deals.length} deals. Click any person to edit their profile inline.
+            {isZh
+              ? `管理 ${deals.length} 个交易中的 ${totalStakeholders} 位联系人。点击任意人员可在线编辑档案。`
+              : `Manage ${totalStakeholders} contacts across ${deals.length} deals. Click any person to edit their profile inline.`}
           </p>
         </div>
 

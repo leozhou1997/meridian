@@ -106,7 +106,7 @@ export default function Dashboard() {
             <h1 className="font-display text-2xl font-bold mb-1">{t('dashboard.greeting')}, {firstName}</h1>
             <p className="text-sm text-muted-foreground">
               {language === 'zh'
-                ? `公司档案已设置完成（${companyProfile.companyName}）。现在创建你的第一个 Deal 吧！`
+                ? `公司档案已设置完成（${companyProfile.companyName}）。现在创建你的第一个交易吧！`
                 : `Company profile set up (${companyProfile.companyName}). Create your first Deal!`}
             </p>
           </motion.div>
@@ -116,7 +116,7 @@ export default function Dashboard() {
               <Search className="w-8 h-8 text-primary" />
             </div>
             <h2 className="font-display text-xl font-bold mb-2">
-              {language === 'zh' ? '创建你的第一个 Deal' : 'Create your first Deal'}
+              {language === 'zh' ? '创建你的第一个交易' : 'Create your first Deal'}
             </h2>
             <p className="text-muted-foreground text-sm mb-6 max-w-md mx-auto">
               {language === 'zh'
@@ -125,7 +125,7 @@ export default function Dashboard() {
             </p>
             <Button onClick={() => navigate('/deal/new')} size="lg" className="px-8 h-12 text-base">
               <Plus className="w-5 h-5 mr-2" />
-              {language === 'zh' ? '新建 Deal' : 'New Deal'}
+              {language === 'zh' ? '新建交易' : 'New Deal'}
             </Button>
           </motion.div>
         </motion.div>

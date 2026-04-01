@@ -1,0 +1,2 @@
+ALTER TABLE `meetings` MODIFY COLUMN `type` enum('Discovery Call','Demo','Technical Review','POC Check-in','Negotiation','Executive Briefing','Follow-up','WeChat','Email','Internal Meeting','Site Visit','Phone Call') NOT NULL DEFAULT 'Follow-up';--> statement-breakpoint
+ALTER TABLE `meetings` ADD `attachmentUrl` text;

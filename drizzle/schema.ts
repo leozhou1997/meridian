@@ -154,11 +154,17 @@ export const meetings = mysqlTable("meetings", {
     "Negotiation",
     "Executive Briefing",
     "Follow-up",
+    "WeChat",
+    "Email",
+    "Internal Meeting",
+    "Site Visit",
+    "Phone Call",
   ]).default("Follow-up").notNull(),
   keyParticipant: varchar("keyParticipant", { length: 255 }),
   summary: text("summary"),
   duration: int("duration").default(30),
   transcriptUrl: text("transcript"),
+  attachmentUrl: text("attachmentUrl"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -345,6 +351,7 @@ export const dealStrategyNotes = mysqlTable("dealStrategyNotes", {
   id: int("id").autoincrement().primaryKey(),
   dealId: int("dealId").notNull(),
   tenantId: int("tenantId").notNull(),
+  title: varchar("title", { length: 255 }),
   category: mysqlEnum("category", [
     "pricing",
     "relationship",
@@ -353,6 +360,7 @@ export const dealStrategyNotes = mysqlTable("dealStrategyNotes", {
     "other",
   ]).default("other").notNull(),
   content: text("content").notNull(),
+  date: timestamp("date"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

@@ -99,8 +99,10 @@ type StrategyNote = {
   id: number;
   dealId: number;
   tenantId: number;
+  title: string | null;
   category: 'pricing' | 'relationship' | 'competitive' | 'internal' | 'other';
   content: string;
+  date: Date | string | null;
   createdAt: Date | string;
   updatedAt: Date | string;
 };
@@ -998,11 +1000,22 @@ export default function DealDetail() {
               <DealTimeline
                 snapshots={deal.snapshots}
                 meetings={localInteractions}
+                strategyNotes={strategyNotes}
                 companyInfo={deal.companyInfo}
                 companyName={deal.company}
-                onAddMeeting={addInteraction}
+                onCreateMeeting={(data) => {
+                  createMeetingMutation.mutate({
+                    dealId,
+                    date: data.date,
+                    type: data.type,
+                    keyParticipant: data.keyParticipant || '',
+                    summary: data.summary || '',
+                    duration: data.duration || 30,
+                  });
+                }}
                 onEditMeeting={(id) => setEditingInteractionId(id)}
                 onDeleteMeeting={deleteInteraction}
+                onSwitchToStrategy={() => setActiveTab('strategy')}
               />
             </TabsContent>
 

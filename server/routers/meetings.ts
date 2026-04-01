@@ -15,6 +15,7 @@ import { storagePut } from "../storage";
 const MEETING_TYPES = [
   "Discovery Call", "Demo", "Technical Review", "POC Check-in",
   "Negotiation", "Executive Briefing", "Follow-up",
+  "WeChat", "Email", "Internal Meeting", "Site Visit", "Phone Call",
 ] as const;
 
 export const meetingsRouter = router({
@@ -39,6 +40,7 @@ export const meetingsRouter = router({
       summary: z.string().optional(),
       duration: z.number().default(30),
       transcriptUrl: z.string().optional(),
+      attachmentUrl: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const tenant = await getOrCreateDefaultTenant(ctx.user.id, ctx.user.name ?? "User");
@@ -52,6 +54,7 @@ export const meetingsRouter = router({
         summary: input.summary,
         duration: input.duration,
         transcriptUrl: input.transcriptUrl,
+        attachmentUrl: input.attachmentUrl,
       });
       const all = await getMeetings(input.dealId, tenant.id);
       return all.find(m => m.id === id)!;
@@ -66,6 +69,7 @@ export const meetingsRouter = router({
       transcriptUrl: z.string().optional(),
       keyParticipant: z.string().optional(),
       duration: z.number().optional(),
+      attachmentUrl: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const tenant = await getOrCreateDefaultTenant(ctx.user.id, ctx.user.name ?? "User");

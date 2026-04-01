@@ -338,3 +338,24 @@ export const companyProfiles = mysqlTable("companyProfiles", {
 
 export type CompanyProfile = typeof companyProfiles.$inferSelect;
 export type InsertCompanyProfile = typeof companyProfiles.$inferInsert;
+
+// ─── Deal Strategy Notes ─────────────────────────────────────────────────────
+
+export const dealStrategyNotes = mysqlTable("dealStrategyNotes", {
+  id: int("id").autoincrement().primaryKey(),
+  dealId: int("dealId").notNull(),
+  tenantId: int("tenantId").notNull(),
+  category: mysqlEnum("category", [
+    "pricing",
+    "relationship",
+    "competitive",
+    "internal",
+    "other",
+  ]).default("other").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type DealStrategyNote = typeof dealStrategyNotes.$inferSelect;
+export type InsertDealStrategyNote = typeof dealStrategyNotes.$inferInsert;

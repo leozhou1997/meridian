@@ -61,7 +61,6 @@ import {
   Mic, Check, Edit2, Save, Camera, GripHorizontal, ChevronDown, ChevronUp,
   Plus, Trash2, Pencil, Calendar, Lightbulb, Lock, Target, Sparkles, Heart, StickyNote, UserCircle, Activity, Users
 } from 'lucide-react';
-import { nanoid } from 'nanoid';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -95,13 +94,16 @@ function getInteractionTypeColor(type: string) {
   return INTERACTION_TYPE_COLORS[type] ?? { bg: 'bg-muted/40', text: 'text-muted-foreground', border: 'border-border/40' };
 }
 
-interface StrategyNote {
-  id: string;
+// DB-backed strategy note type (numeric IDs from server)
+type StrategyNote = {
+  id: number;
+  dealId: number;
+  tenantId: number;
   category: 'pricing' | 'relationship' | 'competitive' | 'internal' | 'other';
   content: string;
-  createdAt: string;
-  updatedAt: string;
-}
+  createdAt: Date | string;
+  updatedAt: Date | string;
+};
 
 const STRATEGY_CATEGORIES: { value: StrategyNote['category']; label: string; color: string }[] = [
   { value: 'pricing',       label: 'Pricing Flexibility', color: 'text-emerald-400' },
@@ -239,6 +241,10 @@ export default function DealDetail() {
     { dealId },
     { enabled: dealId > 0, refetchOnWindowFocus: false }
   );
+  const { data: strategyNotesData = [] } = trpc.strategyNotes.listByDeal.useQuery(
+    { dealId },
+    { enabled: dealId > 0, refetchOnWindowFocus: false }
+  );
 
   // ── tRPC mutations ────────────────────────────────────────────────────────
   const utils = trpc.useUtils();
@@ -268,6 +274,15 @@ export default function DealDetail() {
   });
   const updateDealMutation = trpc.deals.update.useMutation({
     onSuccess: () => utils.deals.get.invalidate({ id: dealId }),
+  });
+  const createStrategyNoteMutation = trpc.strategyNotes.create.useMutation({
+    onSuccess: () => utils.strategyNotes.listByDeal.invalidate({ dealId }),
+  });
+  const updateStrategyNoteMutation = trpc.strategyNotes.update.useMutation({
+    onSuccess: () => utils.strategyNotes.listByDeal.invalidate({ dealId }),
+  });
+  const deleteStrategyNoteMutation = trpc.strategyNotes.delete.useMutation({
+    onSuccess: () => utils.strategyNotes.listByDeal.invalidate({ dealId }),
   });
 
   // Build a unified deal object that matches the UI's expected shape
@@ -385,29 +400,34 @@ export default function DealDetail() {
     updateActionStatusMutation.mutate({ id, status: status as any });
   };
 
-  // Deal Strategy notes
-  const [strategyNotes, setStrategyNotes] = useState<StrategyNote[]>([]);
-  const [editingStrategyId, setEditingStrategyId] = useState<string | null>(null);
+  // Deal Strategy notes (DB-backed)
+  const strategyNotes = strategyNotesData as StrategyNote[];
+  const [editingStrategyId, setEditingStrategyId] = useState<number | null>(null);
+  const [editingStrategyDraft, setEditingStrategyDraft] = useState<{ category: StrategyNote['category']; content: string } | null>(null);
 
   const addStrategyNote = () => {
-    const note: StrategyNote = {
-      id: nanoid(8),
-      category: 'internal',
-      content: '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    setStrategyNotes(prev => [note, ...prev]);
-    setEditingStrategyId(note.id);
+    createStrategyNoteMutation.mutate({ dealId, category: 'internal', content: '' }, {
+      onSuccess: (created) => {
+        setEditingStrategyId(created.id);
+        setEditingStrategyDraft({ category: created.category as StrategyNote['category'], content: created.content });
+      },
+    });
   };
 
-  const updateStrategyNote = (id: string, patch: Partial<StrategyNote>) => {
-    setStrategyNotes(prev => prev.map(n => n.id === id ? { ...n, ...patch, updatedAt: new Date().toISOString() } : n));
+  const saveStrategyNote = (id: number) => {
+    if (editingStrategyDraft) {
+      updateStrategyNoteMutation.mutate({ id, ...editingStrategyDraft });
+    }
+    setEditingStrategyId(null);
+    setEditingStrategyDraft(null);
   };
 
-  const deleteStrategyNote = (id: string) => {
-    setStrategyNotes(prev => prev.filter(n => n.id !== id));
-    if (editingStrategyId === id) setEditingStrategyId(null);
+  const deleteStrategyNote = (id: number) => {
+    deleteStrategyNoteMutation.mutate({ id });
+    if (editingStrategyId === id) {
+      setEditingStrategyId(null);
+      setEditingStrategyDraft(null);
+    }
   };
 
   const INTERACTION_TYPES = [
@@ -451,8 +471,8 @@ export default function DealDetail() {
     if (dealId > 0) {
       setEditingInteractionId(null);
       setExpandedTranscriptId(null);
-      setStrategyNotes([]);
       setEditingStrategyId(null);
+      setEditingStrategyDraft(null);
       setSelectedStakeholder(null);
       setIsEditingProfile(false);
       setShowSummary(true);
@@ -1013,6 +1033,8 @@ export default function DealDetail() {
                   {strategyNotes.map(note => {
                     const isEditing = editingStrategyId === note.id;
                     const catConfig = STRATEGY_CATEGORIES.find(c => c.value === note.category) ?? STRATEGY_CATEGORIES[4];
+                    const draftCat = isEditing && editingStrategyDraft ? editingStrategyDraft.category : note.category;
+                    const draftContent = isEditing && editingStrategyDraft ? editingStrategyDraft.content : note.content;
                     return (
                       <Card key={note.id} className={`border-border/50 transition-colors ${
                         isEditing ? 'bg-muted/40 border-primary/30' : 'bg-card'
@@ -1022,8 +1044,8 @@ export default function DealDetail() {
                             <div className="space-y-3">
                               <div className="flex items-center gap-2">
                                 <select
-                                  value={note.category}
-                                  onChange={e => updateStrategyNote(note.id, { category: e.target.value as StrategyNote['category'] })}
+                                  value={draftCat}
+                                  onChange={e => setEditingStrategyDraft(prev => ({ ...(prev ?? { category: note.category, content: note.content }), category: e.target.value as StrategyNote['category'] }))}
                                   className="flex-1 text-xs bg-background border border-border/50 rounded-md px-2.5 py-1.5 text-foreground"
                                 >
                                   {STRATEGY_CATEGORIES.map(cat => (
@@ -1032,25 +1054,25 @@ export default function DealDetail() {
                                 </select>
                               </div>
                               <textarea
-                                value={note.content}
-                                onChange={e => updateStrategyNote(note.id, { content: e.target.value })}
-                                placeholder="Describe the internal strategy, context, or constraints for this deal..."
+                                value={draftContent}
+                                onChange={e => setEditingStrategyDraft(prev => ({ ...(prev ?? { category: note.category, content: note.content }), content: e.target.value }))}
+                                placeholder={isZh ? '描述此交易的内部策略、背景或约束条件...' : 'Describe the internal strategy, context, or constraints for this deal...'}
                                 rows={5}
                                 className="w-full text-xs bg-background border border-border/50 rounded-md px-2.5 py-2 text-foreground resize-y leading-relaxed"
                                 autoFocus
                               />
                               <div className="flex gap-2">
                                 <button
-                                  onClick={() => setEditingStrategyId(null)}
+                                  onClick={() => saveStrategyNote(note.id)}
                                   className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
                                 >
-                                  <Check className="w-3 h-3" /> Done
+                                  <Check className="w-3 h-3" /> {isZh ? '保存' : 'Done'}
                                 </button>
                                 <button
                                   onClick={() => deleteStrategyNote(note.id)}
                                   className="px-4 py-1.5 rounded-lg bg-destructive/10 text-destructive text-xs font-medium hover:bg-destructive/20 transition-colors"
                                 >
-                                  Delete
+                                  {isZh ? '删除' : 'Delete'}
                                 </button>
                               </div>
                             </div>
@@ -1062,10 +1084,10 @@ export default function DealDetail() {
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1.5">
                                   <span className={`text-[10px] font-semibold ${catConfig.color}`}>{catConfig.label}</span>
-                                  <span className="text-[10px] text-muted-foreground/50">· {formatDate(note.updatedAt)}</span>
+                                  <span className="text-[10px] text-muted-foreground/50">· {formatDate(String(note.updatedAt))}</span>
                                   <div className="ml-auto">
                                     <button
-                                      onClick={() => setEditingStrategyId(note.id)}
+                                      onClick={() => { setEditingStrategyId(note.id); setEditingStrategyDraft({ category: note.category, content: note.content }); }}
                                       className="w-6 h-6 rounded flex items-center justify-center hover:bg-muted transition-colors"
                                     >
                                       <Pencil className="w-3 h-3 text-muted-foreground/50" />
@@ -1075,7 +1097,7 @@ export default function DealDetail() {
                                 {note.content ? (
                                   <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap">{note.content}</p>
                                 ) : (
-                                  <p className="text-xs text-muted-foreground/40 italic">Empty note — click ✏ to add content</p>
+                                  <p className="text-xs text-muted-foreground/40 italic">{isZh ? '空笔记 — 点击 ✏ 添加内容' : 'Empty note — click ✏ to add content'}</p>
                                 )}
                               </div>
                             </div>

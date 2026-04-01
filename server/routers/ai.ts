@@ -17,6 +17,7 @@ import {
   getLatestSnapshot,
   getNextActions,
   updateSnapshotSuggestionActions,
+  getStrategyNotes,
 } from "../db";
 import { BUILT_IN_MODELS, getModelDimensions, getModelName } from "./salesModels";
 
@@ -549,12 +550,18 @@ Rules:
         `- ${s.name} (${s.title ?? s.role}): ${s.sentiment} sentiment, ${s.engagement} engagement`
       ).join("\n") ?? "No stakeholders on record";
 
+      // Fetch internal strategy notes from DB
+      const stratNotes = await getStrategyNotes(input.dealId, tenant.id);
+      const strategyBlock = stratNotes.length > 0
+        ? `\n\n=== INTERNAL STRATEGY NOTES (CONFIDENTIAL — from the sales team) ===\n${stratNotes.map(n => `[${n.category.toUpperCase()}] ${n.content}`).join('\n')}\n\nThese are internal notes from the sales team. Use them to inform your analysis — e.g., pricing constraints, relationship dynamics, competitive threats, and internal alignment status. Do NOT repeat these notes verbatim in your output, but factor them into your risk assessment and recommended next steps.`
+        : '';
+
       let userPrompt = `Deal: ${input.dealName}
 Stage: ${input.dealStage} | Value: $${input.dealValue.toLocaleString()} | Confidence: ${input.confidenceScore}%
 ${input.companyInfo ? `Company Context: ${input.companyInfo}` : ""}
 
 Stakeholders:
-${stakeholderSummary}`;
+${stakeholderSummary}${strategyBlock}`;
 
       if (hasTranscripts) {
         userPrompt += `\n\n=== MEETING EVIDENCE (${meetingsWithContent.length} meetings with notes) ===\n${transcriptEvidence}`;
@@ -718,6 +725,12 @@ Only include JSON if insights actually need updating. Most conversational exchan
         `- ${s.name} (${s.title ?? s.role}): ${s.sentiment} sentiment, ${s.engagement} engagement`
       ).join("\n") ?? "No stakeholders on record";
 
+      // Fetch internal strategy notes for chat context
+      const chatStratNotes = await getStrategyNotes(input.dealId, tenant.id);
+      const chatStrategyBlock = chatStratNotes.length > 0
+        ? `\n\n=== INTERNAL STRATEGY NOTES ===\n${chatStratNotes.map(n => `[${n.category.toUpperCase()}] ${n.content}`).join('\n')}`
+        : '';
+
       // Build meeting evidence for user prompt
       const meetingEvidence = hasEvidence
         ? `\n\nMeeting Evidence:\n${meetingsWithContent.map((m, i) => {
@@ -731,7 +744,7 @@ Stage: ${input.dealStage} | Value: $${input.dealValue.toLocaleString()} | Confid
 ${input.companyInfo ? `Company: ${input.companyInfo}` : ""}
 
 Stakeholders:
-${stakeholderSummary}${meetingEvidence}
+${stakeholderSummary}${chatStrategyBlock}${meetingEvidence}
 
 Current AI Insights:
 What's Happening: ${input.currentWhatsHappening ?? "Not set"}

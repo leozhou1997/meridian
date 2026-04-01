@@ -803,3 +803,22 @@
 ## Onboarding Chinese Translation
 - [x] Translate all Onboarding page strings to Chinese (already completed in previous round)
 - [x] Ensure onboarding AI prompts respect language preference (language param added)
+
+## 拓疆者 Demo Data Seeding (April 2)
+- [x] Update demo account email to demotjz@meridianos.ai
+- [x] Clear existing demo deals from 拓疆者 account
+- [x] Seed Deal 1: 包钢集团 (Negotiation, 4 stakeholders, 6 meetings, 2 strategy notes)
+- [x] Seed Deal 2: 江西铜业 (POC, 4 stakeholders, 6 meetings, 3 strategy notes)
+- [x] Seed Deal 3: 住友商事 (Negotiation, 3 stakeholders, 5 meetings, 5 strategy notes)
+- [ ] Generate AI snapshots for all 3 deals (deferred: user will test manually via Refresh)
+- [x] Verify all data displays correctly via DB query
+- [x] Verify Deal Strategy has DB storage and AI prompt integration
+- [x] Remove won-deal touchpoints (赢单确认, 内部审批) — all deals in-progress
+- [x] Separate touchpoints: external → Deal Room, internal → Deal Strategy
+
+## Deal Strategy Notes Persistence
+- [x] Create dealStrategyNotes DB table (id, dealId, tenantId, category, content, createdAt, updatedAt)
+- [x] Add CRUD tRPC procedures (list, create, update, delete)
+- [x] Update DealDetail.tsx to use API instead of local useState
+- [x] Integrate strategy notes into AI insight generation prompt (generateDealInsight, chatWithDeal)
+- [x] Write vitest tests for strategy notes (6 tests passing)

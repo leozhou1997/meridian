@@ -4,6 +4,7 @@ import {
   aiLogs,
   companyProfiles,
   deals,
+  dealStrategyNotes,
   kbDocuments,
   meetings,
   nextActions,
@@ -17,6 +18,7 @@ import {
   type InsertAiLog,
   type InsertCompanyProfile,
   type InsertDeal,
+  type InsertDealStrategyNote,
   type InsertKbDocument,
   type InsertMeeting,
   type InsertNextAction,
@@ -524,4 +526,35 @@ export async function updateDealSalesModel(dealId: number, tenantId: number, sal
   if (!db) throw new Error("Database not available");
   await db.update(deals).set({ salesModel, customModelId: customModelId ?? null })
     .where(and(eq(deals.id, dealId), eq(deals.tenantId, tenantId)));
+}
+
+// ─── Deal Strategy Notes ─────────────────────────────────────────────────────
+
+export async function getStrategyNotes(dealId: number, tenantId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(dealStrategyNotes)
+    .where(and(eq(dealStrategyNotes.dealId, dealId), eq(dealStrategyNotes.tenantId, tenantId)))
+    .orderBy(desc(dealStrategyNotes.createdAt));
+}
+
+export async function createStrategyNote(data: InsertDealStrategyNote) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [result] = await db.insert(dealStrategyNotes).values(data);
+  return (result as any).insertId as number;
+}
+
+export async function updateStrategyNote(id: number, tenantId: number, data: Partial<InsertDealStrategyNote>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(dealStrategyNotes).set(data)
+    .where(and(eq(dealStrategyNotes.id, id), eq(dealStrategyNotes.tenantId, tenantId)));
+}
+
+export async function deleteStrategyNote(id: number, tenantId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(dealStrategyNotes)
+    .where(and(eq(dealStrategyNotes.id, id), eq(dealStrategyNotes.tenantId, tenantId)));
 }

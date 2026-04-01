@@ -28,9 +28,11 @@ export const onboardingRouter = router({
     .input(z.object({
       url: z.string().min(1),
       knowledgeBase: z.string().optional(),
+      language: z.enum(["en", "zh"]).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const tenant = await getOrCreateDefaultTenant(ctx.user.id, ctx.user.name ?? "User");
+      const langSuffix = input.language === "zh" ? "\n\nIMPORTANT: All text values in the JSON response MUST be in Simplified Chinese (中文)." : "";
 
       const dbPrompt = await getActivePrompt('company_analysis');
       const systemPrompt = dbPrompt?.systemPrompt ?? `You are an expert business analyst specializing in B2B company profiling. Given a company website URL, produce a detailed, specific analysis that a sales team can immediately use.
@@ -63,7 +65,7 @@ ${input.knowledgeBase ? `\nAdditional context provided by the user:\n${input.kno
 
       const response = await invokeLLM({
         messages: [
-          { role: "system", content: systemPrompt },
+          { role: "system", content: systemPrompt + langSuffix },
           { role: "user", content: userPrompt },
         ],
       });
@@ -166,9 +168,11 @@ ${input.knowledgeBase ? `\nAdditional context provided by the user:\n${input.kno
       targetProducts: z.array(z.string()).optional(),
       targetMarket: z.string().optional(),
       targetHeadquarters: z.string().optional(),
+      language: z.enum(["en", "zh"]).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const tenant = await getOrCreateDefaultTenant(ctx.user.id, ctx.user.name ?? "User");
+      const langSuffix = input.language === "zh" ? "\n\nIMPORTANT: All text values in the JSON response MUST be in Simplified Chinese (中文). Use Chinese for names of Chinese stakeholders, insights, risks, and action items." : "";
 
       // Load company profile for context
       const companyProfile = await getCompanyProfile(tenant.id);
@@ -240,7 +244,7 @@ CRITICAL RULES for realistic stakeholder generation:
 4. **Names must be culturally appropriate**: Chinese companies → Chinese names, Japanese → Japanese, etc.
 5. **keyInsights must be specific**: Reference the seller's actual product and the stakeholder's specific concerns. Bad: "Cares about efficiency". Good: "Measured on reducing scrap processing turnaround from 72h to 24h; the seller's real-time pricing platform directly addresses this KPI."
 
-Return ONLY the JSON array, no markdown, no explanation.`;
+Return ONLY the JSON array, no markdown, no explanation.${langSuffix}`;
 
       const stakeholderUserPrompt = `Generate a buying committee for selling to:
 Company: ${input.targetCompanyName}
@@ -317,7 +321,7 @@ Rules:
 - keyRisks: 2-3 items. Focus on EARLY-STAGE risks: no champion identified, unclear budget authority, competitive displacement, wrong entry point.
 - whatsNext: 2-3 items. These are OPENING MOVES, not mid-deal tactics. Focus on: validating the opportunity, finding the champion, understanding the buying process.
 - Reference stakeholder names from the buying committee when possible.
-- Return ONLY JSON, no markdown.`;
+- Return ONLY JSON, no markdown.${langSuffix}`;
 
         const insightResponse = await invokeLLM({
           messages: [
@@ -357,9 +361,11 @@ ${stakeholderData.map((s: any) => `- ${s.name} (${s.title}) — Role: ${s.role},
   analyzeTargetCompany: protectedProcedure
     .input(z.object({
       url: z.string().min(1),
+      language: z.enum(["en", "zh"]).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const tenant = await getOrCreateDefaultTenant(ctx.user.id, ctx.user.name ?? "User");
+      const langSuffix = input.language === "zh" ? "\n\nIMPORTANT: All text values in the JSON response MUST be in Simplified Chinese (中文)." : "";
       const companyProfile = await getCompanyProfile(tenant.id);
 
       const sellerContext = companyProfile ? `
@@ -395,7 +401,7 @@ Return ONLY a valid JSON object with this exact structure:
   "sellerAngle": "A specific, actionable insight about how the seller could help this company. Reference a concrete business need, not a generic benefit. E.g. 'Stellantis generates 2M+ tons of manufacturing scrap annually across 30 plants. Doctor Scrap could provide real-time scrap pricing and marketplace access to optimize their scrap metal revenue by 15-20%.' NOT 'Could benefit from improved recycling solutions.'"
 }
 
-Return ONLY the JSON, no markdown, no explanation.`;
+Return ONLY the JSON, no markdown, no explanation.${langSuffix}`;
 
       const response = await invokeLLM({
         messages: [

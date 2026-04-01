@@ -122,8 +122,8 @@
 ### 1. Full Chinese i18n (including AI dynamic content)
 - [x] AI-generated content respects user language preference (Deal Insight, What's Happening, Key Risks, What's Next, Pre-meeting Brief all output in Chinese when language=zh)
 - [x] Pass language preference to all AI prompt calls
-- [ ] Onboarding page full Chinese translation
-- [ ] All remaining hardcoded English strings translated
+- [x] Onboarding page full Chinese translation
+- [x] All remaining hardcoded English strings translated
 
 ### 2. Sales Model Switching (MEDDIC/BANT/Custom)
 - [x] DB: Add salesModel field to deals table + salesModels table for custom models
@@ -782,10 +782,24 @@
 - [x] Localize Deal Room dialog: title, labels, content type buttons, Cancel button
 - [x] Localize Ask Meridian page: subtitle, placeholder, all suggestion cards
 - [x] Localize Deals page: "新建 Deal" → "新建交易"
-- [ ] Localize Settings/MEDDIC: framework description, dimension names (deferred - industry standard terms)
+- [x] Localize Settings/MEDDIC: framework description, dimension names (bilingual: English term + Chinese translation)
 - [x] Localize Transcripts sort labels (Data Density, A-Z, Recent)
 
 ## Multilingual AI Prompt Architecture Research
 - [x] Research best practices for multilingual LLM prompt design
 - [x] Provide expert recommendation on prompt vs output translation strategy
 - [x] Document decision for Meridian's approach
+
+## AI Language Injection
+- [x] Modify LLM call layer to inject language instruction based on user preference
+- [x] Pass language preference through all AI tRPC procedures (onboarding, ai, knowledge)
+- [x] Test AI outputs in both EN and ZH modes
+
+## MEDDIC Dimension Localization
+- [x] Update built-in sales model definitions: bilingual dimension names (EN + CN)
+- [x] Translate dimension descriptions to Chinese
+- [x] Frontend rendering automatically displays bilingual names (data-driven)
+
+## Onboarding Chinese Translation
+- [x] Translate all Onboarding page strings to Chinese (already completed in previous round)
+- [x] Ensure onboarding AI prompts respect language preference (language param added)

@@ -230,7 +230,7 @@ export default function NewDeal() {
     }
     setIsAnalyzing(true);
     try {
-      const result = await analyzeTarget.mutateAsync({ url: targetUrl.trim() });
+      const result = await analyzeTarget.mutateAsync({ url: targetUrl.trim(), language });
       setTargetAnalysis(result);
       toast.success(language === 'zh' ? '目标公司分析完成！' : 'Target company analysis complete!');
     } catch (err: any) {
@@ -274,6 +274,7 @@ export default function NewDeal() {
       targetProducts: targetAnalysis.products,
       targetMarket: targetAnalysis.targetMarket,
       targetHeadquarters: targetAnalysis.headquarters,
+      language,
     });
 
     // Run animation steps

@@ -214,12 +214,14 @@ ${input.openActions?.length ? input.openActions.map(a => `- ${a}`).join("\n") : 
       stakeholderId: z.number(),
       transcript: z.string(),
       stakeholderName: z.string(),
+      language: z.enum(["en", "zh"]).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const tenant = await getOrCreateDefaultTenant(ctx.user.id, ctx.user.name ?? "User");
 
       const activePrompt = await getActivePrompt("signal_extraction");
-      const systemPrompt = activePrompt?.systemPrompt ?? DEFAULT_SIGNAL_SYSTEM_PROMPT;
+      const langSuffix = input.language === "zh" ? "\n\nIMPORTANT: All signal descriptions MUST be in Simplified Chinese (中文)." : "";
+      const systemPrompt = (activePrompt?.systemPrompt ?? DEFAULT_SIGNAL_SYSTEM_PROMPT) + langSuffix;
 
       const userPrompt = `Extract signals from this meeting content about ${input.stakeholderName}:
 

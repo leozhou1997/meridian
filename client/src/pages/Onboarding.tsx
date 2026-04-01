@@ -124,7 +124,7 @@ export default function Onboarding() {
     }
     setIsAnalyzing(true);
     try {
-      const result = await analyzeCompany.mutateAsync({ url: companyUrl.trim(), knowledgeBase: knowledgeBase.trim() || undefined });
+      const result = await analyzeCompany.mutateAsync({ url: companyUrl.trim(), knowledgeBase: knowledgeBase.trim() || undefined, language });
       setCompanyAnalysis(result);
       toast.success(language === 'zh' ? '公司信息分析完成！' : 'Company analysis complete!');
     } catch (err: any) {

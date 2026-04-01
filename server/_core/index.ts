@@ -35,6 +35,35 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+
+  // Demo login route (for demo accounts that bypass OAuth)
+  app.get('/api/demo-login', async (req, res) => {
+    const { account } = req.query;
+    const demoAccounts: Record<string, { openId: string; name: string }> = {
+      tuojiangzhe: { openId: 'demo_tuojiangzhe_001', name: 'Demo 演示' },
+      leo: { openId: 'demo_leo_001', name: 'Leo Chen' },
+    };
+    const demo = typeof account === 'string' ? demoAccounts[account] : undefined;
+    if (!demo) {
+      res.status(400).json({ error: 'Invalid demo account. Use ?account=tuojiangzhe or ?account=leo' });
+      return;
+    }
+    try {
+      const { sdk } = await import('./sdk');
+      const { getSessionCookieOptions } = await import('./cookies');
+      const { ONE_YEAR_MS, COOKIE_NAME } = await import('@shared/const');
+      const sessionToken = await sdk.createSessionToken(demo.openId, {
+        name: demo.name,
+        expiresInMs: ONE_YEAR_MS,
+      });
+      const cookieOptions = getSessionCookieOptions(req);
+      res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+      res.redirect(302, '/');
+    } catch (error) {
+      console.error('[Demo Login] Failed:', error);
+      res.status(500).json({ error: 'Demo login failed' });
+    }
+  });
   // tRPC API
   app.use(
     "/api/trpc",

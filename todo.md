@@ -730,3 +730,11 @@
 - [x] Fix scroll-to-top when navigating between pages (ScrollToTop component in App.tsx)
 - [x] Unify all CTA buttons (联系销售, Enterprise申请体验) to use Request Access/WaitlistDialog
 - [x] Enhance Request Access form with optional fields: WeChat, phone number
+
+## Demo Preparation - 拓疆者 (Tuojiangzhe)
+- [x] Research 拓疆者 website: products, company background, target markets
+- [x] Create Product Sheet document for knowledge base
+- [x] Create Sales Process document for knowledge base
+- [x] Create ICP (Ideal Customer Profile) document for knowledge base
+- [x] Create demo test account (demo@meridianos.ai) with pre-loaded knowledge base
+- [x] Verify demo setup: login, dashboard, knowledge base all working

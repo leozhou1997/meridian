@@ -401,12 +401,14 @@ interface MobileBottomNavProps {
 }
 
 function MobileBottomNav({ navItems, location }: MobileBottomNavProps) {
-  // Only show 4 core items on mobile: Dashboard, Deals, Ask, Stakeholders
+  const { t } = useLanguage();
+  // Show 5 items on mobile: Dashboard, Deals, Ask, Stakeholders, Settings
   const mobileItems = [
     navItems.find(n => n.path === '/'),
     navItems.find(n => n.path === '/deals'),
-    navItems.find(n => n.path === '/stakeholders'),
     navItems.find(n => n.path === '/ask'),
+    navItems.find(n => n.path === '/stakeholders'),
+    { icon: Settings, label: t('nav.settings'), path: '/settings' },
   ].filter(Boolean) as typeof navItems;
 
   return (
@@ -416,7 +418,7 @@ function MobileBottomNav({ navItems, location }: MobileBottomNavProps) {
           const isActive = location === item.path || (item.path !== '/dashboard' && item.path !== '/' && location.startsWith(item.path));
           return (
             <Link key={item.path} href={item.path}>
-              <div className={`flex flex-col items-center gap-0.5 px-4 py-2 rounded-lg transition-all ${
+              <div className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg transition-all ${
                 isActive
                   ? 'text-primary'
                   : 'text-sidebar-foreground/50'

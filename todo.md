@@ -738,3 +738,6 @@
 - [x] Create ICP (Ideal Customer Profile) document for knowledge base
 - [x] Create demo test account (demo@meridianos.ai) with pre-loaded knowledge base
 - [x] Verify demo setup: login, dashboard, knowledge base all working
+
+## Mobile Navigation Fix
+- [x] Add Settings entry to mobile bottom nav bar (logout, theme toggle, language switch)

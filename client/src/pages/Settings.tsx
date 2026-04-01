@@ -12,11 +12,11 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   User, Globe, Users, Palette, Mail, Check, Send,
-  Sun, Moon, Shield, Crown
+  Sun, Moon, Shield, Crown, LogOut
 } from "lucide-react";
 
 export default function Settings() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { language, setLanguage, t } = useLanguage();
   const [inviteEmail, setInviteEmail] = useState("");
@@ -190,6 +190,23 @@ export default function Settings() {
               🇨🇳 {t("settings.lang.zh")}
             </button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Sign Out (visible on all devices, especially useful on mobile) ── */}
+      <Card>
+        <CardContent className="pt-6">
+          <Button
+            variant="outline"
+            className="w-full h-10 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+            onClick={() => {
+              logout();
+              window.location.href = '/login';
+            }}
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            {t('nav.signout')}
+          </Button>
         </CardContent>
       </Card>
 

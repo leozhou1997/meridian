@@ -19,6 +19,7 @@ export default function Settings() {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { language, setLanguage, t } = useLanguage();
+  const isZh = language === 'zh';
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteSent, setInviteSent] = useState(false);
   const [displayName, setDisplayName] = useState(user?.name ?? "");
@@ -63,16 +64,16 @@ export default function Settings() {
   };
 
   const roleLabel = (role: string) => {
-    if (role === "owner") return { label: "Owner", icon: Crown, color: "text-yellow-400" };
-    if (role === "admin") return { label: "Admin", icon: Shield, color: "text-blue-400" };
-    return { label: "Member", icon: User, color: "text-muted-foreground" };
+    if (role === "owner") return { label: isZh ? '所有者' : "Owner", icon: Crown, color: "text-yellow-400" };
+    if (role === "admin") return { label: isZh ? '管理员' : "Admin", icon: Shield, color: "text-blue-400" };
+    return { label: isZh ? '成员' : "Member", icon: User, color: "text-muted-foreground" };
   };
 
   return (
     <div className="max-w-2xl mx-auto py-8 px-4 space-y-6">
       <div>
         <h1 className="text-2xl font-display font-bold text-foreground">{t("settings.title")}</h1>
-        <p className="text-sm text-muted-foreground mt-1">Manage your account, preferences, and team</p>
+        <p className="text-sm text-muted-foreground mt-1">{isZh ? '管理您的账户、偏好和团队' : 'Manage your account, preferences, and team'}</p>
       </div>
 
       {/* ── Account ── */}
@@ -94,7 +95,7 @@ export default function Settings() {
                 id="displayName"
                 value={displayName}
                 onChange={e => setDisplayName(e.target.value)}
-                placeholder="Your name"
+                placeholder={isZh ? '您的名字' : 'Your name'}
                 className="h-9 text-sm"
               />
               <Button

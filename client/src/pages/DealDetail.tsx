@@ -216,6 +216,7 @@ export default function DealDetail() {
   const [, params] = useRoute('/deal/:id');
   const dealId = params?.id ? Number(params.id) : 0;
   const { t, language } = useLanguage();
+  const isZh = language === 'zh';
 
   // ── Real API queries ──────────────────────────────────────────────────────
   const { data: dealData, isLoading: dealLoading } = trpc.deals.get.useQuery(
@@ -869,17 +870,17 @@ export default function DealDetail() {
                 <TabsTrigger value="map" className="data-[state=active]:bg-muted/50 data-[state=active]:shadow-none rounded-lg text-xs font-display gap-1 md:gap-1.5 px-2 md:px-3 h-8">
                   <Map className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">{t('deal.buyingCommittee')}</span>
-                  <span className="sm:hidden">Insight</span>
+                  <span className="sm:hidden">{isZh ? '洞察' : 'Insight'}</span>
                 </TabsTrigger>
                 <TabsTrigger value="timeline" className="data-[state=active]:bg-muted/50 data-[state=active]:shadow-none rounded-lg text-xs font-display gap-1 md:gap-1.5 px-2 md:px-3 h-8">
                   <Activity className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Deal Room</span>
-                  <span className="sm:hidden">Room</span>
+                  <span className="hidden sm:inline">{isZh ? '交易室' : 'Deal Room'}</span>
+                  <span className="sm:hidden">{isZh ? '交易室' : 'Room'}</span>
                 </TabsTrigger>
                 <TabsTrigger value="strategy" className="data-[state=active]:bg-muted/50 data-[state=active]:shadow-none rounded-lg text-xs font-display gap-1 md:gap-1.5 px-2 md:px-3 h-8">
                   <Target className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">{t('deal.dealStrategy')}</span>
-                  <span className="sm:hidden">Strategy</span>
+                  <span className="sm:hidden">{isZh ? '策略' : 'Strategy'}</span>
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -926,7 +927,7 @@ export default function DealDetail() {
                   <button
                     onClick={() => setMapCollapsed(c => !c)}
                     className="absolute top-2 left-2 z-20 flex items-center justify-center w-7 h-7 rounded-lg bg-card/80 backdrop-blur-sm border border-border/40 hover:bg-card text-muted-foreground/60 hover:text-foreground transition-all shadow-sm"
-                    title={mapCollapsed ? 'Expand Stakeholder Map' : 'Minimize Stakeholder Map'}
+                    title={mapCollapsed ? (isZh ? '展开利益相关者地图' : 'Expand Stakeholder Map') : (isZh ? '收起利益相关者地图' : 'Minimize Stakeholder Map')}
                   >
                     {mapCollapsed
                       ? <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
@@ -937,7 +938,7 @@ export default function DealDetail() {
                     <div className="h-full flex flex-col items-center justify-center gap-2 bg-card/20">
                       <Map className="w-4 h-4 text-muted-foreground/40" />
                       <div className="text-[10px] text-muted-foreground/40 uppercase tracking-widest font-medium select-none" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
-                        Stakeholder Map
+                        {isZh ? '利益相关者' : 'Stakeholder Map'}
                       </div>
                     </div>
                   ) : (

@@ -446,6 +446,8 @@ interface QuickCaptureFABProps {
 }
 
 function QuickCaptureFAB({ deals }: QuickCaptureFABProps) {
+  const { language } = useLanguage();
+  const isZh = language === 'zh';
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<'menu' | 'note' | 'photo' | 'voice'>('menu');
   const [selectedDealId, setSelectedDealId] = useState<number | null>(null);
@@ -577,7 +579,7 @@ function QuickCaptureFAB({ deals }: QuickCaptureFABProps) {
 
   const DealSelector = () => (
     <div className="mb-4">
-      <label className="text-xs text-muted-foreground mb-1.5 block">Select Deal</label>
+      <label className="text-xs text-muted-foreground mb-1.5 block">{isZh ? '选择交易' : 'Select Deal'}</label>
       <div className="space-y-1.5 max-h-40 overflow-y-auto">
         {deals.map(d => (
           <button
@@ -638,10 +640,10 @@ function QuickCaptureFAB({ deals }: QuickCaptureFABProps) {
                 {/* Header */}
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-display text-base font-semibold">
-                    {mode === 'menu' ? 'Quick Capture' :
-                     mode === 'note' ? 'Text Note' :
-                     mode === 'photo' ? 'Photo / Screenshot' :
-                     'Voice Note'}
+                    {mode === 'menu' ? (isZh ? '快速记录' : 'Quick Capture') :
+                     mode === 'note' ? (isZh ? '文字笔记' : 'Text Note') :
+                     mode === 'photo' ? (isZh ? '照片 / 截图' : 'Photo / Screenshot') :
+                     (isZh ? '语音笔记' : 'Voice Note')}
                   </h3>
                   <button onClick={close} className="w-7 h-7 rounded-full bg-muted flex items-center justify-center">
                     <X className="w-4 h-4" />
@@ -658,7 +660,7 @@ function QuickCaptureFAB({ deals }: QuickCaptureFABProps) {
                       <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
                         <StickyNote className="w-5 h-5 text-blue-400" />
                       </div>
-                      <span className="text-xs font-medium">Text Note</span>
+                      <span className="text-xs font-medium">{isZh ? '文字笔记' : 'Text Note'}</span>
                     </button>
                     <button
                       onClick={() => { setMode('photo'); fileInputRef.current?.click(); }}
@@ -667,7 +669,7 @@ function QuickCaptureFAB({ deals }: QuickCaptureFABProps) {
                       <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
                         <Camera className="w-5 h-5 text-green-400" />
                       </div>
-                      <span className="text-xs font-medium">Photo</span>
+                      <span className="text-xs font-medium">{isZh ? '照片' : 'Photo'}</span>
                     </button>
                     <button
                       onClick={() => setMode('voice')}
@@ -676,7 +678,7 @@ function QuickCaptureFAB({ deals }: QuickCaptureFABProps) {
                       <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
                         <Mic className="w-5 h-5 text-red-400" />
                       </div>
-                      <span className="text-xs font-medium">Voice</span>
+                      <span className="text-xs font-medium">{isZh ? '语音' : 'Voice'}</span>
                     </button>
                   </div>
                 )}
@@ -688,7 +690,7 @@ function QuickCaptureFAB({ deals }: QuickCaptureFABProps) {
                     <textarea
                       value={noteText}
                       onChange={e => setNoteText(e.target.value)}
-                      placeholder="What happened? Key takeaways, objections, next steps..."
+                      placeholder={isZh ? '发生了什么？关键要点、异议、下一步...' : 'What happened? Key takeaways, objections, next steps...'}
                       className="w-full h-28 px-3 py-2.5 rounded-xl bg-muted/50 border border-border/50 text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-1 focus:ring-primary"
                       autoFocus
                     />
@@ -697,7 +699,7 @@ function QuickCaptureFAB({ deals }: QuickCaptureFABProps) {
                       disabled={!selectedDealId || !noteText.trim() || isSubmitting}
                       className="mt-3 w-full h-11 rounded-xl bg-primary text-primary-foreground text-sm font-medium disabled:opacity-40 active:scale-[0.98] transition-all"
                     >
-                      {isSubmitting ? 'Saving...' : 'Save Note'}
+                      {isSubmitting ? (isZh ? '保存中...' : 'Saving...') : (isZh ? '保存笔记' : 'Save Note')}
                     </button>
                   </div>
                 )}
@@ -728,13 +730,13 @@ function QuickCaptureFAB({ deals }: QuickCaptureFABProps) {
                         className="w-full h-20 rounded-xl border-2 border-dashed border-border/50 flex flex-col items-center justify-center gap-2 text-muted-foreground mb-3"
                       >
                         <Upload className="w-5 h-5" />
-                        <span className="text-xs">Tap to select photo</span>
+                        <span className="text-xs">{isZh ? '点击选择照片' : 'Tap to select photo'}</span>
                       </button>
                     )}
                     <input
                       value={photoCaption}
                       onChange={e => setPhotoCaption(e.target.value)}
-                      placeholder="Caption (optional)"
+                      placeholder={isZh ? '说明（可选）' : 'Caption (optional)'}
                       className="w-full h-10 px-3 rounded-xl bg-muted/50 border border-border/50 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary mb-3"
                     />
                     <button
@@ -742,7 +744,7 @@ function QuickCaptureFAB({ deals }: QuickCaptureFABProps) {
                       disabled={!selectedDealId || !photoFile || isSubmitting}
                       className="w-full h-11 rounded-xl bg-primary text-primary-foreground text-sm font-medium disabled:opacity-40 active:scale-[0.98] transition-all"
                     >
-                      {isSubmitting ? 'Saving...' : 'Save Photo'}
+                      {isSubmitting ? (isZh ? '保存中...' : 'Saving...') : (isZh ? '保存照片' : 'Save Photo')}
                     </button>
                   </div>
                 )}
@@ -757,12 +759,12 @@ function QuickCaptureFAB({ deals }: QuickCaptureFABProps) {
                           <div className="w-16 h-16 rounded-full bg-red-500/20 border-2 border-red-500 flex items-center justify-center animate-pulse">
                             <Mic className="w-7 h-7 text-red-400" />
                           </div>
-                          <p className="text-sm text-muted-foreground">Recording... tap to stop</p>
+                          <p className="text-sm text-muted-foreground">{isZh ? '录音中... 点击停止' : 'Recording... tap to stop'}</p>
                           <button
                             onClick={stopRecording}
                             className="w-full h-11 rounded-xl bg-red-500 text-white text-sm font-medium active:scale-[0.98] transition-all"
                           >
-                            Stop Recording
+                            {isZh ? '停止录音' : 'Stop Recording'}
                           </button>
                         </>
                       ) : audioChunksRef.current.length > 0 ? (
@@ -773,7 +775,7 @@ function QuickCaptureFAB({ deals }: QuickCaptureFABProps) {
                               <div className="w-16 h-16 rounded-full bg-blue-500/20 border-2 border-blue-500/50 flex items-center justify-center animate-pulse">
                                 <Upload className="w-7 h-7 text-blue-400" />
                               </div>
-                              <p className="text-sm text-muted-foreground">Uploading audio...</p>
+                              <p className="text-sm text-muted-foreground">{isZh ? '上传音频中...' : 'Uploading audio...'}</p>
                             </>
                           )}
                           {transcribeStatus === 'transcribing' && (
@@ -781,7 +783,7 @@ function QuickCaptureFAB({ deals }: QuickCaptureFABProps) {
                               <div className="w-16 h-16 rounded-full bg-primary/20 border-2 border-primary/50 flex items-center justify-center animate-pulse">
                                 <Mic className="w-7 h-7 text-primary" />
                               </div>
-                              <p className="text-sm text-muted-foreground">Transcribing with AI...</p>
+                              <p className="text-sm text-muted-foreground">{isZh ? 'AI 转录中...' : 'Transcribing with AI...'}</p>
                             </>
                           )}
                           {transcribeStatus === 'done' && transcribedText && (
@@ -790,21 +792,21 @@ function QuickCaptureFAB({ deals }: QuickCaptureFABProps) {
                                 <Check className="w-7 h-7 text-green-400" />
                               </div>
                               <div className="w-full bg-muted/40 rounded-lg p-3">
-                                <p className="text-[11px] text-muted-foreground/60 uppercase tracking-wider mb-1">Transcript</p>
+                                <p className="text-[11px] text-muted-foreground/60 uppercase tracking-wider mb-1">{isZh ? '转录内容' : 'Transcript'}</p>
                                 <p className="text-xs text-foreground/80 leading-relaxed line-clamp-4">{transcribedText}</p>
                               </div>
-                              <p className="text-xs text-green-400">Saved! Redirecting to deal...</p>
+                              <p className="text-xs text-green-400">{isZh ? '已保存！正在跳转...' : 'Saved! Redirecting to deal...'}</p>
                             </>
                           )}
                           {transcribeStatus === 'error' && (
-                            <p className="text-sm text-red-400">Transcription failed. Please try again.</p>
+                            <p className="text-sm text-red-400">{isZh ? '转录失败，请重试。' : 'Transcription failed. Please try again.'}</p>
                           )}
                           {transcribeStatus === 'idle' && (
                             <>
                               <div className="w-16 h-16 rounded-full bg-green-500/20 border-2 border-green-500 flex items-center justify-center">
                                 <Check className="w-7 h-7 text-green-400" />
                               </div>
-                              <p className="text-sm text-muted-foreground">Recording ready</p>
+                              <p className="text-sm text-muted-foreground">{isZh ? '录音已就绪' : 'Recording ready'}</p>
                             </>
                           )}
                           {transcribeStatus === 'idle' && (
@@ -813,12 +815,12 @@ function QuickCaptureFAB({ deals }: QuickCaptureFABProps) {
                               disabled={!selectedDealId || isSubmitting}
                               className="w-full h-11 rounded-xl bg-primary text-primary-foreground text-sm font-medium disabled:opacity-40 active:scale-[0.98] transition-all"
                             >
-                              Transcribe &amp; Save
+                              {isZh ? '转录并保存' : 'Transcribe & Save'}
                             </button>
                           )}
                           {transcribeStatus === 'idle' && (
                             <button onClick={() => { audioChunksRef.current = []; }} className="text-xs text-muted-foreground underline">
-                              Re-record
+                              {isZh ? '重新录音' : 'Re-record'}
                             </button>
                           )}
                           {transcribeStatus === 'error' && (
@@ -826,7 +828,7 @@ function QuickCaptureFAB({ deals }: QuickCaptureFABProps) {
                               onClick={() => { setTranscribeStatus('idle'); setIsSubmitting(false); }}
                               className="w-full h-11 rounded-xl bg-muted text-foreground text-sm font-medium active:scale-[0.98] transition-all"
                             >
-                              Try Again
+                              {isZh ? '重试' : 'Try Again'}
                             </button>
                           )}
                         </>
@@ -835,12 +837,12 @@ function QuickCaptureFAB({ deals }: QuickCaptureFABProps) {
                           <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
                             <Mic className="w-7 h-7 text-muted-foreground" />
                           </div>
-                          <p className="text-sm text-muted-foreground">Tap to start recording</p>
+                          <p className="text-sm text-muted-foreground">{isZh ? '点击开始录音' : 'Tap to start recording'}</p>
                           <button
                             onClick={startRecording}
                             className="w-full h-11 rounded-xl bg-primary text-primary-foreground text-sm font-medium active:scale-[0.98] transition-all"
                           >
-                            Start Recording
+                            {isZh ? '开始录音' : 'Start Recording'}
                           </button>
                         </>
                       )}

@@ -141,6 +141,8 @@ const STATUS_TRANSITIONS: Record<ActionStatus, ActionStatus[]> = {
 // ─── Collapsible Insight History ────────────────────────────────────────────
 
 function InsightHistory({ snapshots, onRestoreSuggestion }: { snapshots: Snapshot[]; onRestoreSuggestion?: (actionText: string) => void }) {
+  const { language } = useLanguage();
+  const isZh = language === 'zh';
   const [showHistory, setShowHistory] = useState(false);
   const [expandedSnapshotId, setExpandedSnapshotId] = useState<number | null>(null);
   const olderSnapshots = snapshots.slice(1);
@@ -148,8 +150,8 @@ function InsightHistory({ snapshots, onRestoreSuggestion }: { snapshots: Snapsho
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'accepted': return <span className="text-[8px] px-1 py-0.5 rounded bg-blue-400/10 text-blue-400 border border-blue-400/20">Accepted</span>;
-      case 'rejected': return <span className="text-[8px] px-1 py-0.5 rounded bg-muted/30 text-muted-foreground/50 border border-border/20">Dismissed</span>;
+      case 'accepted': return <span className="text-[8px] px-1 py-0.5 rounded bg-blue-400/10 text-blue-400 border border-blue-400/20">{isZh ? '已接受' : 'Accepted'}</span>;
+      case 'rejected': return <span className="text-[8px] px-1 py-0.5 rounded bg-muted/30 text-muted-foreground/50 border border-border/20">{isZh ? '已忽略' : 'Dismissed'}</span>;
       case 'later': return <span className="text-[8px] px-1 py-0.5 rounded bg-purple-400/10 text-purple-400 border border-purple-400/20">Later</span>;
       default: return <span className="text-[8px] px-1 py-0.5 rounded bg-muted/20 text-muted-foreground/40 border border-border/15">Pending</span>;
     }
@@ -184,8 +186,8 @@ function InsightHistory({ snapshots, onRestoreSuggestion }: { snapshots: Snapsho
                       </span>
                       {hasDispositions && (
                         <span className="text-[8px] text-muted-foreground/40">
-                          {suggActions.filter(s => s.status === 'accepted').length} accepted
-                          {suggActions.filter(s => s.status === 'rejected').length > 0 && `, ${suggActions.filter(s => s.status === 'rejected').length} dismissed`}
+                          {suggActions.filter(s => s.status === 'accepted').length} {isZh ? '已接受' : 'accepted'}
+                          {suggActions.filter(s => s.status === 'rejected').length > 0 && (isZh ? `，${suggActions.filter(s => s.status === 'rejected').length} 已忽略` : `, ${suggActions.filter(s => s.status === 'rejected').length} dismissed`)}
                         </span>
                       )}
                     </div>
@@ -240,7 +242,7 @@ function InsightHistory({ snapshots, onRestoreSuggestion }: { snapshots: Snapsho
                                     onClick={(e) => { e.stopPropagation(); onRestoreSuggestion(actionText); }}
                                     className="text-[8px] px-1 py-0.5 rounded text-blue-400/70 hover:text-blue-400 hover:bg-blue-400/10 transition-colors"
                                   >
-                                    Restore
+                                    {isZh ? '恢复' : 'Restore'}
                                   </button>
                                 )}
                               </div>
@@ -301,6 +303,8 @@ function WhatsNextCard({
   dealCompany?: string;
   existingActions?: NextAction[];
 }) {
+  const { language } = useLanguage();
+  const isZh = language === 'zh';
   const [expanded, setExpanded] = useState(false);
   const [addedContacts, setAddedContacts] = useState<Set<string>>(new Set());
 
@@ -406,7 +410,7 @@ function WhatsNextCard({
             <Sparkles className="w-3 h-3 text-primary/60 shrink-0 mt-0.5" />
             {rationale
               ? <p className="text-[11.5px] text-foreground/70 leading-relaxed italic">{rationale}</p>
-              : <p className="text-[11.5px] text-muted-foreground/40 leading-relaxed italic">Run Refresh Analysis to generate detailed rationale.</p>
+              : <p className="text-[11.5px] text-muted-foreground/40 leading-relaxed italic">{isZh ? '运行「刷新分析」生成详细理由。' : 'Run Refresh Analysis to generate detailed rationale.'}</p>
             }
           </div>
 
@@ -595,6 +599,8 @@ function KeyRiskCard({
   onStakeholderHover?: (id: number | null) => void;
   onStakeholderClick?: (id: number) => void;
 }) {
+  const { language } = useLanguage();
+  const isZh = language === 'zh';
   const [expanded, setExpanded] = useState(false);
   const isStructured = typeof risk === 'object' && risk !== null;
   const title = isStructured ? (risk as KeyRiskItem).title : (risk as string);
@@ -619,7 +625,7 @@ function KeyRiskCard({
         <div className="px-3 pb-3 pt-1 border-t border-red-500/15 space-y-3">
           <div className="flex items-start gap-2">
             <Sparkles className="w-3 h-3 text-red-400/60 shrink-0 mt-0.5" />
-            {detail ? <p className="text-[11.5px] text-foreground/70 leading-relaxed italic">{detail}</p> : <p className="text-[11.5px] text-muted-foreground/40 leading-relaxed italic">Re-run Refresh Analysis to generate detailed risk analysis.</p>}
+            {detail ? <p className="text-[11.5px] text-foreground/70 leading-relaxed italic">{detail}</p> : <p className="text-[11.5px] text-muted-foreground/40 leading-relaxed italic">{isZh ? '重新运行「刷新分析」生成详细风险分析。' : 'Re-run Refresh Analysis to generate detailed risk analysis.'}</p>}
           </div>
           {mentioned.length > 0 && (
             <div>
@@ -724,6 +730,7 @@ export default function DealInsightPanel({
   onOpenMapSheet,
 }: Props) {
   const { t, language } = useLanguage();
+  const isZh = language === 'zh';
   const [collapsed, setCollapsed] = useState(false);
 
   // Sales model state
@@ -766,11 +773,11 @@ export default function DealInsightPanel({
       utils.deals.get.invalidate({ id: deal.id });
       utils.nextActions.listByDeal.invalidate({ dealId: deal.id });
       toast.success(data.dataLevel === 'early-stage'
-        ? 'Initial assessment generated \u2014 upload meeting transcripts for deeper insights'
-        : 'Deal insights refreshed \u2014 Meridian has analysed the latest context');
+        ? (isZh ? '初始评估已生成 — 上传会议记录获取更深入洞察' : 'Initial assessment generated \u2014 upload meeting transcripts for deeper insights')
+        : (isZh ? '交易洞察已刷新 — Meridian 已分析最新上下文' : 'Deal insights refreshed \u2014 Meridian has analysed the latest context'));
     },
     onError: (err) => {
-      toast.error('Failed to generate insights: ' + err.message);
+      toast.error(isZh ? '生成洞察失败：' + err.message : 'Failed to generate insights: ' + err.message);
     },
   });
 
@@ -780,10 +787,10 @@ export default function DealInsightPanel({
       setChatMessages(prev => [...prev, assistantMsg]);
       if (data.updatedInsights) {
         setInsightOverrides({ whatsHappening: data.updatedInsights.whatsHappening, keyRisks: data.updatedInsights.keyRisks, updatedAt: new Date() });
-        toast.success('Meridian updated the deal insights based on your input');
+        toast.success(isZh ? 'Meridian 已根据您的输入更新交易洞察' : 'Meridian updated the deal insights based on your input');
       }
     },
-    onError: (err) => { toast.error('Failed to get AI response: ' + err.message); },
+    onError: (err) => { toast.error(isZh ? 'AI 响应失败：' + err.message : 'Failed to get AI response: ' + err.message); },
   });
 
   // Save suggestion dispositions to snapshot
@@ -792,9 +799,9 @@ export default function DealInsightPanel({
   const addSuggestedContactMutation = trpc.stakeholders.create.useMutation({
     onSuccess: (newStakeholder) => {
       utils.deals.get.invalidate({ id: deal.id });
-      toast.success(`${newStakeholder.name} added to the stakeholder map`);
+      toast.success(isZh ? `${newStakeholder.name} 已添加到利益相关者地图` : `${newStakeholder.name} added to the stakeholder map`);
     },
-    onError: (err) => { toast.error('Failed to add contact: ' + err.message); },
+    onError: (err) => { toast.error(isZh ? '添加联系人失败：' + err.message : 'Failed to add contact: ' + err.message); },
   });
 
   useEffect(() => {
@@ -915,7 +922,7 @@ export default function DealInsightPanel({
             {/* Last analysis timestamp */}
             {lastAnalysisDate && (
               <span className="text-[9px] text-muted-foreground/50">
-                Last analysed: {lastAnalysisDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at {lastAnalysisDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                {isZh ? `上次分析：${lastAnalysisDate.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })} ${lastAnalysisDate.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}` : `Last analysed: ${lastAnalysisDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at ${lastAnalysisDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`}
               </span>
             )}
             {/* Refresh Analysis button */}
@@ -961,7 +968,7 @@ export default function DealInsightPanel({
             >
               {generateInsightsMutation.isPending || saveSuggestionActionsMutation.isPending
                 ? <><Loader2 className="w-2.5 h-2.5 animate-spin" /><span>{t('insight.analysing')}</span></>
-                : <><RotateCcw className="w-2.5 h-2.5" /><span>Refresh Analysis</span></>}
+                : <><RotateCcw className="w-2.5 h-2.5" /><span>{isZh ? '刷新分析' : 'Refresh Analysis'}</span></>}
             </button>
           </div>
           <div className="flex items-center gap-1.5">
@@ -1079,8 +1086,8 @@ export default function DealInsightPanel({
                   <div className="flex items-center gap-2 py-3 px-3 rounded-lg bg-emerald-400/5 border border-emerald-400/15">
                     <Check className="w-4 h-4 text-emerald-400" />
                     <div>
-                      <p className="text-[11px] text-emerald-400/80 font-medium">All caught up!</p>
-                      <p className="text-[10px] text-muted-foreground/50">All suggestions have been handled. Refresh Analysis for new recommendations.</p>
+                      <p className="text-[11px] text-emerald-400/80 font-medium">{isZh ? '全部处理完毕！' : 'All caught up!'}</p>
+                      <p className="text-[10px] text-muted-foreground/50">{isZh ? '所有建议已处理。刷新分析获取新建议。' : 'All suggestions have been handled. Refresh Analysis for new recommendations.'}</p>
                     </div>
                   </div>
                 ) : (
@@ -1103,15 +1110,15 @@ export default function DealInsightPanel({
                         }}
                         onAccept={(actionText) => {
                           createAiAction?.(actionText, latestSnapshot?.id, 'accepted');
-                          toast.success('Action accepted \u2014 added to your task list');
+                          toast.success(isZh ? '行动已接受 — 已添加到任务列表' : 'Action accepted \u2014 added to your task list');
                         }}
                         onDismiss={(actionText) => {
                           createAiAction?.(actionText, latestSnapshot?.id, 'rejected');
-                          toast.success('Suggestion dismissed');
+                          toast.success(isZh ? '建议已忽略' : 'Suggestion dismissed');
                         }}
                         onLater={(actionText) => {
                           createAiAction?.(actionText, latestSnapshot?.id, 'later');
-                          toast.success('Saved for later');
+                          toast.success(isZh ? '已保存为稍后处理' : 'Saved for later');
                         }}
                       />
                     ))}
@@ -1127,7 +1134,7 @@ export default function DealInsightPanel({
             onRestoreSuggestion={(actionText) => {
               // Restore a dismissed suggestion by creating it as accepted
               createAiAction?.(actionText, latestSnapshot?.id, 'accepted');
-              toast.success('Suggestion restored and added to your task list');
+              toast.success(isZh ? '建议已恢复并添加到任务列表' : 'Suggestion restored and added to your task list');
             }}
           />
 
@@ -1315,12 +1322,14 @@ function DoneActionsSection({
   deleteAction: (id: number) => void;
   updateActionStatus?: (id: number, status: string) => void;
 }) {
+  const { language } = useLanguage();
+  const isZh = language === 'zh';
   const [showDone, setShowDone] = useState(false);
   return (
     <div>
       <button onClick={() => setShowDone(v => !v)} className="flex items-center gap-1.5 text-[9px] text-emerald-400/50 uppercase tracking-wider font-semibold mb-1 px-2.5 hover:text-emerald-400/80 transition-colors w-full">
         {showDone ? <ChevronUp className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />}
-        <span>Completed ({actions.length})</span>
+        <span>{isZh ? `已完成 (${actions.length})` : `Completed (${actions.length})`}</span>
       </button>
       {showDone && (
         <div className="space-y-1">
@@ -1331,7 +1340,7 @@ function DoneActionsSection({
                 <p className="text-[11px] leading-snug text-foreground/60 line-through">{action.text}</p>
               </div>
               {updateActionStatus && (
-                <button onClick={() => updateActionStatus(action.id, 'accepted')} className="opacity-0 group-hover:opacity-100 text-[9px] text-muted-foreground/40 hover:text-primary transition-all shrink-0" title="Reopen">
+                <button onClick={() => updateActionStatus(action.id, 'accepted')} className="opacity-0 group-hover:opacity-100 text-[9px] text-muted-foreground/40 hover:text-primary transition-all shrink-0" title={isZh ? '重新打开' : 'Reopen'}>
                   <RotateCcw className="w-3 h-3" />
                 </button>
               )}

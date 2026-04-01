@@ -340,6 +340,45 @@ ${input.transcript}`;
       return { success: true };
     }),
 
+  // Test a prompt template with filled-in variables
+  testPromptTemplate: protectedProcedure
+    .input(z.object({
+      promptId: z.number(),
+      variables: z.record(z.string(), z.string()),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const tenant = await getOrCreateDefaultTenant(ctx.user.id, ctx.user.name ?? "User");
+      const prompts = await getAllPrompts();
+      const prompt = prompts.find((p: any) => p.id === input.promptId);
+      if (!prompt) throw new Error("Prompt template not found");
+
+      // Replace {{variables}} in both system and user prompts
+      let systemPrompt = prompt.systemPrompt;
+      let userPrompt = prompt.userPromptTemplate;
+      for (const [key, value] of Object.entries(input.variables)) {
+        const regex = new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+        systemPrompt = systemPrompt.replace(regex, value);
+        userPrompt = userPrompt.replace(regex, value);
+      }
+
+      const { content, tokensUsed, latencyMs } = await callOpenAI(systemPrompt, userPrompt);
+
+      await createAiLog({
+        tenantId: tenant.id,
+        userId: ctx.user.id,
+        feature: `template_test:${prompt.feature}`,
+        promptVersion: prompt.version,
+        systemPrompt,
+        userPrompt,
+        rawOutput: content,
+        modelUsed: OPENAI_MODEL,
+        tokensUsed,
+        latencyMs,
+      });
+
+      return { output: content, tokensUsed, latencyMs, feature: prompt.feature, version: prompt.version };
+    }),
+
   // Generate structured deal insights (whatsHappening, keyRisks, structured whatsNext with rationale)
   generateDealInsight: protectedProcedure
     .input(z.object({

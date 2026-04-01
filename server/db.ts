@@ -373,6 +373,14 @@ export async function updateKbDocument(id: number, tenantId: number, data: Parti
   await db.update(kbDocuments).set(data).where(and(eq(kbDocuments.id, id), eq(kbDocuments.tenantId, tenantId)));
 }
 
+export async function getKbDocumentById(id: number, tenantId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(kbDocuments)
+    .where(and(eq(kbDocuments.id, id), eq(kbDocuments.tenantId, tenantId))).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
 export async function deleteKbDocument(id: number, tenantId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");

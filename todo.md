@@ -751,16 +751,25 @@
 - [x] Seed all 8 prompts into DB
 
 ## Knowledge Base Document Management Refactor
-- [ ] Refactor KB to support file uploads (PDF, Excel, Docx)
-- [ ] Add file upload endpoint with S3 storage
-- [ ] AI reads uploaded document content
-- [ ] Pure text becomes description/notes on documents, not the main content
-- [ ] Visual polish for KB page
+- [x] Refactor KB to support file uploads (PDF, Excel, Docx)
+- [x] Add file upload endpoint with S3 storage
+- [x] AI reads uploaded document content
+- [x] Pure text becomes description/notes on documents, not the main content
+- [x] Visual polish for KB page
 
 ## Full Chinese Localization
-- [ ] Audit all pages for remaining English text
-- [ ] Translate all hardcoded English strings
-- [ ] Ensure AI-generated content outputs in Chinese when language is set to zh
-- [ ] Fix Settings page subtitle and other missed strings
-- [ ] Fix Dashboard overdue actions banner English text
-- [ ] Fix mobile Quick Capture English text
+- [x] Audit all pages for remaining English text
+- [x] Translate all hardcoded English strings
+- [x] Ensure AI-generated content outputs in Chinese when language is set to zh
+- [x] Fix Settings page subtitle and other missed strings
+- [x] Fix Dashboard overdue actions banner English text
+- [x] Fix mobile Quick Capture English text
+
+## Prompt Test Run Feature
+- [x] Add testPromptTemplate backend endpoint (accepts template ID + variable values, replaces {{vars}}, calls OpenAI, logs result)
+- [x] Add Test button to each prompt template in PromptManager
+- [x] Variable fill form: auto-detect {{variables}} from template, generate input fields
+- [x] Smart field types: Textarea for long content variables, Input for short ones
+- [x] Run test with filled variables, show output with latency/token stats
+- [x] Auto-log test runs to AI Logs (feature: template_test:feature_name)
+- [x] Localize PromptManager component (Chinese/English)

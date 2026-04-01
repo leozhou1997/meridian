@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { StakeholderAvatar } from '@/components/Avatars';
 import { CompanyLogo } from '@/components/Avatars';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -162,6 +163,8 @@ function InlineField({ label, value, onSave, type = 'text', options }: {
 // ─── Add Stakeholder Form ───────────────────────────────────────────────────
 
 function AddStakeholderForm({ dealId, onClose }: { dealId: number; onClose: () => void }) {
+  const { language } = useLanguage();
+  const isZh = language === 'zh';
   const [name, setName] = useState('');
   const [title, setTitle] = useState('');
   const [role, setRole] = useState<RoleType>('User');
@@ -172,14 +175,14 @@ function AddStakeholderForm({ dealId, onClose }: { dealId: number; onClose: () =
     onSuccess: () => {
       utils.stakeholders.listAll.invalidate();
       utils.stakeholders.listByDeal.invalidate({ dealId });
-      toast.success('Stakeholder added');
+      toast.success(isZh ? '利益相关者已添加' : 'Stakeholder added');
       onClose();
     },
-    onError: () => toast.error('Failed to add stakeholder'),
+    onError: () => toast.error(isZh ? '添加失败' : 'Failed to add stakeholder'),
   });
 
   const handleSubmit = () => {
-    if (!name.trim()) { toast.error('Name is required'); return; }
+    if (!name.trim()) { toast.error(isZh ? '姓名为必填项' : 'Name is required'); return; }
     createMutation.mutate({ dealId, name: name.trim(), title: title.trim(), role, sentiment });
   };
 
@@ -192,8 +195,8 @@ function AddStakeholderForm({ dealId, onClose }: { dealId: number; onClose: () =
     >
       <div className="p-3 bg-primary/5 border-t border-primary/20 space-y-2">
         <div className="flex items-center gap-2">
-          <Input value={name} onChange={e => setName(e.target.value)} placeholder="Name *" className="h-7 text-xs flex-1" autoFocus />
-          <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title" className="h-7 text-xs flex-1" />
+          <Input value={name} onChange={e => setName(e.target.value)} placeholder={isZh ? '姓名 *' : 'Name *'} className="h-7 text-xs flex-1" autoFocus />
+          <Input value={title} onChange={e => setTitle(e.target.value)} placeholder={isZh ? '职位' : 'Title'} className="h-7 text-xs flex-1" />
         </div>
         <div className="flex items-center gap-2">
           <div className="flex-1 flex flex-wrap gap-1">
@@ -215,7 +218,7 @@ function AddStakeholderForm({ dealId, onClose }: { dealId: number; onClose: () =
           <div className="flex-1" />
           <Button size="sm" variant="ghost" onClick={onClose} className="h-6 text-[10px] px-2">Cancel</Button>
           <Button size="sm" onClick={handleSubmit} disabled={createMutation.isPending} className="h-6 text-[10px] px-3">
-            {createMutation.isPending ? 'Adding...' : 'Add'}
+            {createMutation.isPending ? (isZh ? '添加中...' : 'Adding...') : (isZh ? '添加' : 'Add')}
           </Button>
         </div>
       </div>
@@ -226,6 +229,8 @@ function AddStakeholderForm({ dealId, onClose }: { dealId: number; onClose: () =
 // ─── Stakeholder Row (expandable with inline editing) ───────────────────────
 
 function StakeholderRow({ stakeholder, dealId }: { stakeholder: any; dealId: number }) {
+  const { language } = useLanguage();
+  const isZh = language === 'zh';
   const [expanded, setExpanded] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -234,17 +239,17 @@ function StakeholderRow({ stakeholder, dealId }: { stakeholder: any; dealId: num
     onSuccess: () => {
       utils.stakeholders.listAll.invalidate();
       utils.stakeholders.listByDeal.invalidate({ dealId });
-      toast.success('Updated');
+      toast.success(isZh ? '已更新' : 'Updated');
     },
-    onError: () => toast.error('Update failed'),
+    onError: () => toast.error(isZh ? '更新失败' : 'Update failed'),
   });
   const deleteMutation = trpc.stakeholders.delete.useMutation({
     onSuccess: () => {
       utils.stakeholders.listAll.invalidate();
       utils.stakeholders.listByDeal.invalidate({ dealId });
-      toast.success('Stakeholder removed');
+      toast.success(isZh ? '利益相关者已移除' : 'Stakeholder removed');
     },
-    onError: () => toast.error('Delete failed'),
+    onError: () => toast.error(isZh ? '删除失败' : 'Delete failed'),
   });
 
   const save = useCallback((field: string, value: string) => {
@@ -336,6 +341,8 @@ function StakeholderRow({ stakeholder, dealId }: { stakeholder: any; dealId: num
 // ─── Main Page ──────────────────────────────────────────────────────────────
 
 export default function Stakeholders() {
+  const { language } = useLanguage();
+  const isZh = language === 'zh';
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedDeals, setExpandedDeals] = useState<Set<number>>(new Set());
   const [addingToDeal, setAddingToDeal] = useState<number | null>(null);
@@ -391,7 +398,7 @@ export default function Stakeholders() {
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by name, title, role, or company..."
+            placeholder={isZh ? '按姓名、职位、角色或公司搜索...' : 'Search by name, title, role, or company...'}
             className="pl-10 h-9 text-sm"
           />
         </div>
@@ -481,7 +488,7 @@ export default function Stakeholders() {
                             ))
                           ) : (
                             <div className="px-4 py-6 text-center text-xs text-muted-foreground/60">
-                              {searchQuery ? 'No matches in this deal.' : 'No stakeholders yet.'}
+                              {searchQuery ? (isZh ? '此交易中无匹配结果。' : 'No matches in this deal.') : (isZh ? '暂无利益相关者。' : 'No stakeholders yet.')}
                             </div>
                           )}
                         </div>
@@ -496,7 +503,7 @@ export default function Stakeholders() {
               <div className="text-center py-16 text-muted-foreground">
                 <Users className="w-10 h-10 mx-auto mb-3 opacity-30" />
                 <p className="text-sm">
-                  {searchQuery ? 'No stakeholders match your search.' : 'No stakeholders yet. Add them from the Deal Detail page.'}
+                  {searchQuery ? (isZh ? '没有匹配的利益相关者。' : 'No stakeholders match your search.') : (isZh ? '暂无利益相关者。请从交易详情页添加。' : 'No stakeholders yet. Add them from the Deal Detail page.')}
                 </p>
               </div>
             )}

@@ -146,7 +146,7 @@ export default function Dashboard() {
           </div>
           <Button onClick={() => navigate('/deal/new')} size="sm" className="gap-1.5 shrink-0">
             <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">{language === 'zh' ? '新建 Deal' : 'New Deal'}</span>
+            <span className="hidden sm:inline">{language === 'zh' ? '新建交易' : 'New Deal'}</span>
           </Button>
         </motion.div>
 
@@ -157,10 +157,10 @@ export default function Dashboard() {
               <AlertTriangle className="w-4 h-4 shrink-0" />
               <div className="flex-1 min-w-0">
                 <span className="text-xs font-semibold">
-                  {overdueActions.length} overdue action{overdueActions.length > 1 ? 's' : ''} need attention
+                  {language === 'zh' ? `${overdueActions.length} 个逾期行动需要关注` : `${overdueActions.length} overdue action${overdueActions.length > 1 ? 's' : ''} need attention`}
                 </span>
                 <div className="text-[11px] text-red-400/70 mt-0.5 truncate">
-                  {overdueActions.slice(0, 2).map(a => a.text).join(' · ')}{overdueActions.length > 2 ? ` +${overdueActions.length - 2} more` : ''}
+                  {overdueActions.slice(0, 2).map(a => a.text).join(' · ')}{overdueActions.length > 2 ? (language === 'zh' ? ` +${overdueActions.length - 2} 更多` : ` +${overdueActions.length - 2} more`) : ''}
                 </div>
               </div>
             </div>
@@ -211,7 +211,7 @@ export default function Dashboard() {
                               {deal.stage}
                             </Badge>
                           </div>
-                          <p className="text-xs text-status-danger/80 truncate">{deal.riskOneLiner ?? 'Needs attention'}</p>
+                          <p className="text-xs text-status-danger/80 truncate">{deal.riskOneLiner ?? (language === 'zh' ? '需要关注' : 'Needs attention')}</p>
                         </div>
                         <div className="text-right shrink-0">
                           <div className="font-mono text-xs font-medium">{formatCurrency(deal.value ?? 0)}</div>
@@ -225,7 +225,7 @@ export default function Dashboard() {
                   ))}
                   {atRiskDeals.length === 0 && (
                     <div className="text-center py-8 text-sm text-muted-foreground">
-                      No deals at risk. Great work!
+                      {language === 'zh' ? '没有风险交易，做得好！' : 'No deals at risk. Great work!'}
                     </div>
                   )}
                 </CardContent>

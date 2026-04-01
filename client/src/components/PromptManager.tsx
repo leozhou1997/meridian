@@ -1,15 +1,19 @@
 import { useState, useMemo } from 'react';
 import { trpc } from '@/lib/trpc';
 import {
-  Save, ChevronDown, ChevronUp, CheckCircle, FileText, Code, Variable, Copy, Info
+  Save, ChevronDown, ChevronUp, CheckCircle, FileText, Code, Variable, Copy, Info,
+  Play, Loader2, Zap, Clock
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 /* ── Variable metadata: describes what each {{var}} means ── */
 const VARIABLE_DOCS: Record<string, Record<string, string>> = {
@@ -106,6 +110,8 @@ interface PromptTemplate {
 }
 
 export default function PromptManager() {
+  const { language } = useLanguage();
+  const isZh = language === 'zh';
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [editingPrompt, setEditingPrompt] = useState<{
     id: number;
@@ -113,6 +119,11 @@ export default function PromptManager() {
     userPromptTemplate: string;
     description: string;
   } | null>(null);
+
+  // Test run state
+  const [testingPromptId, setTestingPromptId] = useState<number | null>(null);
+  const [testVariables, setTestVariables] = useState<Record<string, string>>({});
+  const [testOutput, setTestOutput] = useState<{ output: string; tokensUsed: number; latencyMs: number; feature: string; version: string } | null>(null);
 
   const { data: prompts = [], refetch } = trpc.ai.getPrompts.useQuery({ feature: undefined });
 
@@ -131,6 +142,19 @@ export default function PromptManager() {
       toast.success('已设为激活版本');
     },
     onError: (err) => toast.error(`操作失败: ${err.message}`),
+  });
+
+  const testTemplateMutation = trpc.ai.testPromptTemplate.useMutation({
+    onSuccess: (data) => {
+      setTestOutput(data);
+      toast.success(isZh
+        ? `生成完成 · ${data.latencyMs}ms · ${data.tokensUsed} tokens`
+        : `Generated · ${data.latencyMs}ms · ${data.tokensUsed} tokens`
+      );
+    },
+    onError: (err) => {
+      toast.error(isZh ? `测试失败: ${err.message}` : `Test failed: ${err.message}`);
+    },
   });
 
   // Group prompts by feature
@@ -178,6 +202,35 @@ export default function PromptManager() {
     toast.success('已复制到剪贴板');
   };
 
+  const handleStartTest = (p: PromptTemplate) => {
+    const allVars = extractVariables(p.systemPrompt + ' ' + p.userPromptTemplate);
+    const initialVars: Record<string, string> = {};
+    allVars.forEach(v => { initialVars[v] = ''; });
+    setTestVariables(initialVars);
+    setTestingPromptId(p.id);
+    setTestOutput(null);
+    setExpandedId(p.id);
+  };
+
+  const handleRunTest = (promptId: number) => {
+    // Check if all variables have values
+    const emptyVars = Object.entries(testVariables).filter(([, v]) => !v.trim());
+    if (emptyVars.length > 0) {
+      toast.error(isZh
+        ? `请填写所有变量值（${emptyVars.length} 个未填）`
+        : `Please fill all variable values (${emptyVars.length} empty)`
+      );
+      return;
+    }
+    testTemplateMutation.mutate({ promptId, variables: testVariables });
+  };
+
+  const handleCancelTest = () => {
+    setTestingPromptId(null);
+    setTestVariables({});
+    setTestOutput(null);
+  };
+
   return (
     <div className="space-y-4">
       {/* Summary stats */}
@@ -185,13 +238,13 @@ export default function PromptManager() {
         <Card className="bg-card border-border/50">
           <CardContent className="p-4">
             <div className="text-2xl font-display font-bold text-foreground">{grouped.size}</div>
-            <div className="text-xs text-muted-foreground mt-1">功能模块</div>
+            <div className="text-xs text-muted-foreground mt-1">{isZh ? '功能模块' : 'Features'}</div>
           </CardContent>
         </Card>
         <Card className="bg-card border-border/50">
           <CardContent className="p-4">
             <div className="text-2xl font-display font-bold text-foreground">{prompts.length}</div>
-            <div className="text-xs text-muted-foreground mt-1">Prompt 版本总数</div>
+            <div className="text-xs text-muted-foreground mt-1">{isZh ? 'Prompt 版本总数' : 'Total Versions'}</div>
           </CardContent>
         </Card>
         <Card className="bg-card border-border/50">
@@ -199,7 +252,7 @@ export default function PromptManager() {
             <div className="text-2xl font-display font-bold text-green-500">
               {(prompts as PromptTemplate[]).filter(p => p.isActive).length}
             </div>
-            <div className="text-xs text-muted-foreground mt-1">激活版本</div>
+            <div className="text-xs text-muted-foreground mt-1">{isZh ? '激活版本' : 'Active'}</div>
           </CardContent>
         </Card>
       </div>
@@ -216,13 +269,14 @@ export default function PromptManager() {
               {feature}
             </Badge>
             <span className="text-[11px] text-muted-foreground">
-              · {versions.length} 个版本
+              · {versions.length} {isZh ? '个版本' : 'versions'}
             </span>
           </div>
 
           {versions.map((p) => {
             const isExpanded = expandedId === p.id;
             const isEditing = editingPrompt?.id === p.id;
+            const isTesting = testingPromptId === p.id;
             const allVars = extractVariables(
               (isEditing ? editingPrompt.systemPrompt : p.systemPrompt) + ' ' +
               (isEditing ? editingPrompt.userPromptTemplate : p.userPromptTemplate)
@@ -238,17 +292,27 @@ export default function PromptManager() {
                       {p.isActive && (
                         <Badge className="bg-green-500/10 text-green-600 border-green-500/30 text-[10px] px-1.5 shrink-0">
                           <CheckCircle className="w-3 h-3 mr-1" />
-                          激活
+                          {isZh ? '激活' : 'Active'}
                         </Badge>
                       )}
                       <Badge variant="secondary" className="text-[10px] px-1.5 shrink-0">
                         {p.version}
                       </Badge>
                       <span className="text-xs text-muted-foreground truncate">
-                        {p.description || '无描述'}
+                        {p.description || (isZh ? '无描述' : 'No description')}
                       </span>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
+                      {/* Test button */}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className={`h-7 text-xs gap-1 ${isTesting ? 'text-yellow-500' : 'text-primary/70 hover:text-primary'}`}
+                        onClick={() => isTesting ? handleCancelTest() : handleStartTest(p)}
+                      >
+                        <Play className="w-3 h-3" />
+                        {isTesting ? (isZh ? '取消测试' : 'Cancel') : (isZh ? '测试' : 'Test')}
+                      </Button>
                       {!p.isActive && (
                         <Button
                           size="sm"
@@ -256,7 +320,7 @@ export default function PromptManager() {
                           className="h-7 text-xs text-green-600 hover:text-green-500"
                           onClick={() => setActiveMutation.mutate({ id: p.id, feature: p.feature })}
                         >
-                          设为激活
+                          {isZh ? '设为激活' : 'Activate'}
                         </Button>
                       )}
                       <Button
@@ -265,7 +329,7 @@ export default function PromptManager() {
                         className="h-7 text-xs"
                         onClick={() => handleStartEdit(p)}
                       >
-                        编辑
+                        {isZh ? '编辑' : 'Edit'}
                       </Button>
                       <Button
                         size="sm"
@@ -281,18 +345,132 @@ export default function PromptManager() {
                   {/* Expanded content */}
                   {isExpanded && (
                     <div className="mt-4 space-y-4 border-t border-border/50 pt-4">
+
+                      {/* ── Test Run Panel ── */}
+                      {isTesting && (
+                        <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-lg p-4 space-y-4">
+                          <div className="flex items-center gap-2">
+                            <Play className="w-4 h-4 text-yellow-500" />
+                            <Label className="text-xs font-semibold text-yellow-600">
+                              {isZh ? '测试运行 — 填写变量值' : 'Test Run — Fill Variable Values'}
+                            </Label>
+                          </div>
+
+                          {allVars.length > 0 ? (
+                            <div className="space-y-3">
+                              {allVars.map(v => (
+                                <div key={v} className="space-y-1">
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant="outline" className="text-[10px] px-1.5 font-mono bg-yellow-500/10 text-yellow-600 border-yellow-500/30">
+                                      {v}
+                                    </Badge>
+                                    <span className="text-[10px] text-muted-foreground">
+                                      {varDocs[v] || (isZh ? '动态变量' : 'Dynamic variable')}
+                                    </span>
+                                  </div>
+                                  {(v.includes('Notes') || v.includes('transcript') || v.includes('Context') || v.includes('stakeholders') || v.includes('meetings') || v.includes('actions') || v.includes('Description') || v.includes('Dimensions')) ? (
+                                    <Textarea
+                                      value={testVariables[v] || ''}
+                                      onChange={(e) => setTestVariables(prev => ({ ...prev, [v]: e.target.value }))}
+                                      className="text-xs font-mono min-h-[80px] resize-y bg-background/50 border-border/50"
+                                      placeholder={isZh ? `输入 ${v} 的值...` : `Enter value for ${v}...`}
+                                    />
+                                  ) : (
+                                    <Input
+                                      value={testVariables[v] || ''}
+                                      onChange={(e) => setTestVariables(prev => ({ ...prev, [v]: e.target.value }))}
+                                      className="text-xs font-mono h-8 bg-background/50 border-border/50"
+                                      placeholder={isZh ? `输入 ${v} 的值...` : `Enter value for ${v}...`}
+                                    />
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">
+                              {isZh ? '此模板没有动态变量，将直接运行。' : 'No dynamic variables in this template. Will run as-is.'}
+                            </p>
+                          )}
+
+                          <div className="flex items-center gap-2 pt-1">
+                            <Button
+                              size="sm"
+                              className="gap-1.5 bg-yellow-600 hover:bg-yellow-700 text-white"
+                              onClick={() => handleRunTest(p.id)}
+                              disabled={testTemplateMutation.isPending}
+                            >
+                              {testTemplateMutation.isPending ? (
+                                <>
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                  {isZh ? '运行中...' : 'Running...'}
+                                </>
+                              ) : (
+                                <>
+                                  <Play className="w-3 h-3" />
+                                  {isZh ? '运行测试' : 'Run Test'}
+                                </>
+                              )}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={handleCancelTest}
+                            >
+                              {isZh ? '取消' : 'Cancel'}
+                            </Button>
+                          </div>
+
+                          {/* Test output */}
+                          {testOutput && (
+                            <div className="border-t border-yellow-500/20 pt-4 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Zap className="w-4 h-4 text-yellow-500" />
+                                  <Label className="text-xs font-semibold text-yellow-600">
+                                    {isZh ? '测试输出' : 'Test Output'}
+                                  </Label>
+                                </div>
+                                <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+                                  <span className="flex items-center gap-1">
+                                    <Clock className="w-3 h-3" />
+                                    {testOutput.latencyMs}ms
+                                  </span>
+                                  <span>{testOutput.tokensUsed} tokens</span>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-5 text-[10px] gap-1 text-muted-foreground px-1.5"
+                                    onClick={() => handleCopyPrompt(testOutput.output)}
+                                  >
+                                    <Copy className="w-3 h-3" /> {isZh ? '复制' : 'Copy'}
+                                  </Button>
+                                </div>
+                              </div>
+                              <ScrollArea className="max-h-[400px]">
+                                <pre className="text-xs whitespace-pre-wrap font-sans leading-relaxed text-foreground bg-background/50 rounded p-3 border border-border/30">
+                                  {testOutput.output}
+                                </pre>
+                              </ScrollArea>
+                              <p className="text-[10px] text-muted-foreground/60 italic">
+                                {isZh ? '此运行已自动记录到 AI 日志中。' : 'This run has been automatically logged to AI Logs.'}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       {/* Dynamic variables panel */}
-                      {allVars.length > 0 && (
+                      {allVars.length > 0 && !isTesting && (
                         <div className="bg-muted/30 rounded-lg p-3">
                           <div className="flex items-center gap-2 mb-2">
                             <Variable className="w-4 h-4 text-blue-500" />
-                            <Label className="text-xs font-semibold">动态变量</Label>
+                            <Label className="text-xs font-semibold">{isZh ? '动态变量' : 'Dynamic Variables'}</Label>
                             <Tooltip>
                               <TooltipTrigger>
                                 <Info className="w-3 h-3 text-muted-foreground" />
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p className="text-xs">这些变量会在运行时被实际数据替换。<br/>点击变量可插入到编辑区。</p>
+                                <p className="text-xs">{isZh ? '这些变量会在运行时被实际数据替换。' : 'These variables are replaced with real data at runtime.'}<br/>{isZh ? '点击变量可插入到编辑区。' : 'Click to insert into editor.'}</p>
                               </TooltipContent>
                             </Tooltip>
                           </div>
@@ -313,7 +491,7 @@ export default function PromptManager() {
                                   </button>
                                 </TooltipTrigger>
                                 <TooltipContent side="bottom">
-                                  <p className="text-xs">{varDocs[v] || '动态变量'}</p>
+                                  <p className="text-xs">{varDocs[v] || (isZh ? '动态变量' : 'Dynamic variable')}</p>
                                 </TooltipContent>
                               </Tooltip>
                             ))}
@@ -335,7 +513,7 @@ export default function PromptManager() {
                               className="h-6 text-[10px] gap-1 text-muted-foreground"
                               onClick={() => handleCopyPrompt(p.systemPrompt)}
                             >
-                              <Copy className="w-3 h-3" /> 复制
+                              <Copy className="w-3 h-3" /> {isZh ? '复制' : 'Copy'}
                             </Button>
                           )}
                         </div>
@@ -357,7 +535,7 @@ export default function PromptManager() {
                         <div className="flex items-center justify-between mb-1.5">
                           <Label className="text-xs font-semibold flex items-center gap-1.5">
                             <span className="w-4 h-4 rounded bg-blue-500/20 text-blue-500 text-[9px] font-bold flex items-center justify-center">U</span>
-                            User Prompt 模板
+                            User Prompt {isZh ? '模板' : 'Template'}
                           </Label>
                           {!isEditing && (
                             <Button
@@ -366,7 +544,7 @@ export default function PromptManager() {
                               className="h-6 text-[10px] gap-1 text-muted-foreground"
                               onClick={() => handleCopyPrompt(p.userPromptTemplate)}
                             >
-                              <Copy className="w-3 h-3" /> 复制
+                              <Copy className="w-3 h-3" /> {isZh ? '复制' : 'Copy'}
                             </Button>
                           )}
                         </div>
@@ -386,12 +564,12 @@ export default function PromptManager() {
                       {/* Description (editable) */}
                       {isEditing && (
                         <div>
-                          <Label className="text-xs font-semibold mb-1.5 block">描述</Label>
+                          <Label className="text-xs font-semibold mb-1.5 block">{isZh ? '描述' : 'Description'}</Label>
                           <Textarea
                             value={editingPrompt!.description}
                             onChange={(e) => setEditingPrompt({ ...editingPrompt!, description: e.target.value })}
                             className="text-xs min-h-[60px] resize-y bg-muted/20 border-border/50"
-                            placeholder="描述这个 prompt 的用途..."
+                            placeholder={isZh ? '描述这个 prompt 的用途...' : 'Describe the purpose of this prompt...'}
                           />
                         </div>
                       )}
@@ -410,14 +588,14 @@ export default function PromptManager() {
                             ) : (
                               <Save className="w-3 h-3" />
                             )}
-                            保存修改
+                            {isZh ? '保存修改' : 'Save'}
                           </Button>
                           <Button
                             size="sm"
                             variant="ghost"
                             onClick={() => setEditingPrompt(null)}
                           >
-                            取消
+                            {isZh ? '取消' : 'Cancel'}
                           </Button>
                         </div>
                       )}
@@ -425,8 +603,8 @@ export default function PromptManager() {
                       {/* Meta info */}
                       <div className="text-[10px] text-muted-foreground flex gap-4 pt-1 border-t border-border/30">
                         <span>ID: {p.id}</span>
-                        <span>创建: {new Date(p.createdAt).toLocaleDateString('zh-CN')}</span>
-                        <span>更新: {new Date(p.updatedAt).toLocaleDateString('zh-CN')}</span>
+                        <span>{isZh ? '创建' : 'Created'}: {new Date(p.createdAt).toLocaleDateString(isZh ? 'zh-CN' : 'en-US')}</span>
+                        <span>{isZh ? '更新' : 'Updated'}: {new Date(p.updatedAt).toLocaleDateString(isZh ? 'zh-CN' : 'en-US')}</span>
                       </div>
                     </div>
                   )}
@@ -441,7 +619,9 @@ export default function PromptManager() {
         <Card className="bg-card border-border/50">
           <CardContent className="py-12 text-center">
             <FileText className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground">暂无 Prompt 模板。请先运行 seed 脚本初始化。</p>
+            <p className="text-sm text-muted-foreground">
+              {isZh ? '暂无 Prompt 模板。请先运行 seed 脚本初始化。' : 'No prompt templates yet. Run the seed script to initialize.'}
+            </p>
           </CardContent>
         </Card>
       )}

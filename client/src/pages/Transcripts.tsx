@@ -18,6 +18,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import { CompanyLogo } from '@/components/Avatars';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -45,16 +46,17 @@ function formatDate(d: Date | string) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function formatRelative(d: Date | string) {
+function formatRelative(d: Date | string, lang?: string) {
+  const zh = lang === 'zh';
   const now = Date.now();
   const then = new Date(d).getTime();
   const diff = now - then;
   const days = Math.floor(diff / 86400000);
-  if (days === 0) return 'Today';
-  if (days === 1) return 'Yesterday';
-  if (days < 7) return `${days}d ago`;
-  if (days < 30) return `${Math.floor(days / 7)}w ago`;
-  return `${Math.floor(days / 30)}mo ago`;
+  if (days === 0) return zh ? '今天' : 'Today';
+  if (days === 1) return zh ? '昨天' : 'Yesterday';
+  if (days < 7) return zh ? `${days}天前` : `${days}d ago`;
+  if (days < 30) return zh ? `${Math.floor(days / 7)}周前` : `${Math.floor(days / 7)}w ago`;
+  return zh ? `${Math.floor(days / 30)}月前` : `${Math.floor(days / 30)}mo ago`;
 }
 
 // ─── Information Density Bar ────────────────────────────────────────────────
@@ -84,6 +86,7 @@ function DealSummaryCard({ deal, interactions, stakeholderCount, snapshotCount, 
   isExpanded: boolean;
   onToggle: () => void;
 }) {
+  const { language } = useLanguage();
   const lastInteraction = interactions.length > 0
     ? interactions.reduce((a, b) => new Date(a.date) > new Date(b.date) ? a : b)
     : null;
@@ -153,7 +156,7 @@ function DealSummaryCard({ deal, interactions, stakeholderCount, snapshotCount, 
 
           <div className="flex flex-col items-end gap-1 shrink-0">
             {lastInteraction && (
-              <span className="text-[10px] text-muted-foreground/50">{formatRelative(lastInteraction.date)}</span>
+              <span className="text-[10px] text-muted-foreground/50">{formatRelative(lastInteraction.date, language)}</span>
             )}
             {isExpanded
               ? <ChevronDown className="w-4 h-4 text-muted-foreground/50" />
@@ -302,6 +305,8 @@ type SelectedInteraction = {
 };
 
 export default function Transcripts() {
+  const { language } = useLanguage();
+  const isZh = language === 'zh';
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedDeals, setExpandedDeals] = useState<Set<number>>(new Set());
   const [showUpload, setShowUpload] = useState(false);
@@ -321,14 +326,14 @@ export default function Transcripts() {
   const createMeeting = trpc.meetings.create.useMutation({
     onSuccess: () => {
       utils.meetings.listAll.invalidate();
-      toast.success('Added to Deal Room! AI analysis will begin shortly.');
+      toast.success(isZh ? '已添加到交易室！AI 分析即将开始。' : 'Added to Deal Room! AI analysis will begin shortly.');
       setShowUpload(false);
       setAddDealId('');
       setAddContentType('note');
       setAddTitle('');
       setAddDescription('');
     },
-    onError: () => toast.error('Failed to add to Deal Room'),
+    onError: () => toast.error(isZh ? '添加到交易室失败' : 'Failed to add to Deal Room'),
   });
 
   const toggleDeal = (dealId: number) => {
@@ -442,7 +447,7 @@ export default function Transcripts() {
                     <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-1.5 block">Deal</label>
                     <Select value={addDealId} onValueChange={setAddDealId}>
                       <SelectTrigger className="h-9 text-xs">
-                        <SelectValue placeholder="Select deal..." />
+                        <SelectValue placeholder={isZh ? '选择交易...' : 'Select deal...'} />
                       </SelectTrigger>
                       <SelectContent>
                         {deals.map(d => (
@@ -457,7 +462,7 @@ export default function Transcripts() {
                     <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-2 block">Content Type</label>
                     <div className="grid grid-cols-3 gap-2">
                       {[
-                        { value: 'note' as const, label: 'Meeting Notes', icon: MessageSquare },
+                        { value: 'note' as const, label: isZh ? '会议笔记' : 'Meeting Notes', icon: MessageSquare },
                         { value: 'audio' as const, label: 'Audio / Video', icon: Upload },
                         { value: 'screenshot' as const, label: 'Screenshot', icon: Eye },
                         { value: 'pdf' as const, label: 'PDF Document', icon: FileText },
@@ -485,7 +490,7 @@ export default function Transcripts() {
                     <Input
                       value={addTitle}
                       onChange={e => setAddTitle(e.target.value)}
-                      placeholder={addContentType === 'action' ? 'e.g., Sent pricing proposal to CFO' : 'e.g., Discovery call with VP Engineering'}
+                      placeholder={addContentType === 'action' ? (isZh ? '例如：向 CFO 发送报价方案' : 'e.g., Sent pricing proposal to CFO') : (isZh ? '例如：与 VP Engineering 的探索电话' : 'e.g., Discovery call with VP Engineering')}
                       className="h-9 text-xs"
                     />
                   </div>
@@ -493,12 +498,12 @@ export default function Transcripts() {
                   {/* Description / Content */}
                   <div>
                     <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-1.5 block">
-                      {addContentType === 'note' ? 'Meeting Notes / Transcript Content' : addContentType === 'action' ? 'Action Details' : 'Description (optional)'}
+                      {addContentType === 'note' ? (isZh ? '会议笔记 / 记录内容' : 'Meeting Notes / Transcript Content') : addContentType === 'action' ? (isZh ? '行动详情' : 'Action Details') : (isZh ? '描述（可选）' : 'Description (optional)')}
                     </label>
                     <Textarea
                       value={addDescription}
                       onChange={e => setAddDescription(e.target.value)}
-                      placeholder={addContentType === 'note' ? 'Paste meeting transcript or notes here...' : 'Add details...'}
+                      placeholder={addContentType === 'note' ? (isZh ? '粘贴会议记录或笔记...' : 'Paste meeting transcript or notes here...') : (isZh ? '添加详情...' : 'Add details...')}
                       className={`text-xs ${addContentType === 'note' ? 'min-h-[200px]' : 'min-h-[80px]'}`}
                     />
                   </div>
@@ -512,7 +517,7 @@ export default function Transcripts() {
                     disabled={!addDealId || !addTitle.trim() || createMeeting.isPending}
                     onClick={() => {
                       if (!addDealId || !addTitle.trim()) {
-                        toast.error('Please select a deal and enter a title');
+                        toast.error(isZh ? '请选择交易并输入标题' : 'Please select a deal and enter a title');
                         return;
                       }
                       const typeMap: Record<string, string> = {
@@ -533,7 +538,7 @@ export default function Transcripts() {
                       });
                     }}
                   >
-                    {createMeeting.isPending ? 'Saving...' : 'Add to Timeline'}
+                    {createMeeting.isPending ? (isZh ? '保存中...' : 'Saving...') : (isZh ? '添加到时间线' : 'Add to Timeline')}
                   </Button>
                 </div>
               </div>
@@ -568,7 +573,7 @@ export default function Transcripts() {
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by deal, participant, or topic..."
+              placeholder={isZh ? '按交易、参与者或主题搜索...' : 'Search by deal, participant, or topic...'}
               className="pl-10 h-9 text-sm"
             />
           </div>
@@ -616,7 +621,7 @@ export default function Transcripts() {
                 <CardContent className="p-12 text-center">
                   <FileText className="w-8 h-8 text-muted-foreground/40 mx-auto mb-3" />
                   <p className="text-sm text-muted-foreground">
-                    {searchQuery ? 'No deals match your search.' : 'No deals yet. Create a deal to get started.'}
+                    {searchQuery ? (isZh ? '没有匹配的交易。' : 'No deals match your search.') : (isZh ? '暂无交易。创建交易开始吧。' : 'No deals yet. Create a deal to get started.')}
                   </p>
                 </CardContent>
               </Card>

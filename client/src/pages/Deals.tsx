@@ -25,7 +25,8 @@ type SortDir = 'asc' | 'desc';
 
 export default function Deals() {
   const [, navigate] = useLocation();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const isZh = language === 'zh';
   const { data: deals = [], isLoading } = trpc.deals.list.useQuery(undefined, {
     refetchOnWindowFocus: false,
   });
@@ -81,7 +82,7 @@ export default function Deals() {
   if (isLoading) {
     return (
       <div className="h-full flex items-center justify-center">
-        <div className="text-muted-foreground text-sm animate-pulse">Loading deals...</div>
+        <div className="text-muted-foreground text-sm animate-pulse">{isZh ? '加载交易中...' : 'Loading deals...'}</div>
       </div>
     );
   }
@@ -92,17 +93,17 @@ export default function Deals() {
       <div className="shrink-0 border-b border-border bg-card/30 px-4 md:px-6 py-3 md:py-4">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h1 className="text-xl font-display font-bold text-foreground">Deals</h1>
+            <h1 className="text-xl font-display font-bold text-foreground">{isZh ? '交易管理' : 'Deals'}</h1>
             <p className="text-xs text-muted-foreground mt-0.5 hidden sm:block">
-              {activeDeals} active deals &middot; {formatCurrency(totalPipeline)} total pipeline &middot; {avgConfidence}% avg confidence
+              {isZh ? `${activeDeals} 个活跃交易 · ${formatCurrency(totalPipeline)} 总管线 · ${avgConfidence}% 平均置信度` : `${activeDeals} active deals \u00b7 ${formatCurrency(totalPipeline)} total pipeline \u00b7 ${avgConfidence}% avg confidence`}
             </p>
             <p className="text-xs text-muted-foreground mt-0.5 sm:hidden">
-              {activeDeals} active &middot; {avgConfidence}% avg
+              {isZh ? `${activeDeals} 个活跃 · ${avgConfidence}% 平均` : `${activeDeals} active \u00b7 ${avgConfidence}% avg`}
             </p>
           </div>
           <Button size="sm" onClick={() => navigate('/deal/new')} className="gap-1.5 shrink-0">
             <Plus className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">New Deal</span>
+            <span className="hidden sm:inline">{isZh ? '新建交易' : 'New Deal'}</span>
           </Button>
         </div>
 
@@ -113,7 +114,7 @@ export default function Deals() {
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search deals..."
+              placeholder={isZh ? '搜索交易...' : 'Search deals...'}
               className="h-8 pl-9 text-xs"
             />
           </div>
@@ -124,7 +125,7 @@ export default function Deals() {
               onClick={() => setViewMode('table')}
               className="h-7 text-xs px-2"
             >
-              Table
+              {isZh ? '表格' : 'Table'}
             </Button>
             <Button
               variant={viewMode === 'board' ? 'secondary' : 'ghost'}
@@ -132,7 +133,7 @@ export default function Deals() {
               onClick={() => setViewMode('board')}
               className="h-7 text-xs px-2"
             >
-              Board
+              {isZh ? '看板' : 'Board'}
             </Button>
           </div>
         </div>
@@ -175,6 +176,9 @@ function TableView({
   toggleSort: (f: SortField) => void;
   navigate: (path: string) => void;
 }) {
+  const { language } = useLanguage();
+  const isZh = language === 'zh';
+
   const SortHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
     <button
       onClick={() => toggleSort(field)}
@@ -189,18 +193,18 @@ function TableView({
     <div className="px-3 md:px-6 py-3">
       {/* Table header — hidden on mobile, shown on sm+ */}
       <div className="hidden sm:grid grid-cols-[2fr_1fr_100px_100px_80px_40px] gap-4 px-3 py-2 border-b border-border/50">
-        <SortHeader field="company">Company / Deal</SortHeader>
-        <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Stage</div>
-        <SortHeader field="value">Value</SortHeader>
-        <SortHeader field="confidenceScore">Confidence</SortHeader>
-        <SortHeader field="daysInStage">Days</SortHeader>
+        <SortHeader field="company">{isZh ? '公司 / 交易' : 'Company / Deal'}</SortHeader>
+        <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{isZh ? '阶段' : 'Stage'}</div>
+        <SortHeader field="value">{isZh ? '金额' : 'Value'}</SortHeader>
+        <SortHeader field="confidenceScore">{isZh ? '置信度' : 'Confidence'}</SortHeader>
+        <SortHeader field="daysInStage">{isZh ? '天数' : 'Days'}</SortHeader>
         <div />
       </div>
 
       {/* Table rows */}
       {deals.length === 0 ? (
         <div className="py-12 text-center text-sm text-muted-foreground">
-          No deals found. Create your first deal to get started.
+          {isZh ? '未找到交易。创建您的第一个交易开始吧。' : 'No deals found. Create your first deal to get started.'}
         </div>
       ) : (
         deals.map((deal, i) => (
@@ -296,7 +300,7 @@ function TableView({
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="text-xs">
                     <DropdownMenuItem onClick={() => navigate(`/deal/${deal.id}`)}>
-                      <Eye className="w-3.5 h-3.5 mr-2" /> View Deal
+                      <Eye className="w-3.5 h-3.5 mr-2" /> {isZh ? '查看交易' : 'View Deal'}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -321,6 +325,9 @@ function BoardView({
   toggleStage: (s: string) => void;
   navigate: (path: string) => void;
 }) {
+  const { language } = useLanguage();
+  const isZh = language === 'zh';
+
   return (
     <div className="flex gap-4 p-4 overflow-x-auto h-full pb-2" style={{ minWidth: 'min-content' }}>
       {stages.filter(s => s !== 'Closed Won' && s !== 'Closed Lost').map(stage => {
@@ -378,7 +385,7 @@ function BoardView({
               ))}
               {stageDeals.length === 0 && (
                 <div className="text-center py-8 text-[10px] text-muted-foreground">
-                  No deals
+                  {isZh ? '暂无交易' : 'No deals'}
                 </div>
               )}
             </div>

@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import { formatDate } from '@/lib/data';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const DEFAULT_SYSTEM_PROMPT = `You are an expert enterprise sales coach. Generate a concise, actionable pre-meeting brief for a sales representative.
 
@@ -54,6 +55,8 @@ Signals: 🏃 Runs marathons, uses it as a metaphor for long-term thinking. 📊
 - Schedule security review with her team`;
 
 export default function AdminPlayground() {
+  const { language } = useLanguage();
+  const isZh = language === 'zh';
   const [systemPrompt, setSystemPrompt] = useState(DEFAULT_SYSTEM_PROMPT);
   const [userPrompt, setUserPrompt] = useState(DEFAULT_USER_PROMPT);
   const [output, setOutput] = useState('');
@@ -75,13 +78,13 @@ export default function AdminPlayground() {
   const rateLogMutation = trpc.ai.rateLog.useMutation({
     onSuccess: () => {
       refetchLogs();
-      toast.success('Feedback saved');
+      toast.success(isZh ? '反馈已保存' : 'Feedback saved');
     },
   });
 
   const handleTest = () => {
     if (!systemPrompt.trim() || !userPrompt.trim()) {
-      toast.error('Both system and user prompts are required');
+      toast.error(isZh ? '系统提示词和用户提示词均为必填' : 'Both system and user prompts are required');
       return;
     }
     testPromptMutation.mutate({ systemPrompt, userPrompt });
@@ -103,14 +106,14 @@ export default function AdminPlayground() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Sparkles className="w-5 h-5 text-primary" />
-              <h1 className="font-display text-2xl font-bold">AI Prompt Playground</h1>
+              <h1 className="font-display text-2xl font-bold">{isZh ? 'AI Prompt 测试场' : 'AI Prompt Playground'}</h1>
             </div>
             <p className="text-muted-foreground text-sm">
-              Test and iterate on AI prompts. All runs are logged for dataset accumulation.
+              {isZh ? '测试和迭代 AI 提示词。所有运行记录均自动保存用于数据积累。' : 'Test and iterate on AI prompts. All runs are logged for dataset accumulation.'}
             </p>
           </div>
           <Badge variant="outline" className="text-primary border-primary/30 bg-primary/5">
-            Admin Only
+            {isZh ? '仅管理员' : 'Admin Only'}
           </Badge>
         </div>
 
@@ -118,11 +121,11 @@ export default function AdminPlayground() {
           <TabsList>
             <TabsTrigger value="playground">
               <Play className="w-3.5 h-3.5 mr-1.5" />
-              Playground
+              {isZh ? '测试场' : 'Playground'}
             </TabsTrigger>
             <TabsTrigger value="logs">
               <BarChart3 className="w-3.5 h-3.5 mr-1.5" />
-              AI Logs
+              {isZh ? 'AI 日志' : 'AI Logs'}
               {logs.length > 0 && (
                 <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5 py-0">
                   {logs.length}
@@ -144,7 +147,7 @@ export default function AdminPlayground() {
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-display flex items-center gap-2">
                       <span className="w-5 h-5 rounded bg-primary/20 text-primary text-[10px] font-bold flex items-center justify-center">S</span>
-                      System Prompt
+                      {isZh ? '系统提示词' : 'System Prompt'}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -152,7 +155,7 @@ export default function AdminPlayground() {
                       value={systemPrompt}
                       onChange={(e) => setSystemPrompt(e.target.value)}
                       className="font-mono text-xs min-h-[200px] resize-y bg-muted/30 border-border/50"
-                      placeholder="You are..."
+                      placeholder={isZh ? '你是...' : 'You are...'}
                     />
                   </CardContent>
                 </Card>
@@ -161,7 +164,7 @@ export default function AdminPlayground() {
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-display flex items-center gap-2">
                       <span className="w-5 h-5 rounded bg-blue-500/20 text-blue-400 text-[10px] font-bold flex items-center justify-center">U</span>
-                      User Prompt
+                      {isZh ? '用户提示词' : 'User Prompt'}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -169,7 +172,7 @@ export default function AdminPlayground() {
                       value={userPrompt}
                       onChange={(e) => setUserPrompt(e.target.value)}
                       className="font-mono text-xs min-h-[280px] resize-y bg-muted/30 border-border/50"
-                      placeholder="Generate a brief for..."
+                      placeholder={isZh ? '为...生成简报' : 'Generate a brief for...'}
                     />
                   </CardContent>
                 </Card>
@@ -183,12 +186,12 @@ export default function AdminPlayground() {
                   {testPromptMutation.isPending ? (
                     <>
                       <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                      Generating...
+                      {isZh ? '生成中...' : 'Generating...'}
                     </>
                   ) : (
                     <>
                       <Play className="w-4 h-4" />
-                      Run Prompt
+                      {isZh ? '运行' : 'Run Prompt'}
                     </>
                   )}
                 </Button>
@@ -199,7 +202,7 @@ export default function AdminPlayground() {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-display flex items-center gap-2">
                     <Zap className="w-4 h-4 text-yellow-400" />
-                    Output
+                    {isZh ? '输出' : 'Output'}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -214,7 +217,7 @@ export default function AdminPlayground() {
                       <div className="text-center">
                         <Sparkles className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
                         <p className="text-sm text-muted-foreground">
-                          Run a prompt to see the output here
+                          {isZh ? '运行提示词查看输出结果' : 'Run a prompt to see the output here'}
                         </p>
                       </div>
                     </div>
@@ -230,10 +233,10 @@ export default function AdminPlayground() {
               {/* Stats row */}
               <div className="grid grid-cols-4 gap-4">
                 {[
-                  { label: 'Total Runs', value: logs.length },
-                  { label: 'Good Outputs', value: logs.filter(l => l.rating === 'good').length },
-                  { label: 'Bad Outputs', value: logs.filter(l => l.rating === 'bad').length },
-                  { label: 'Edited', value: logs.filter(l => l.rating === 'edited').length },
+                  { label: isZh ? '总运行次数' : 'Total Runs', value: logs.length },
+                  { label: isZh ? '好的输出' : 'Good Outputs', value: logs.filter(l => l.rating === 'good').length },
+                  { label: isZh ? '差的输出' : 'Bad Outputs', value: logs.filter(l => l.rating === 'bad').length },
+                  { label: isZh ? '已编辑' : 'Edited', value: logs.filter(l => l.rating === 'edited').length },
                 ].map(stat => (
                   <Card key={stat.label} className="bg-card border-border/50">
                     <CardContent className="p-4">
@@ -249,7 +252,7 @@ export default function AdminPlayground() {
                 <Card className="bg-card border-border/50">
                   <CardContent className="py-12 text-center">
                     <BarChart3 className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
-                    <p className="text-sm text-muted-foreground">No AI runs yet. Use the Playground to generate your first output.</p>
+                    <p className="text-sm text-muted-foreground">{isZh ? '暂无 AI 运行记录。使用测试场生成第一个输出。' : 'No AI runs yet. Use the Playground to generate your first output.'}</p>
                   </CardContent>
                 </Card>
               ) : (
@@ -277,7 +280,7 @@ export default function AdminPlayground() {
                                     'text-yellow-400 border-yellow-400/30'
                                   }`}
                                 >
-                                  {log.rating === 'good' ? '👍 Good' : log.rating === 'bad' ? '👎 Bad' : '✏️ Edited'}
+                                  {log.rating === 'good' ? (isZh ? '👍 好' : '👍 Good') : log.rating === 'bad' ? (isZh ? '👎 差' : '👎 Bad') : (isZh ? '✏️ 已编辑' : '✏️ Edited')}
                                 </Badge>
                               )}
                             </div>
@@ -337,7 +340,7 @@ export default function AdminPlayground() {
                           <div className="mt-4 space-y-3 border-t border-border/50 pt-4">
                             {log.systemPrompt && (
                               <div>
-                                <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">System Prompt</Label>
+                                <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">{isZh ? '系统提示词' : 'System Prompt'}</Label>
                                 <pre className="mt-1 text-xs text-muted-foreground bg-muted/30 rounded p-3 whitespace-pre-wrap font-mono max-h-32 overflow-auto">
                                   {log.systemPrompt}
                                 </pre>
@@ -345,14 +348,14 @@ export default function AdminPlayground() {
                             )}
                             {log.userPrompt && (
                               <div>
-                                <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">User Prompt</Label>
+                                <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">{isZh ? '用户提示词' : 'User Prompt'}</Label>
                                 <pre className="mt-1 text-xs text-muted-foreground bg-muted/30 rounded p-3 whitespace-pre-wrap font-mono max-h-32 overflow-auto">
                                   {log.userPrompt}
                                 </pre>
                               </div>
                             )}
                             <div>
-                              <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">Raw Output</Label>
+                              <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">{isZh ? '原始输出' : 'Raw Output'}</Label>
                               {editingOutput?.id === log.id ? (
                                 <div className="mt-1 space-y-2">
                                   <Textarea
@@ -367,14 +370,14 @@ export default function AdminPlayground() {
                                       onClick={() => handleRate(log.id, 'edited', editingOutput.text)}
                                     >
                                       <Save className="w-3 h-3" />
-                                      Save Edit
+                                      {isZh ? '保存编辑' : 'Save Edit'}
                                     </Button>
                                     <Button
                                       size="sm"
                                       variant="ghost"
                                       onClick={() => setEditingOutput(null)}
                                     >
-                                      Cancel
+                                      {isZh ? '取消' : 'Cancel'}
                                     </Button>
                                   </div>
                                 </div>

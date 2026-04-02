@@ -399,6 +399,7 @@ ${input.transcript}`;
         engagement: z.string(),
       })).optional(),
       meetings: z.array(z.object({
+        id: z.number().optional(),
         date: z.string().or(z.date()),
         type: z.string(),
         keyParticipant: z.string().nullable().optional(),
@@ -454,26 +455,45 @@ Do NOT output any English text in the JSON values. Only stakeholder names and co
 示例 action: "与李明确认定价模型并推动内部审批"
 示例 risk title: "决策链不明确，缺乎关键支持者"` : "";
 
-      // Determine data richness: do we have actual meeting transcripts/summaries?
+      // EVIDENCE-BASED ONLY: require actual meeting transcripts/summaries
       const meetingsWithContent = (input.meetings ?? []).filter(m => m.summary && m.summary.trim().length > 20);
       const hasTranscripts = meetingsWithContent.length > 0;
-      const dataLevel = hasTranscripts ? 'evidence-based' : 'early-stage';
 
-      // Build transcript evidence block
-      const transcriptEvidence = hasTranscripts
-        ? meetingsWithContent.map((m, i) => {
-            const dateStr = typeof m.date === 'string' ? m.date : new Date(m.date).toISOString().split('T')[0];
-            return `Meeting ${i + 1} (${m.type}, ${dateStr}${m.keyParticipant ? `, with ${m.keyParticipant}` : ''}):\n${m.summary}`;
-          }).join('\n\n')
+      if (!hasTranscripts) {
+        // No evidence available — refuse to generate hallucinated insights
+        return {
+          whatsHappening: '',
+          keyRisks: [],
+          whatsNext: [],
+          dataLevel: 'no-data' as const,
+          tokensUsed: 0,
+          latencyMs: 0,
+          error: lang === 'zh'
+            ? '暂无足够的销售记录来生成交易洞察。请先在交易室中上传会议记录、微信截图或邮件等销售跟进内容，AI 将基于这些真实数据为您生成分析。'
+            : 'Not enough sales records to generate deal insights. Please upload meeting notes, chat screenshots, or emails in the Deal Room first. AI will analyze based on real data.',
+        };
+      }
+
+      const dataLevel = 'evidence-based';
+
+      // Build transcript evidence block with meeting IDs for source attribution
+      const transcriptEvidence = meetingsWithContent.map((m, i) => {
+        const dateStr = typeof m.date === 'string' ? m.date : new Date(m.date).toISOString().split('T')[0];
+        const meetingLabel = m.id ? `[会议#${m.id}]` : `Meeting ${i + 1}`;
+        return `${meetingLabel} (${m.type}, ${dateStr}${m.keyParticipant ? `, with ${m.keyParticipant}` : ''}):\n${m.summary}`;
+      }).join('\n\n');
+
+      // Collect source event IDs for the snapshot
+      const sourceEventIds = meetingsWithContent.map(m => m.id).filter((id): id is number => id !== undefined);
+
+      // Build meeting reference instruction for AI
+      const meetingRefInstruction = sourceEventIds.length > 0
+        ? `\n\nSOURCE ATTRIBUTION RULE: When citing evidence from a meeting, you MUST embed a reference tag in the format [ref:MEETING_ID] where MEETING_ID is the number from the meeting label (e.g., [ref:90004]). Place the tag naturally in the text, e.g., "根据与霍光的技术沟通[ref:90004]，一期系统存在信号延迟问题". Every keyRisk detail and whatsNext rationale MUST contain at least one [ref:ID] tag.`
         : '';
 
-      let systemPrompt: string;
-
-      if (dataLevel === 'evidence-based') {
-        // ── EVIDENCE-BASED MODE: Ground everything in transcript data ──
-        const dbPromptEvidence = await getActivePrompt('deal_insight_evidence');
-        const baseEvidencePrompt = dbPromptEvidence?.systemPrompt ?? `You are Meridian, a veteran B2B enterprise sales strategist. You analyze deals STRICTLY based on evidence from meeting transcripts and recorded interactions.`;
-        systemPrompt = `${baseEvidencePrompt}${sellerContext}
+      const dbPromptEvidence = await getActivePrompt('deal_insight_evidence');
+      const baseEvidencePrompt = dbPromptEvidence?.systemPrompt ?? `You are Meridian, a veteran B2B enterprise sales strategist. You analyze deals STRICTLY based on evidence from meeting transcripts and recorded interactions.`;
+      let systemPrompt = `${baseEvidencePrompt}${sellerContext}
 
 You are analyzing this deal through the **${modelName}** sales framework.
 The ${modelName} framework dimensions:
@@ -481,78 +501,34 @@ ${dimensionPrompt}
 
 CRITICAL RULE: Every claim you make MUST be traceable to a specific meeting or interaction provided below. Do NOT fabricate information. Do NOT infer dynamics that aren't supported by the evidence. If a ${modelName} dimension has no evidence, explicitly say "No data yet" for that dimension.
 
-Your analysis MUST reference ${modelName} dimensions by name and cite which meeting/interaction supports each insight.${langInstruction}
+Your analysis MUST reference ${modelName} dimensions by name and cite which meeting/interaction supports each insight.${meetingRefInstruction}${langInstruction}
 
 Return ONLY a valid JSON object:
 {
-  "whatsHappening": "2-3 sentences grounded in the meeting evidence. What did the conversations ACTUALLY reveal? Reference specific meetings, quotes, or behaviors observed. Name stakeholders. Do NOT speculate beyond what the data shows.",
+  "whatsHappening": "2-3 sentences grounded in the meeting evidence. What did the conversations ACTUALLY reveal? Reference specific meetings using [ref:ID] tags, quotes, or behaviors observed. Name stakeholders. Do NOT speculate beyond what the data shows.",
   "keyRisks": [
     {
       "title": "Crisp risk title (max 8 words)",
-      "detail": "Based on [Meeting X with Person Y], we observed [specific evidence]. This creates a gap in ${modelName}'s [Dimension] because [consequence]. If unaddressed, [specific outcome].",
+      "detail": "Based on [specific meeting evidence with ref:ID tag], we observed [evidence]. This creates a gap in ${modelName}'s [Dimension] because [consequence]. If unaddressed, [specific outcome].",
       "stakeholders": ["Name of stakeholder involved"]
     }
   ],
   "whatsNext": [
     {
       "action": "Imperative verb + specific person + specific outcome",
-      "rationale": "Based on what [Person] said in [Meeting], the logical next move is... This addresses the ${modelName} [Dimension] gap.",
+      "rationale": "Based on what [Person] said in [Meeting with ref:ID tag], the logical next move is... This addresses the ${modelName} [Dimension] gap.",
       "suggestedContacts": []
     }
   ]
 }
 
 Rules:
-- keyRisks: 2-4 items. Each MUST cite evidence from a specific meeting. No fabricated risks.
-- whatsHappening: Summarize what the meetings ACTUALLY revealed, not what you imagine is happening.
-- whatsNext: 2-4 items. Actions must follow logically from the meeting evidence.
+- keyRisks: 2-4 items. Each MUST cite evidence from a specific meeting with [ref:ID] tag. No fabricated risks.
+- whatsHappening: Summarize what the meetings ACTUALLY revealed, not what you imagine is happening. Include [ref:ID] tags.
+- whatsNext: 2-4 items. Actions must follow logically from the meeting evidence. Include [ref:ID] tags in rationale.
 - suggestedContacts: Only suggest if a meeting participant mentioned someone not yet on the map. Otherwise empty [].
 - If there's not enough data for a section, say so honestly rather than fabricating.
 - Return ONLY JSON, no markdown.`;
-      } else {
-        // ── EARLY-STAGE MODE: Only company + stakeholder info, no transcripts ──
-        const dbPromptEarly = await getActivePrompt('deal_insight_early');
-        const baseEarlyPrompt = dbPromptEarly?.systemPrompt ?? `You are Meridian, a B2B sales strategist. This is an EARLY-STAGE deal with NO meeting transcripts yet. You can only work with the company profile and identified stakeholders.`;
-        systemPrompt = `${baseEarlyPrompt}${sellerContext}
-
-You are evaluating this deal through the **${modelName}** framework.
-The ${modelName} dimensions:
-${dimensionPrompt}
-
-CRITICAL CONSTRAINTS:
-- You have NO meeting data, NO conversation transcripts, NO direct evidence of stakeholder behavior.
-- You MUST NOT fabricate meeting outcomes, stakeholder quotes, or engagement dynamics.
-- You CAN provide: initial hypothesis based on company profile, industry patterns, and stakeholder roles.
-- You MUST clearly label everything as "hypothesis" or "assumption" — not fact.
-- For each ${modelName} dimension, indicate what information is MISSING and needs to be gathered.${langInstruction}
-
-Return ONLY a valid JSON object:
-{
-  "whatsHappening": "2-3 sentences: Based on the company profile and identified stakeholders, here is the initial opportunity hypothesis. Be explicit about what we DON'T know yet. Flag that this is pre-engagement analysis.",
-  "keyRisks": [
-    {
-      "title": "Risk title (max 8 words)",
-      "detail": "HYPOTHESIS: Based on [company profile / industry pattern], [risk]. We need [specific meeting/data] to validate. ${modelName} dimension gap: [Dimension] — no evidence gathered yet.",
-      "stakeholders": ["Name if relevant"]
-    }
-  ],
-  "whatsNext": [
-    {
-      "action": "First engagement action — who to meet and what to learn",
-      "rationale": "We need to gather evidence for ${modelName}'s [Dimension]. This meeting will help us validate [hypothesis]. Key questions to ask: [specific questions].",
-      "suggestedContacts": []
-    }
-  ]
-}
-
-Rules:
-- This is a PLANNING phase, not an analysis phase. Focus on what to LEARN, not what you already know.
-- whatsHappening: State the opportunity hypothesis + explicitly list what's unknown.
-- keyRisks: 2-3 items. Frame as hypothetical risks that need validation through meetings.
-- whatsNext: 2-3 items. Focus on first meetings to schedule and key questions to ask. Every action should aim to fill a ${modelName} dimension gap.
-- Do NOT suggest contacts unless the company profile gives clear hints about who to find.
-- Return ONLY JSON, no markdown.`;
-      }
 
       const stakeholderSummary = input.stakeholders?.map(s =>
         `- ${s.name} (${s.title ?? s.role}): ${s.sentiment} sentiment, ${s.engagement} engagement`
@@ -650,6 +626,7 @@ ${stakeholderSummary}${strategyBlock}`;
             confidenceScore: input.confidenceScore,
             confidenceChange: 0,
             aiGenerated: true,
+            sourceEventIds: sourceEventIds.length > 0 ? sourceEventIds : undefined,
           });
         } catch (snapshotErr) {
           console.warn('[AI] Failed to persist snapshot:', snapshotErr);

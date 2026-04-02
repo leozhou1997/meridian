@@ -571,6 +571,17 @@ function StakeholderLinkedText({
   // Check if text contains CJK characters
   const hasCJK = /[\u4e00-\u9fff\u3400-\u4dbf]/.test(text);
 
+  // Build meeting ID map for [ref:meetingId] references
+  const sortedMeetings = [...(meetings ?? [])].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const meetingIdMap = new Map<number, Meeting>();
+  sortedMeetings.forEach(m => meetingIdMap.set(m.id, m));
+
+  // Pre-process text: replace [ref:meetingId] with readable meeting labels
+  // We'll split on [ref:xxx] patterns first, then do stakeholder/meeting-term matching on the text segments
+  const refPattern = /\[ref:(\d+)\]/g;
+  const hasRefs = refPattern.test(text);
+  refPattern.lastIndex = 0; // reset
+
   // Build stakeholder terms
   const titleTerms = stakeholders
     .filter(s => s.title)
@@ -592,7 +603,6 @@ function StakeholderLinkedText({
   });
 
   // Build meeting reference terms: "会议1", "会议 1", "Meeting 1", etc.
-  const sortedMeetings = [...(meetings ?? [])].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   const meetingTermMap = new Map<string, Meeting>();
   sortedMeetings.forEach((m, idx) => {
     const num = idx + 1;
@@ -606,11 +616,59 @@ function StakeholderLinkedText({
   const stakeholderTerms = [...names, ...titleTerms].filter((v, i, a) => a.indexOf(v) === i);
   const meetingTerms = Array.from(meetingTermMap.keys());
   const allTerms = [...meetingTerms, ...stakeholderTerms].sort((a, b) => b.length - a.length);
-  
-  if (!allTerms.length) return <span>{text}</span>;
 
-  const escaped = allTerms.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-  const parts = text.split(new RegExp(`(${escaped.join('|')})`, 'g'));
+  // If text has [ref:xxx] markers, split on those first
+  // Each segment is either a ref marker or plain text
+  type Segment = { type: 'text'; value: string } | { type: 'ref'; meetingId: number; meeting: Meeting | undefined };
+  let segments: Segment[] = [];
+  if (hasRefs) {
+    let lastIdx = 0;
+    let match: RegExpExecArray | null;
+    while ((match = refPattern.exec(text)) !== null) {
+      if (match.index > lastIdx) {
+        segments.push({ type: 'text', value: text.slice(lastIdx, match.index) });
+      }
+      const mId = parseInt(match[1], 10);
+      segments.push({ type: 'ref', meetingId: mId, meeting: meetingIdMap.get(mId) });
+      lastIdx = match.index + match[0].length;
+    }
+    if (lastIdx < text.length) {
+      segments.push({ type: 'text', value: text.slice(lastIdx) });
+    }
+  } else {
+    segments = [{ type: 'text', value: text }];
+  }
+
+  // For text segments, further split by stakeholder/meeting terms
+  function splitTextByTerms(txt: string): string[] {
+    if (!allTerms.length) return [txt];
+    const escaped = allTerms.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    return txt.split(new RegExp(`(${escaped.join('|')})`, 'g'));
+  }
+
+  const parts: Array<{ kind: 'text'; value: string } | { kind: 'stakeholder'; value: string; stakeholder: Stakeholder } | { kind: 'meeting-term'; value: string; meeting: Meeting } | { kind: 'meeting-ref'; meetingId: number; meeting: Meeting | undefined }> = [];
+  for (const seg of segments) {
+    if (seg.type === 'ref') {
+      parts.push({ kind: 'meeting-ref', meetingId: seg.meetingId, meeting: seg.meeting });
+    } else {
+      const subParts = splitTextByTerms(seg.value);
+      for (const sp of subParts) {
+        const meetingMatch = meetingTermMap.get(sp);
+        if (meetingMatch) {
+          parts.push({ kind: 'meeting-term', value: sp, meeting: meetingMatch });
+          continue;
+        }
+        const stakeholder = stakeholders.find(
+          s => s.name === sp || s.name.startsWith(sp + ' ') || (s.title === sp) || (s.title?.includes(sp) && /\b(C[A-Z]O|VP|SVP|EVP|CPO|CMO|CRO)\b/.test(sp))
+        );
+        if (stakeholder) {
+          parts.push({ kind: 'stakeholder', value: sp, stakeholder });
+          continue;
+        }
+        parts.push({ kind: 'text', value: sp });
+      }
+    }
+  }
 
   const handleMeetingHover = (e: React.MouseEvent, meeting: Meeting) => {
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
@@ -635,35 +693,52 @@ function StakeholderLinkedText({
     setPopoverPos(null);
   };
 
+  // Helper to generate a readable label for a meeting ref
+  const getMeetingRefLabel = (meeting: Meeting) => {
+    const d = new Date(meeting.date);
+    const dateStr = isZh
+      ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const typeLabel = meeting.title || meeting.type || '';
+    return isZh ? `${dateStr} ${typeLabel}` : `${dateStr} ${typeLabel}`;
+  };
+
   return (
     <span className="relative">
       {parts.map((part, i) => {
-        // Check if it's a meeting reference
-        const meeting = meetingTermMap.get(part);
-        if (meeting) {
+        if (part.kind === 'meeting-ref') {
+          if (!part.meeting) return <span key={i} className="text-muted-foreground/50">[?]</span>;
+          const label = getMeetingRefLabel(part.meeting);
+          return (
+            <span key={i}
+              className="inline-flex items-center gap-0.5 text-amber-600 dark:text-amber-400 underline decoration-wavy decoration-amber-400/50 underline-offset-2 cursor-pointer hover:text-amber-700 dark:hover:text-amber-300 transition-colors font-medium text-[0.9em]"
+              onMouseEnter={(e) => handleMeetingHover(e, part.meeting!)}
+              onMouseLeave={handleMeetingLeave}
+              onClick={() => onMeetingClick?.('timeline')}>
+              <Calendar className="w-3 h-3 inline shrink-0" />{label}
+            </span>
+          );
+        }
+        if (part.kind === 'meeting-term') {
           return (
             <span key={i}
               className="text-amber-600 dark:text-amber-400 underline decoration-wavy decoration-amber-400/50 underline-offset-2 cursor-pointer hover:text-amber-700 dark:hover:text-amber-300 transition-colors font-medium"
-              onMouseEnter={(e) => handleMeetingHover(e, meeting)}
+              onMouseEnter={(e) => handleMeetingHover(e, part.meeting)}
               onMouseLeave={handleMeetingLeave}
               onClick={() => onMeetingClick?.('timeline')}>
-              {part}
+              {part.value}
             </span>
           );
         }
-        // Check if it's a stakeholder name
-        const stakeholder = stakeholders.find(
-          s => s.name === part || s.name.startsWith(part + ' ') || (s.title === part) || (s.title?.includes(part) && /\b(C[A-Z]O|VP|SVP|EVP|CPO|CMO|CRO)\b/.test(part))
-        );
-        if (stakeholder) {
+        if (part.kind === 'stakeholder') {
           return (
             <span key={i} className="text-blue-700 dark:text-blue-400 underline decoration-dotted underline-offset-2 cursor-pointer hover:text-blue-900 dark:hover:text-blue-300 transition-colors font-medium"
-              onMouseEnter={() => onHover?.(stakeholder.id)} onMouseLeave={() => onHover?.(null)} onClick={() => onClick?.(stakeholder.id)}>
-              {part}
+              onMouseEnter={() => onHover?.(part.stakeholder.id)} onMouseLeave={() => onHover?.(null)} onClick={() => onClick?.(part.stakeholder.id)}>
+              {part.value}
             </span>
           );
         }
-        return <span key={i}>{part}</span>;
+        return <span key={i}>{part.value}</span>;
       })}
       {/* Meeting hover popover */}
       {hoveredMeeting && popoverPos && (
@@ -905,23 +980,28 @@ export default function DealInsightPanel({
     whatsNext?: WhatsNextItem[];
     updatedAt?: Date;
   }>({});
-  const [insightDataLevel, setInsightDataLevel] = useState<'early-stage' | 'evidence-based' | null>(null);
+  const [insightDataLevel, setInsightDataLevel] = useState<'no-data' | 'evidence-based' | null>(null);
 
   const utils = trpc.useUtils();
   const generateInsightsMutation = trpc.ai.generateDealInsight.useMutation({
     onSuccess: (data) => {
+      if ((data as any).error) {
+        // No data available - show error message
+        toast.warning((data as any).error);
+        return;
+      }
       setInsightOverrides({
         whatsHappening: data.whatsHappening,
         keyRisks: data.keyRisks,
         whatsNext: data.whatsNext as WhatsNextItem[],
         updatedAt: new Date(),
       });
-      setInsightDataLevel(data.dataLevel as 'early-stage' | 'evidence-based');
+      setInsightDataLevel(data.dataLevel as 'evidence-based');
       utils.deals.get.invalidate({ id: deal.id });
       utils.nextActions.listByDeal.invalidate({ dealId: deal.id });
-      toast.success(data.dataLevel === 'early-stage'
-        ? (isZh ? '初始评估已生成 — 上传会议记录获取更深入洞察' : 'Initial assessment generated \u2014 upload meeting transcripts for deeper insights')
-        : (isZh ? '交易洞察已刷新 — Meridian 已分析最新上下文' : 'Deal insights refreshed \u2014 Meridian has analysed the latest context'));
+      utils.snapshots.listByDeal.invalidate({ dealId: deal.id });
+      utils.meetings.listByDeal.invalidate({ dealId: deal.id });
+      toast.success(isZh ? '交易洞察已刷新 — Meridian 已基于销售记录分析最新上下文' : 'Deal insights refreshed \u2014 Meridian has analysed the latest context based on sales records');
     },
     onError: (err) => {
       toast.error(isZh ? '生成洞察失败：' + err.message : 'Failed to generate insights: ' + err.message);
@@ -1082,12 +1162,16 @@ export default function DealInsightPanel({
                     console.warn('Failed to save suggestion dispositions:', e);
                   }
                 }
+                // Refetch latest meetings from DB before generating insights
+                // This ensures newly added deal room entries are included
+                const freshMeetings = await utils.meetings.listByDeal.fetch({ dealId: deal.id });
                 generateInsightsMutation.mutate({
                   dealId: deal.id, dealName: deal.name, dealStage: deal.stage, dealValue: deal.value,
                   confidenceScore: deal.confidenceScore, companyInfo: deal.companyInfo,
                   salesModel: currentModelKey, customModelId: deal.customModelId, language,
                   stakeholders: deal.stakeholders.map(s => ({ name: s.name, title: s.title, role: s.role, sentiment: s.sentiment, engagement: s.engagement })),
-                  meetings: (deal.meetings ?? []).map(m => ({
+                  meetings: (freshMeetings ?? []).map((m: any) => ({
+                    id: m.id,
                     date: typeof m.date === 'string' ? m.date : new Date(m.date).toISOString(),
                     type: m.type, keyParticipant: m.keyParticipant, summary: m.summary, duration: m.duration,
                   })),
@@ -1293,12 +1377,12 @@ export default function DealInsightPanel({
             </div>
           )}
 
-          {/* Early-stage data warning */}
-          {insightDataLevel === 'early-stage' && (
+          {/* No-data warning */}
+          {insightDataLevel === 'no-data' && (
             <div className="flex items-start gap-2 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
-              <div className="w-4 h-4 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0 mt-0.5"><span className="text-[10px]">{'\u26a0\ufe0f'}</span></div>
+              <div className="w-4 h-4 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0 mt-0.5"><span className="text-[10px]">{'⚠️'}</span></div>
               <div className="text-[11px] text-amber-300/90 leading-relaxed">
-                {isZh ? (<><span className="font-semibold">初期评估。</span>本分析仅基于公司资料和利益相关者角色。上传会议纪要或通话录音以获取基于证据的深度洞察。</>) : (<><span className="font-semibold">Pre-engagement analysis.</span> This assessment is based on company profile and stakeholder roles only. Upload meeting notes or call recordings to unlock evidence-based insights.</>)}
+                {isZh ? (<><span className="font-semibold">暂无销售记录。</span>请先在交易室中上传会议记录、微信截图或邮件等销售跟进内容，AI 将基于这些真实数据为您生成分析。</>) : (<><span className="font-semibold">No sales records available.</span> Please upload meeting notes, chat screenshots, or emails in the Deal Room first. AI will analyze based on real data.</>)}
               </div>
             </div>
           )}

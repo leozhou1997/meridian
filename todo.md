@@ -898,3 +898,31 @@
 - [x] Translate deal stage names (Discovery, Demo, etc.) to Chinese across all pages
 - [x] Clarified: deal stages and buying stages are separate concepts (sales pipeline vs customer procurement)
 - [x] Set kanban as default view in deal management (board button first, default state)
+## AI Insight Grounding Fix (April 2)
+- [x] Investigate current insight generation logic (how snapshots are created, what feeds into AI)
+- [x] Investigate seed data for historical snapshots (are they based on real meetings?)
+- [x] Fix: AI insights must be grounded in actual sales data (meetings, strategy notes, interactions)
+- [x] Fix: Remove hallucinated content from seed snapshots
+- [x] Fix: Each insight should be traceable to source records
+- [x] Fix: AI prompt must only reference data that actually exists in the system
+
+## Insight Source Attribution + Snapshot Rebuild (April 2)
+- [x] Check DB: verify current snapshot data and meeting records
+- [x] Design source-attribution: snapshots reference source meetings, insights traceable
+- [x] Rebuild all seed snapshots grounded in actual meeting records
+- [x] Add sourceEvents field to snapshot data (references to meeting IDs)
+- [x] UI: hover on insight shows source meeting/event popover
+- [x] Ensure keyRisks and whatsNext are present in all snapshots
+- [x] Remove early-stage mode from AI generation - always evidence-based only
+- [x] If no meetings/notes exist, show "请先上传销售记录" instead of generating assumptions
+- [x] Add sourceEventIds JSON column to snapshots schema
+- [x] Rebuild seed snapshots: align to real meetings, embed [ref:meetingId] in detail text
+- [x] UI: parse [ref:...] markers in detail text, render as hoverable amber links
+- [x] UI: hover on reference shows meeting summary popover
+- [x] BUG: Sumitomo (210003) snapshots created (5 snapshots grounded in meetings)
+- [x] BUG: [ref:meetingId] renders correctly as hoverable meeting link
+
+## Refresh Analysis Fix (April 2)
+- [x] BUG: "刷新分析" now fetches latest meetings from DB before calling AI
+- [x] BUG: New snapshot invalidates snapshots + meetings cache after generation
+- [ ] REMAINING: AI-generated snapshots from real-time refresh may not always include [ref:ID] tags (depends on AI output)

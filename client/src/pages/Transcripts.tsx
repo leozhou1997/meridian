@@ -19,6 +19,7 @@ import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import { CompanyLogo } from '@/components/Avatars';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { getStageName } from '@/lib/data';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -113,7 +114,7 @@ function DealSummaryCard({ deal, interactions, stakeholderCount, snapshotCount, 
             <div className="flex items-center gap-2 mb-1">
               <span className="font-display text-sm font-semibold">{deal.company}</span>
               <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${STAGE_COLORS[deal.stage] ?? 'bg-muted/50 text-muted-foreground'}`}>
-                {deal.stage}
+                {getStageName(deal.stage, isZh)}
               </Badge>
             </div>
 

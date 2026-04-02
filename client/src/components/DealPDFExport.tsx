@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { FileDown, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { formatCurrency } from '@/lib/data';
+import { formatCurrency, getStageName } from '@/lib/data';
 
 interface DealReportData {
   company: string;
@@ -151,7 +151,7 @@ export default function DealPDFExport({ deal }: DealPDFExportProps) {
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;">
     <div style="padding:16px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
       <div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">${isZh ? '阶段' : 'Stage'}</div>
-      <div style="font-size:16px;font-weight:600;color:#1e3a5f;">${deal.stage}</div>
+      <div style="font-size:16px;font-weight:600;color:#1e3a5f;">${getStageName(deal.stage, isZh)}</div>
     </div>
     <div style="padding:16px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
       <div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">ACV</div>

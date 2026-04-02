@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
-import { formatCurrency, getConfidenceColor, getStageColor } from '@/lib/data';
+import { formatCurrency, getConfidenceColor, getStageColor, getStageName } from '@/lib/data';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { CompanyLogo } from '@/components/Avatars';
 import { motion } from 'framer-motion';
@@ -32,7 +32,7 @@ export default function Deals() {
   });
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<ViewMode>('table');
+  const [viewMode, setViewMode] = useState<ViewMode>('board');
   const [sortField, setSortField] = useState<SortField>('updatedAt');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [expandedStages, setExpandedStages] = useState<Set<string>>(
@@ -95,7 +95,7 @@ export default function Deals() {
           <div>
             <h1 className="text-xl font-display font-bold text-foreground">{isZh ? '交易管理' : 'Deals'}</h1>
             <p className="text-xs text-muted-foreground mt-0.5 hidden sm:block">
-              {isZh ? `${activeDeals} 个活跃交易 · ${formatCurrency(totalPipeline)} 总管线 · ${avgConfidence}% 平均置信度` : `${activeDeals} active deals \u00b7 ${formatCurrency(totalPipeline)} total pipeline \u00b7 ${avgConfidence}% avg confidence`}
+              {isZh ? `${activeDeals} 个活跃交易 · ${formatCurrency(totalPipeline)} 总管线 · ${avgConfidence}% 平均交易健康度` : `${activeDeals} active deals \u00b7 ${formatCurrency(totalPipeline)} total pipeline \u00b7 ${avgConfidence}% avg confidence`}
             </p>
             <p className="text-xs text-muted-foreground mt-0.5 sm:hidden">
               {isZh ? `${activeDeals} 个活跃 · ${avgConfidence}% 平均` : `${activeDeals} active \u00b7 ${avgConfidence}% avg`}
@@ -120,20 +120,20 @@ export default function Deals() {
           </div>
           <div className="flex items-center gap-1">
             <Button
-              variant={viewMode === 'table' ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('table')}
-              className="h-7 text-xs px-2"
-            >
-              {isZh ? '表格' : 'Table'}
-            </Button>
-            <Button
               variant={viewMode === 'board' ? 'secondary' : 'ghost'}
               size="sm"
               onClick={() => setViewMode('board')}
               className="h-7 text-xs px-2"
             >
               {isZh ? '看板' : 'Board'}
+            </Button>
+            <Button
+              variant={viewMode === 'table' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('table')}
+              className="h-7 text-xs px-2"
+            >
+              {isZh ? '表格' : 'Table'}
             </Button>
           </div>
         </div>
@@ -224,7 +224,7 @@ function TableView({
                 <div className="flex items-center gap-2 mb-0.5">
                   <span className="text-sm font-medium text-foreground truncate">{deal.company}</span>
                   <Badge variant="outline" className={`text-[10px] shrink-0 ${getStageColor(deal.stage)}`}>
-                    {deal.stage}
+                    {getStageName(deal.stage, isZh)}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-2">
@@ -253,7 +253,7 @@ function TableView({
               {/* Stage */}
               <div className="flex items-center">
                 <Badge variant="outline" className={`text-[10px] ${getStageColor(deal.stage)}`}>
-                  {deal.stage}
+                  {getStageName(deal.stage, isZh)}
                 </Badge>
               </div>
 
@@ -339,7 +339,7 @@ function BoardView({
             {/* Column header */}
             <div className="flex items-center justify-between px-3 py-2 mb-2">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-foreground">{stage}</span>
+                <span className="text-xs font-medium text-foreground">{getStageName(stage, isZh)}</span>
                 <span className="text-[10px] bg-muted text-muted-foreground rounded px-1.5 py-0.5">
                   {stageDeals.length}
                 </span>

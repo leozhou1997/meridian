@@ -894,7 +894,7 @@
 - [x] FEATURE: Remove old collapsible "洞察历史" section, replace with chart-driven navigation
 
 ## UI Fixes: Stage Names, Labels, Default View
-- [ ] Rename homepage '平均执行度' to '平均交易健康度'
-- [ ] Translate deal stage names (Discovery, Demo, etc.) to Chinese
-- [ ] Unify stage definitions between deal management and stakeholder map
-- [ ] Set kanban as default view in deal management (currently table is default)
+- [x] Rename homepage '平均置信度' to '平均交易健康度'
+- [x] Translate deal stage names (Discovery, Demo, etc.) to Chinese across all pages
+- [x] Clarified: deal stages and buying stages are separate concepts (sales pipeline vs customer procurement)
+- [x] Set kanban as default view in deal management (board button first, default state)

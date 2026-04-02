@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useLocation, Link } from 'wouter';
 import { trpc } from '@/lib/trpc';
-import { formatCurrency, getConfidenceColor, getConfidenceBg, getStageColor, formatDate } from '@/lib/data';
+import { formatCurrency, getConfidenceColor, getConfidenceBg, getStageColor, getStageName, formatDate } from '@/lib/data';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { motion } from 'framer-motion';
 import { AlertTriangle, TrendingUp, TrendingDown, ArrowRight, Clock, Target, BarChart3, Shield, Plus, Sparkles, Search, Building2 } from 'lucide-react';
@@ -25,6 +25,7 @@ export default function Dashboard() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const { t, language } = useLanguage();
+  const isZh = language === 'zh';
 
   const { data: deals = [], isLoading } = trpc.deals.list.useQuery(undefined, {
     refetchOnWindowFocus: false,
@@ -208,7 +209,7 @@ export default function Dashboard() {
                           <div className="flex items-center gap-2 mb-0.5">
                             <span className="text-sm font-medium truncate">{deal.company}</span>
                             <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${getStageColor(deal.stage)}`}>
-                              {deal.stage}
+                              {getStageName(deal.stage, isZh)}
                             </Badge>
                           </div>
                           <p className="text-xs text-status-danger/80 truncate">{deal.riskOneLiner ?? (language === 'zh' ? '需要关注' : 'Needs attention')}</p>
@@ -254,7 +255,7 @@ export default function Dashboard() {
                     >
                       <span className={`text-xs w-32 shrink-0 truncate ${
                         selectedStage === group.stage ? 'text-primary font-medium' : 'text-muted-foreground'
-                      }`}>{group.stage}</span>
+                      }`}>{getStageName(group.stage, isZh)}</span>
                       <div className="flex-1">
                         <div className="h-6 bg-muted/30 rounded overflow-hidden">
                           <motion.div
@@ -296,7 +297,7 @@ export default function Dashboard() {
                     <CardTitle className="text-sm font-display">{t('dashboard.allDeals')}</CardTitle>
                     <span className="text-xs text-muted-foreground">
                       {selectedStage ? (
-                        <span className="text-primary font-medium">{filteredDeals.length} in {selectedStage}</span>
+                        <span className="text-primary font-medium">{filteredDeals.length} in {getStageName(selectedStage, isZh)}</span>
                       ) : (
                         <>{deals.length} {t('dashboard.total')}</>
                       )}
@@ -307,7 +308,7 @@ export default function Dashboard() {
                   {filteredDeals.length === 0 ? (
                     <p className="text-xs text-muted-foreground text-center py-6">
                       {selectedStage
-                        ? (language === 'zh' ? `${selectedStage} 阶段暂无 Deal` : `No deals in ${selectedStage}`)
+                        ? (language === 'zh' ? `${getStageName(selectedStage, isZh)} 阶段暂无 Deal` : `No deals in ${selectedStage}`)
                         : (language === 'zh' ? '暂无 Deal' : 'No deals yet')}
                     </p>
                   ) : (
@@ -324,7 +325,7 @@ export default function Dashboard() {
                               <span className="text-[10px] font-mono text-muted-foreground ml-1">{formatCurrency(deal.value ?? 0)}</span>
                             </div>
                             <div className="flex items-center justify-between mt-0.5">
-                              <span className="text-[10px] text-muted-foreground">{deal.stage}</span>
+                              <span className="text-[10px] text-muted-foreground">{getStageName(deal.stage, isZh)}</span>
                               <span className={`text-[10px] font-mono font-medium ${getConfidenceColor(deal.confidenceScore ?? 0)}`}>
                                 {deal.confidenceScore ?? 0}%
                               </span>

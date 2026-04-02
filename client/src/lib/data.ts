@@ -1233,6 +1233,20 @@ export function getDaysAgo(dateStr: string): number {
   return Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
 }
 
+export function getStageName(stage: string, isZh: boolean): string {
+  if (!isZh) return stage;
+  const map: Record<string, string> = {
+    'Discovery': '需求发现',
+    'Demo': '方案演示',
+    'Technical Evaluation': '技术评估',
+    'POC': '概念验证',
+    'Negotiation': '商务谈判',
+    'Closed Won': '赢单',
+    'Closed Lost': '丢单',
+  };
+  return map[stage] ?? stage;
+}
+
 export function getStageColor(stage: string): string {
   switch (stage) {
     case 'Discovery': return 'bg-blue-500/15 text-blue-400 border-blue-500/30';

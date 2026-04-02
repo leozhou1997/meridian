@@ -13,6 +13,7 @@ import { StakeholderAvatar } from '@/components/Avatars';
 import { CompanyLogo } from '@/components/Avatars';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { getStageName } from '@/lib/data';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -434,7 +435,7 @@ export default function Stakeholders() {
                       <CompanyLogo name={deal.company} logoUrl={deal.logo} size="sm" />
                       <div className="flex-1 min-w-0">
                         <span className="font-display text-sm font-semibold">{deal.company}</span>
-                        <span className="text-xs text-muted-foreground ml-2">{deal.stage}</span>
+                        <span className="text-xs text-muted-foreground ml-2">{getStageName(deal.stage, isZh)}</span>
                       </div>
 
                       {/* Sentiment summary */}

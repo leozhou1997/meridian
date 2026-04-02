@@ -266,7 +266,7 @@ const translations: Record<Language, Record<string, string>> = {
     "dashboard.attention": "以下是今天需要您关注的事项。",
     "dashboard.totalPipeline": "总管线",
     "dashboard.predictableRevenue": "可预测收入",
-    "dashboard.avgConfidence": "平均置信度",
+    "dashboard.avgConfidence": "平均交易健康度",
     "dashboard.atRiskDeals": "风险交易",
     "dashboard.dealsNeedingAction": "需要行动的交易",
     "dashboard.allDeals": "所有交易",

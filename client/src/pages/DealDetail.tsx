@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRoute, Link } from 'wouter';
 import { trpc } from '@/lib/trpc';
-import { formatCurrency, getConfidenceColor, getConfidenceBg, getRoleColor, getSentimentColor, formatDate, getStageColor } from '@/lib/data';
+import { formatCurrency, getConfidenceColor, getConfidenceBg, getRoleColor, getSentimentColor, formatDate, getStageColor, getStageName } from '@/lib/data';
 import type { PersonalSignal } from '@/lib/data';
 
 // DB-backed types (numeric IDs)
@@ -777,7 +777,7 @@ export default function DealDetail() {
             {/* Mobile: compact single-line header */}
             <div className="flex items-center gap-2 md:hidden">
               <span className="font-display text-base font-bold truncate">{editCompany}</span>
-              <Badge variant="outline" className={`text-[10px] shrink-0 ${getStageColor(deal.stage)}`}>{deal.stage}</Badge>
+              <Badge variant="outline" className={`text-[10px] shrink-0 ${getStageColor(deal.stage)}`}>{getStageName(deal.stage, isZh)}</Badge>
               <span className={`font-mono text-sm font-medium shrink-0 ${getConfidenceColor(deal.confidenceScore)}`}>{deal.confidenceScore}%</span>
             </div>
             {/* Desktop: full header with inline edits */}
@@ -827,7 +827,7 @@ export default function DealDetail() {
               )}
             </div>
             <div className="hidden md:flex items-center gap-3 mt-1">
-              <Badge variant="outline" className={`text-[10px] ${getStageColor(deal.stage)}`}>{deal.stage}</Badge>
+              <Badge variant="outline" className={`text-[10px] ${getStageColor(deal.stage)}`}>{getStageName(deal.stage, isZh)}</Badge>
               <InlineEdit
                 field="value"
                 value={editValue}
@@ -1376,7 +1376,7 @@ export default function DealDetail() {
                           <div className="grid grid-cols-3 gap-2">
                             <div className="bg-muted/20 rounded-lg p-2">
                               <div className="text-[9px] text-muted-foreground mb-0.5">{isZh ? '阶段' : 'Stage'}</div>
-                              <div className="text-[11px] font-medium">{deal.stage}</div>
+                              <div className="text-[11px] font-medium">{getStageName(deal.stage, isZh)}</div>
                             </div>
                             <div className="bg-muted/20 rounded-lg p-2">
                               <div className="text-[9px] text-muted-foreground mb-0.5">{isZh ? '健康度' : 'Health'}</div>
@@ -1867,7 +1867,7 @@ export default function DealDetail() {
                     <div className="grid grid-cols-3 gap-2">
                       <div className="bg-muted/20 rounded-lg p-2">
                         <div className="text-[9px] text-muted-foreground mb-0.5">{isZh ? '阶段' : 'Stage'}</div>
-                        <div className="text-[11px] font-medium">{deal.stage}</div>
+                        <div className="text-[11px] font-medium">{getStageName(deal.stage, isZh)}</div>
                       </div>
                       <div className="bg-muted/20 rounded-lg p-2">
                         <div className="text-[9px] text-muted-foreground mb-0.5">{isZh ? '健康度' : 'Confidence'}</div>

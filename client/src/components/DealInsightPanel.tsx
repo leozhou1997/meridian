@@ -1,11 +1,11 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { trpc } from '@/lib/trpc';
 import { formatCurrency, getConfidenceColor } from '@/lib/data';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   AlertTriangle, Check, Plus, Trash2, Calendar, Send, Loader2,
   ChevronDown, ChevronUp, Sparkles, Settings2, Play, Pause, Ban,
-  Clock, CircleCheck, CircleDot, RotateCcw, ArrowRight
+  Clock, CircleCheck, CircleDot, RotateCcw, ArrowRight, History
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -867,6 +867,17 @@ export default function DealInsightPanel({
   const isZh = language === 'zh';
   const [collapsed, setCollapsed] = useState(false);
 
+  // Snapshot timeline navigation state
+  const sortedSnapshots = useMemo(() => 
+    [...deal.snapshots].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
+    [deal.snapshots]
+  );
+  const [selectedSnapshotIdx, setSelectedSnapshotIdx] = useState<number | null>(null);
+  const [hoveredPointIdx, setHoveredPointIdx] = useState<number | null>(null);
+  const activeSnapshotIdx = selectedSnapshotIdx ?? (sortedSnapshots.length - 1);
+  const activeSnapshot = sortedSnapshots[activeSnapshotIdx] ?? latestSnapshot;
+  const isViewingHistory = selectedSnapshotIdx !== null && selectedSnapshotIdx < sortedSnapshots.length - 1;
+
   // Sales model state
   const [showModelSelector, setShowModelSelector] = useState(false);
   const salesModelsQuery = trpc.salesModels.list.useQuery();
@@ -965,10 +976,17 @@ export default function DealInsightPanel({
     });
   };
 
-  const whatsHappening: string | null | undefined = insightOverrides.whatsHappening ?? latestSnapshot?.whatsHappening;
-  const keyRisks: (KeyRiskItem | string)[] = (insightOverrides.keyRisks ?? latestSnapshot?.keyRisks ?? []) as (KeyRiskItem | string)[];
-  const whatsNextRaw = insightOverrides.whatsNext ?? latestSnapshot?.whatsNext ?? null;
-  const wasUpdatedByChat = !!insightOverrides.updatedAt;
+  // When viewing history, show that snapshot's data; when viewing latest, use overrides from AI refresh
+  const whatsHappening: string | null | undefined = isViewingHistory
+    ? activeSnapshot?.whatsHappening
+    : (insightOverrides.whatsHappening ?? latestSnapshot?.whatsHappening);
+  const keyRisks: (KeyRiskItem | string)[] = isViewingHistory
+    ? ((activeSnapshot?.keyRisks ?? []) as (KeyRiskItem | string)[])
+    : ((insightOverrides.keyRisks ?? latestSnapshot?.keyRisks ?? []) as (KeyRiskItem | string)[]);
+  const whatsNextRaw = isViewingHistory
+    ? (activeSnapshot?.whatsNext ?? null)
+    : (insightOverrides.whatsNext ?? latestSnapshot?.whatsNext ?? null);
+  const wasUpdatedByChat = !isViewingHistory && !!insightOverrides.updatedAt;
 
   // Group next actions by status for the management section
   const activeActions = nextActions.filter(a => {
@@ -985,12 +1003,11 @@ export default function DealInsightPanel({
   // Last analysis timestamp
   const lastAnalysisDate = latestSnapshot ? new Date(latestSnapshot.date) : null;
 
-  // Sparkline
-  const sparklineEl = (() => {
-    if (deal.snapshots.length < 2) return null;
-    const sorted = [...deal.snapshots].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    const scores = sorted.map(s => s.confidenceScore);
-    const W = 280, H = 44, PAD = 4;
+  // Interactive Trend Line Chart (replaces old sparkline)
+  const trendChartEl = useMemo(() => {
+    if (sortedSnapshots.length < 2) return null;
+    const scores = sortedSnapshots.map(s => s.confidenceScore);
+    const W = 280, H = 56, PAD = 6;
     const minS = Math.max(0, Math.min(...scores) - 10);
     const maxS = Math.min(100, Math.max(...scores) + 10);
     const toX = (i: number) => PAD + (i / (scores.length - 1)) * (W - PAD * 2);
@@ -999,35 +1016,8 @@ export default function DealInsightPanel({
     const areaPoints = `${toX(0)},${H} ${points} ${toX(scores.length - 1)},${H}`;
     const lastScore = scores[scores.length - 1];
     const lineColor = lastScore >= 75 ? '#10b981' : lastScore >= 50 ? '#f59e0b' : '#ef4444';
-    return (
-      <div className="mt-2">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-[9px] text-muted-foreground/60 uppercase tracking-wider">{t('insight.confidenceTrend')}</span>
-          <span className="text-[9px] text-muted-foreground/60">
-            {new Date(sorted[0].date).toLocaleDateString(isZh ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' })}
-            {' \u2192 '}
-            {new Date(sorted[sorted.length - 1].date).toLocaleDateString(isZh ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' })}
-          </span>
-        </div>
-        <svg width="100%" viewBox={`0 0 ${W} ${H}`} className="overflow-visible">
-          <defs>
-            <linearGradient id={`cg-insight-${deal.id}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={lineColor} stopOpacity="0.25" />
-              <stop offset="100%" stopColor={lineColor} stopOpacity="0.02" />
-            </linearGradient>
-          </defs>
-          <polygon points={areaPoints} fill={`url(#cg-insight-${deal.id})`} />
-          <polyline points={points} fill="none" stroke={lineColor} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-          {scores.map((v, i) => (
-            <g key={i}>
-              <circle cx={toX(i)} cy={toY(v)} r="2.5" fill={lineColor} />
-              <title>{new Date(sorted[i].date).toLocaleDateString(isZh ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' })}: {v}%</title>
-            </g>
-          ))}
-        </svg>
-      </div>
-    );
-  })();
+    return { scores, W, H, PAD, toX, toY, points, areaPoints, lineColor };
+  }, [sortedSnapshots]);
 
   return (
     <div className={`shrink-0 border-r border-border/30 bg-card/30 backdrop-blur-sm flex flex-col overflow-hidden transition-all duration-300 ease-in-out h-full ${collapsed ? 'hidden md:flex w-[48px]' : 'w-full md:w-[45%] md:min-w-[340px] md:max-w-[560px]'}`}>
@@ -1125,7 +1115,115 @@ export default function DealInsightPanel({
         <div className="h-1.5 rounded-full bg-muted/40 overflow-hidden mb-1">
           <div className="h-full rounded-full transition-all duration-700" style={{ width: `${deal.confidenceScore}%`, background: deal.confidenceScore >= 75 ? '#10b981' : deal.confidenceScore >= 50 ? '#f59e0b' : '#ef4444' }} />
         </div>
-        {sparklineEl}
+        {/* Interactive Trend Line Chart — click to navigate snapshots */}
+        {trendChartEl && (
+          <div className="mt-2">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[9px] text-muted-foreground/60 uppercase tracking-wider">{t('insight.confidenceTrend')}</span>
+              <span className="text-[9px] text-muted-foreground/60">
+                {new Date(sortedSnapshots[0].date).toLocaleDateString(isZh ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' })}
+                {' \u2192 '}
+                {new Date(sortedSnapshots[sortedSnapshots.length - 1].date).toLocaleDateString(isZh ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' })}
+              </span>
+            </div>
+            <div className="relative">
+              <svg width="100%" viewBox={`0 0 ${trendChartEl.W} ${trendChartEl.H}`} className="overflow-visible cursor-pointer">
+                <defs>
+                  <linearGradient id={`cg-insight-${deal.id}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={trendChartEl.lineColor} stopOpacity="0.25" />
+                    <stop offset="100%" stopColor={trendChartEl.lineColor} stopOpacity="0.02" />
+                  </linearGradient>
+                </defs>
+                <polygon points={trendChartEl.areaPoints} fill={`url(#cg-insight-${deal.id})`} />
+                <polyline points={trendChartEl.points} fill="none" stroke={trendChartEl.lineColor} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+                {trendChartEl.scores.map((v: number, i: number) => {
+                  const isActive = i === activeSnapshotIdx;
+                  const isHovered = i === hoveredPointIdx;
+                  const snap = sortedSnapshots[i];
+                  return (
+                    <g key={i}
+                      onMouseEnter={() => setHoveredPointIdx(i)}
+                      onMouseLeave={() => setHoveredPointIdx(null)}
+                      onClick={() => setSelectedSnapshotIdx(i === sortedSnapshots.length - 1 ? null : i)}
+                      className="cursor-pointer"
+                    >
+                      {/* Larger invisible hit area */}
+                      <circle cx={trendChartEl.toX(i)} cy={trendChartEl.toY(v)} r="10" fill="transparent" />
+                      {/* Pulse ring for active point */}
+                      {isActive && (
+                        <circle cx={trendChartEl.toX(i)} cy={trendChartEl.toY(v)} r="6" fill="none" stroke={trendChartEl.lineColor} strokeWidth="1" opacity="0.3">
+                          <animate attributeName="r" values="4;8;4" dur="2s" repeatCount="indefinite" />
+                          <animate attributeName="opacity" values="0.4;0.1;0.4" dur="2s" repeatCount="indefinite" />
+                        </circle>
+                      )}
+                      {/* Visible dot */}
+                      <circle
+                        cx={trendChartEl.toX(i)}
+                        cy={trendChartEl.toY(v)}
+                        r={isActive ? 4 : isHovered ? 3.5 : 2.5}
+                        fill={isActive ? '#fff' : trendChartEl.lineColor}
+                        stroke={isActive ? trendChartEl.lineColor : 'none'}
+                        strokeWidth={isActive ? 2 : 0}
+                        className="transition-all duration-200"
+                      />
+                    </g>
+                  );
+                })}
+              </svg>
+              {/* Hover tooltip */}
+              {hoveredPointIdx !== null && (() => {
+                const snap = sortedSnapshots[hoveredPointIdx];
+                const x = trendChartEl.toX(hoveredPointIdx);
+                const leftPct = (x / trendChartEl.W) * 100;
+                return (
+                  <div
+                    className="absolute bottom-full mb-2 -translate-x-1/2 pointer-events-none z-10 animate-in fade-in-0 zoom-in-95 duration-150"
+                    style={{ left: `${Math.max(15, Math.min(85, leftPct))}%` }}
+                  >
+                    <div className="bg-popover border border-border rounded-lg shadow-xl px-2.5 py-1.5 whitespace-nowrap">
+                      <div className="text-[10px] font-medium text-foreground/90">
+                        {new Date(snap.date).toLocaleDateString(isZh ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className={`text-[11px] font-mono font-bold ${getConfidenceColor(snap.confidenceScore)}`}>
+                          {snap.confidenceScore}%
+                          {snap.confidenceChange !== 0 && (
+                            <span className={snap.confidenceChange > 0 ? ' text-emerald-400' : ' text-red-400'}>
+                              {snap.confidenceChange > 0 ? '\u2191' : '\u2193'}{Math.abs(snap.confidenceChange)}
+                            </span>
+                          )}
+                        </span>
+                        {snap.interactionType && (
+                          <span className="text-[9px] text-muted-foreground/60">{snap.interactionType}</span>
+                        )}
+                      </div>
+                      {snap.whatsHappening && (
+                        <p className="text-[9px] text-muted-foreground/70 mt-1 max-w-[200px] line-clamp-2 leading-snug">
+                          {snap.whatsHappening.substring(0, 80)}{snap.whatsHappening.length > 80 ? '...' : ''}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+            {/* History navigation hint */}
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-[8px] text-muted-foreground/40">
+                {isZh ? '点击节点查看历史洞察' : 'Click a point to view historical insights'}
+              </span>
+              {isViewingHistory && (
+                <button
+                  onClick={() => setSelectedSnapshotIdx(null)}
+                  className="flex items-center gap-1 text-[9px] text-primary/70 hover:text-primary transition-colors"
+                >
+                  <ArrowRight className="w-2.5 h-2.5" />
+                  {isZh ? '返回最新' : 'Back to latest'}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
         {/* Sales Model Badge */}
         <div className="relative mt-2">
           <button onClick={() => setShowModelSelector(v => !v)} className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/30 border border-border/30 hover:border-primary/30 hover:bg-muted/50 transition-all text-[10px] text-muted-foreground/70 hover:text-foreground/80 w-fit">
@@ -1156,6 +1254,36 @@ export default function DealInsightPanel({
       {/* Scrollable Insight Content */}
       <ScrollArea className="flex-1 min-h-0 overflow-hidden">
         <div className="px-4 py-3 space-y-4">
+
+          {/* History viewing banner */}
+          {isViewingHistory && activeSnapshot && (
+            <div className="flex items-center gap-2 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <History className="w-4 h-4 text-amber-400 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="text-[11px] font-medium text-amber-300">
+                  {new Date(activeSnapshot.date).toLocaleDateString(isZh ? 'zh-CN' : 'en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                  {activeSnapshot.interactionType && ` \u00b7 ${activeSnapshot.interactionType}`}
+                </div>
+                <div className="text-[10px] text-amber-300/70 mt-0.5">
+                  {isZh ? '\u6b63\u5728\u67e5\u770b\u5386\u53f2\u5feb\u7167' : 'Viewing historical snapshot'}
+                  <span className={`ml-1.5 font-mono font-semibold ${getConfidenceColor(activeSnapshot.confidenceScore)}`}>
+                    {activeSnapshot.confidenceScore}%
+                    {activeSnapshot.confidenceChange !== 0 && (
+                      <span className={activeSnapshot.confidenceChange > 0 ? ' text-emerald-400' : ' text-red-400'}>
+                        {activeSnapshot.confidenceChange > 0 ? '\u2191' : '\u2193'}{Math.abs(activeSnapshot.confidenceChange)}
+                      </span>
+                    )}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedSnapshotIdx(null)}
+                className="text-[10px] text-amber-400 hover:text-amber-300 font-medium px-2 py-1 rounded-md hover:bg-amber-400/10 transition-colors shrink-0"
+              >
+                {isZh ? '\u8fd4\u56de\u6700\u65b0' : 'Back to latest'}
+              </button>
+            </div>
+          )}
 
           {/* AI updated badge */}
           {wasUpdatedByChat && (
@@ -1270,16 +1398,6 @@ export default function DealInsightPanel({
               </div>
             );
           })()}
-
-          {/* Insight History */}
-          <InsightHistory
-            snapshots={deal.snapshots}
-            onRestoreSuggestion={(actionText) => {
-              // Restore a dismissed suggestion by creating it as accepted
-              createAiAction?.(actionText, latestSnapshot?.id, 'accepted');
-              toast.success(isZh ? '建议已恢复并添加到任务列表' : 'Suggestion restored and added to your task list');
-            }}
-          />
 
           {/* Divider */}
           <div className="border-t border-border/25" />

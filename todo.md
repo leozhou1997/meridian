@@ -884,3 +884,17 @@
 - [x] Deal Strategy notes: add title + date fields to creation/editing UI
 - [ ] Sync Transcripts page Add dialog with unified fields
 - [ ] Verify AI Chinese output enforcement
+
+## Bug Fix + Insight History Redesign (April 2)
+- [x] BUG: Key Risks and What's Next missing from Deal Insight panel (only shows 当前动态)
+- [x] FEATURE: Redesign insight history to use trend line chart as navigation
+- [x] FEATURE: Click on chart data point → switch left panel to that snapshot's full content
+- [x] FEATURE: Hover on chart data point → show date + summary tooltip
+- [x] FEATURE: Ensure all snapshot sections visible (What's Happening, Key Risks, What's Next)
+- [x] FEATURE: Remove old collapsible "洞察历史" section, replace with chart-driven navigation
+
+## UI Fixes: Stage Names, Labels, Default View
+- [ ] Rename homepage '平均执行度' to '平均交易健康度'
+- [ ] Translate deal stage names (Discovery, Demo, etc.) to Chinese
+- [ ] Unify stage definitions between deal management and stakeholder map
+- [ ] Set kanban as default view in deal management (currently table is default)

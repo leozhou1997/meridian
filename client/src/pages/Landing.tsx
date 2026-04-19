@@ -20,6 +20,12 @@ import {
   Globe,
   Menu,
   X,
+  Eye,
+  AlertTriangle,
+  Clock,
+  MapPin,
+  Lock,
+  Quote,
 } from "lucide-react";
 
 /* ─── CDN Assets ─────────────────────────────────────── */
@@ -29,6 +35,8 @@ const MIRACLEPLUS_LOGO =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/miracleplus-logo_11f70a94.png";
 const ANTLER_LOGO =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/antler-logo_e6d05a8f.png";
+const PRODUCT_MOCKUP =
+  "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/product-mockup-bg-2x_35ae52f0.png";
 
 /* ─── Intersection Observer Hook ─────────────────────── */
 function useInView(threshold = 0.15) {
@@ -47,26 +55,10 @@ function useInView(threshold = 0.15) {
   return { ref, inView };
 }
 
-/* ─── Animated Counter ───────────────────────────────── */
-function Counter({ end, suffix = "", duration = 2000 }: { end: number; suffix?: string; duration?: number }) {
-  const [count, setCount] = useState(0);
-  const { ref, inView } = useInView();
-  useEffect(() => {
-    if (!inView) return;
-    let start = 0;
-    const step = end / (duration / 16);
-    const timer = setInterval(() => {
-      start += step;
-      if (start >= end) { setCount(end); clearInterval(timer); }
-      else setCount(Math.floor(start));
-    }, 16);
-    return () => clearInterval(timer);
-  }, [inView, end, duration]);
-  return <span ref={ref}>{count}{suffix}</span>;
-}
-
 /* ═══════════════════════════════════════════════════════
-   LANDING PAGE — LIGHT THEME
+   LANDING PAGE — REDESIGN V5
+   Deep navy + warm accent, editorial typography,
+   narrative-driven sections aligned with latest PDFs
    ═══════════════════════════════════════════════════════ */
 export default function Landing() {
   const [, navigate] = useLocation();
@@ -80,7 +72,6 @@ export default function Landing() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
-  // Track scroll for nav background
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 40);
     window.addEventListener("scroll", handler, { passive: true });
@@ -100,121 +91,49 @@ export default function Landing() {
 
   const toggleLang = () => setLanguage(language === "en" ? "zh" : "en");
 
-  /* ─── Problem section data (locale-aware) ─── */
-  const painPoints = language === "en"
-    ? [
-        { icon: Users, title: "Invisible buying committees", desc: "You don't know who's really making the decision, who's blocking, or who you haven't met yet." },
-        { icon: Brain, title: "Insights trapped in conversations", desc: "Critical signals from calls and emails never make it into your CRM or deal strategy." },
-        { icon: Target, title: "Reactive deal management", desc: "By the time you realize a deal is at risk, it's already too late to course-correct." },
-      ]
-    : [
-        { icon: Users, title: "看不见的采购委员会", desc: "你不知道谁在真正做决策、谁在阻碍、谁还没有接触过。" },
-        { icon: Brain, title: "洞察被困在对话中", desc: "来自电话和邮件的关键信号从未进入你的 CRM 或交易策略。" },
-        { icon: Target, title: "被动的交易管理", desc: "当你意识到交易有风险时，往往已经来不及纠正了。" },
-      ];
-
-  const problemTitle = language === "en"
-    ? { main: "Your CRM tracks activities. ", dim: "It doesn't understand your deals." }
-    : { main: "你的 CRM 记录了活动。", dim: "但它不理解你的交易。" };
-
-  const problemDesc = language === "en"
-    ? "Enterprise sales teams spend 60% of their time on admin instead of selling. Critical stakeholder dynamics are trapped in reps' heads. Deals slip through the cracks because no one sees the full picture until it's too late."
-    : "企业销售团队将 60% 的时间花在行政工作而非销售上。关键的决策人动态被困在销售代表的脑海中。交易因为没有人能看到全貌而悄然流失——直到为时已晚。";
-
-  /* ─── How It Works data (locale-aware) ─── */
-  const howItWorksTitle = language === "en"
-    ? { pre: "The Meridian ", highlight: "Intelligence Engine" }
-    : { pre: "Meridian ", highlight: "智能引擎" };
-
-  const howItWorksDesc = language === "en"
-    ? "Four layers working together to transform raw sales data into actionable deal strategy."
-    : "四层架构协同工作，将原始销售数据转化为可执行的交易策略。";
-
-  const chipStack = language === "en"
-    ? [
-        { layer: "Layer 4", title: "Action Layer", desc: "What's Next recommendations, pre-meeting briefs, risk alerts", icon: Zap, color: "from-purple-500 to-pink-500", glow: "shadow-purple-500/10", borderColor: "border-purple-200" },
-        { layer: "Layer 3", title: "Intelligence Layer", desc: "Deal narrative, confidence scoring, methodology grading", icon: Brain, color: "from-blue-500 to-cyan-500", glow: "shadow-blue-500/10", borderColor: "border-blue-200" },
-        { layer: "Layer 2", title: "Understanding Layer", desc: "Stakeholder mapping, relationship analysis, sentiment detection", icon: Users, color: "from-cyan-500 to-teal-500", glow: "shadow-cyan-500/10", borderColor: "border-cyan-200" },
-        { layer: "Layer 1", title: "Data Layer", desc: "Meeting transcripts, emails, notes, documents, CRM data", icon: Layers, color: "from-slate-500 to-slate-400", glow: "shadow-slate-500/5", borderColor: "border-slate-200" },
-      ]
-    : [
-        { layer: "第四层", title: "行动层", desc: "下一步建议、会前简报、风险预警", icon: Zap, color: "from-purple-500 to-pink-500", glow: "shadow-purple-500/10", borderColor: "border-purple-200" },
-        { layer: "第三层", title: "智能层", desc: "交易叙事、置信度评分、方法论评级", icon: Brain, color: "from-blue-500 to-cyan-500", glow: "shadow-blue-500/10", borderColor: "border-blue-200" },
-        { layer: "第二层", title: "理解层", desc: "决策人映射、关系分析、情感检测", icon: Users, color: "from-cyan-500 to-teal-500", glow: "shadow-cyan-500/10", borderColor: "border-cyan-200" },
-        { layer: "第一层", title: "数据层", desc: "会议记录、邮件、笔记、文档、CRM 数据", icon: Layers, color: "from-slate-500 to-slate-400", glow: "shadow-slate-500/5", borderColor: "border-slate-200" },
-      ];
-
-  /* ─── Team section data (locale-aware) ─── */
-  const teamContent = language === "en"
-    ? {
-        p1: "We've spent years in the trenches of enterprise sales — running complex deals, managing buying committees, and losing sleep over pipeline reviews. We've seen firsthand how the best sales teams win: not through more activity, but through deeper understanding.",
-        p2: "We built Meridian because we believe sales intelligence shouldn't be trapped in spreadsheets and tribal knowledge. Every deal tells a story — the relationships, the risks, the momentum. We're building the AI that reads that story and helps you write a better ending.",
-        p3_pre: "Our team combines deep enterprise sales experience with AI and product engineering. We're backed by ",
-        p3_mid: " and ",
-        p3_post: ".",
-      }
-    : {
-        p1: "我们在企业级销售的战壕中摸爬滚打多年——运营复杂交易、管理采购委员会、为 Pipeline Review 彻夜难眠。我们亲眼见证了最优秀的销售团队如何赢单：不是靠更多的活动，而是靠更深的理解。",
-        p2: "我们创建 Meridian 是因为我们相信销售智能不应该被困在电子表格和口口相传的经验中。每笔交易都在讲述一个故事——关系、风险、势头。我们正在构建能读懂这个故事并帮助你写出更好结局的 AI。",
-        p3_pre: "我们的团队融合了深厚的企业销售经验与 AI 和产品工程能力。我们获得了 ",
-        p3_mid: " 和 ",
-        p3_post: " 的支持，在北京、上海、深圳设有服务站点，贴近客户一线。",
-      };
-
-  const ctaSubtext = language === "en"
-    ? "No credit card required. We'll reach out within 48 hours."
-    : "无需信用卡。我们将在 48 小时内联系您。";
-
-  const waitlistSubtext = language === "en"
-    ? "Join the waitlist for early access. We're onboarding select teams who sell complex, multi-stakeholder deals."
-    : "加入等候名单获取抢先体验资格。我们正在邀请攻克复杂、多决策人交易的精选团队。";
-
   return (
-    <div className="min-h-screen bg-white text-slate-900 overflow-x-hidden">
+    <div className="min-h-screen bg-[#F7F8FA] text-slate-900 overflow-x-hidden">
+
       {/* ─── NAV ─────────────────────────────────────── */}
       <nav
         className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${
           scrolled
-            ? "bg-white/90 backdrop-blur-xl border-b border-slate-200 shadow-sm"
+            ? "bg-white/90 backdrop-blur-xl border-b border-slate-200/60 shadow-sm"
             : "bg-transparent"
         }`}
       >
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          {/* Logo */}
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <a href="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
-            <img src={LOGO_IMG} alt="Meridian" className="h-10 w-auto" />
+            <img src={LOGO_IMG} alt="Meridian" className="h-9 w-auto" />
           </a>
 
-          {/* Desktop Nav Links */}
-          <div className="hidden md:flex items-center gap-8 text-sm text-slate-500">
-            <button onClick={() => scrollTo("features")} className="hover:text-slate-900 transition-colors">{tt("nav_features")}</button>
-            <button onClick={() => scrollTo("how-it-works")} className="hover:text-slate-900 transition-colors">{language === "en" ? "How It Works" : "工作原理"}</button>
+          {/* Desktop Nav */}
+          <div className="hidden md:flex items-center gap-7 text-[13px] font-medium text-slate-500">
+            <button onClick={() => scrollTo("product")} className="hover:text-slate-900 transition-colors">{tt("nav_features")}</button>
+            <button onClick={() => scrollTo("results")} className="hover:text-slate-900 transition-colors">{tt("nav_results")}</button>
+            <button onClick={() => scrollTo("how")} className="hover:text-slate-900 transition-colors">{tt("nav_how")}</button>
             <button onClick={() => scrollTo("team")} className="hover:text-slate-900 transition-colors">{tt("nav_team")}</button>
-            <button onClick={() => navigate("/pricing")} className="hover:text-slate-900 transition-colors">{tt("nav_pricing")}</button>
           </div>
 
           {/* Desktop CTA */}
-          <div className="hidden md:flex items-center gap-3">
-            {/* Language Switcher */}
+          <div className="hidden md:flex items-center gap-2.5">
             <button
               onClick={toggleLang}
-              className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 px-3 py-2 rounded-lg transition-colors border border-transparent hover:border-slate-200"
+              className="flex items-center gap-1.5 text-[13px] text-slate-500 hover:text-slate-900 px-3 py-1.5 rounded-md transition-colors"
               title={language === "en" ? "切换到中文" : "Switch to English"}
             >
-              <Globe className="w-4 h-4" />
-              <span className="text-xs font-medium">{language === "en" ? "中文" : "EN"}</span>
+              <Globe className="w-3.5 h-3.5" />
+              <span className="font-medium">{language === "en" ? "中文" : "EN"}</span>
             </button>
-
             <button
               onClick={() => navigate(user ? "/dashboard" : "/login")}
-              className="text-sm text-slate-600 hover:text-slate-900 px-4 py-2 rounded-lg transition-colors"
+              className="text-[13px] font-medium text-slate-600 hover:text-slate-900 px-4 py-1.5 rounded-md transition-colors"
             >
               {user ? tt("nav_dashboard") : tt("nav_login")}
             </button>
-
             <button
               onClick={() => openWaitlist("nav_desktop")}
-              className="text-sm font-medium bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 py-2 rounded-lg transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30"
+              className="text-[13px] font-semibold bg-[#1a2b5e] hover:bg-[#243672] text-white px-5 py-2 rounded-lg transition-all"
             >
               {tt("nav_request_access")}
             </button>
@@ -232,23 +151,19 @@ export default function Landing() {
         {/* Mobile Menu */}
         {mobileMenuOpen && (
           <div className="md:hidden bg-white/95 backdrop-blur-xl border-t border-slate-200 px-6 py-4 space-y-3">
-            <button onClick={() => scrollTo("features")} className="block w-full text-left text-sm text-slate-600 hover:text-slate-900 py-2">{tt("nav_features")}</button>
-            <button onClick={() => scrollTo("how-it-works")} className="block w-full text-left text-sm text-slate-600 hover:text-slate-900 py-2">{language === "en" ? "How It Works" : "工作原理"}</button>
+            <button onClick={() => scrollTo("product")} className="block w-full text-left text-sm text-slate-600 hover:text-slate-900 py-2">{tt("nav_features")}</button>
+            <button onClick={() => scrollTo("results")} className="block w-full text-left text-sm text-slate-600 hover:text-slate-900 py-2">{tt("nav_results")}</button>
+            <button onClick={() => scrollTo("how")} className="block w-full text-left text-sm text-slate-600 hover:text-slate-900 py-2">{tt("nav_how")}</button>
             <button onClick={() => scrollTo("team")} className="block w-full text-left text-sm text-slate-600 hover:text-slate-900 py-2">{tt("nav_team")}</button>
-            <button onClick={() => navigate("/pricing")} className="block w-full text-left text-sm text-slate-600 hover:text-slate-900 py-2">{tt("nav_pricing")}</button>
             <hr className="border-slate-200" />
-            {/* Mobile Language Switcher */}
-            <button
-              onClick={toggleLang}
-              className="flex items-center gap-2 w-full text-left text-sm text-slate-600 hover:text-slate-900 py-2"
-            >
+            <button onClick={toggleLang} className="flex items-center gap-2 w-full text-left text-sm text-slate-600 hover:text-slate-900 py-2">
               <Globe className="w-4 h-4" />
               {language === "en" ? "切换到中文" : "Switch to English"}
             </button>
             <button onClick={() => navigate(user ? "/dashboard" : "/login")} className="block w-full text-left text-sm text-slate-600 hover:text-slate-900 py-2">{user ? tt("nav_dashboard") : tt("nav_login")}</button>
             <button
               onClick={() => openWaitlist("nav_mobile")}
-              className="block w-full text-center text-sm font-medium bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-2.5 rounded-lg"
+              className="block w-full text-center text-sm font-semibold bg-[#1a2b5e] text-white px-5 py-2.5 rounded-lg"
             >
               {tt("nav_request_access")}
             </button>
@@ -257,316 +172,122 @@ export default function Landing() {
       </nav>
 
       {/* ─── HERO ────────────────────────────────────── */}
-      <section className="relative pt-32 pb-20 md:pt-40 md:pb-32">
-        {/* Background glow — subtle on light */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-b from-blue-100/60 via-indigo-50/40 to-transparent rounded-full blur-3xl" />
-          <div className="absolute top-20 right-1/4 w-[400px] h-[400px] bg-purple-100/30 rounded-full blur-3xl" />
-        </div>
-
-        <div className="relative max-w-7xl mx-auto px-6">
-          <div className="text-center max-w-4xl mx-auto mb-16">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-600 text-xs font-medium mb-8">
-              <Sparkles className="w-3.5 h-3.5" />
-              {tt("hero_badge")}
-            </div>
-
+      <section className="relative pt-28 pb-8 md:pt-36 md:pb-12">
+        <div className="relative max-w-6xl mx-auto px-6">
+          <div className="text-center max-w-3xl mx-auto mb-12 md:mb-16">
             {/* Headline */}
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-bold leading-[1.1] tracking-tight mb-6 text-slate-900">
-              {tt("hero_title_1")}{" "}
+            <h1 className="text-[2.5rem] sm:text-5xl md:text-[3.5rem] lg:text-[4rem] font-display font-bold leading-[1.08] tracking-tight mb-5 text-[#1a2b5e]">
+              {tt("hero_title_1")}
               <br className="hidden sm:block" />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-500">
                 {tt("hero_title_2")}
               </span>
             </h1>
 
             {/* Subheadline */}
-            <p className="text-lg md:text-xl text-slate-500 leading-relaxed max-w-2xl mx-auto mb-10">
+            <p className="text-base md:text-lg text-slate-500 leading-relaxed max-w-xl mx-auto mb-8">
               {tt("hero_subtitle")}
             </p>
 
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
+            {/* CTA */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-8">
               <button
                 onClick={() => openWaitlist("hero")}
-                className="group flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium px-8 py-3.5 rounded-xl transition-all shadow-xl shadow-blue-500/20 hover:shadow-blue-500/30 text-base"
+                className="group flex items-center gap-2 bg-[#1a2b5e] hover:bg-[#243672] text-white font-semibold px-7 py-3 rounded-lg transition-all text-[15px]"
               >
                 {tt("hero_cta_primary")}
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
               </button>
               <button
                 onClick={() => navigate("/login")}
-                className="flex items-center gap-2 text-slate-600 hover:text-slate-900 border border-slate-300 hover:border-slate-400 px-8 py-3.5 rounded-xl transition-all text-base"
+                className="flex items-center gap-2 text-slate-500 hover:text-slate-700 border border-slate-300 hover:border-slate-400 px-7 py-3 rounded-lg transition-all text-[15px]"
               >
                 {tt("nav_login")}
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
 
-            {/* ─── BACKED BY ─────────────────────────── */}
-            <div className="flex flex-col items-center gap-3 mb-4">
-              <p className="text-xs font-medium text-slate-400 tracking-widest uppercase">
-                {language === "en" ? "Backed by" : "投资方"}
+            {/* Backed by */}
+            <div className="flex flex-col items-center gap-2.5">
+              <p className="text-[11px] font-medium text-slate-400 tracking-[0.15em] uppercase">
+                {tt("team_backed")}
               </p>
-              <div className="flex items-center gap-8">
-                <img
-                  src={MIRACLEPLUS_LOGO}
-                  alt="MiraclePlus"
-                  className="h-8 md:h-9 w-auto opacity-50 hover:opacity-80 transition-opacity"
-                />
-                <img
-                  src={ANTLER_LOGO}
-                  alt="Antler"
-                  className="h-5 md:h-6 w-auto opacity-50 hover:opacity-80 transition-opacity"
-                />
+              <div className="flex items-center gap-7">
+                <img src={MIRACLEPLUS_LOGO} alt="MiraclePlus" className="h-7 md:h-8 w-auto opacity-40 hover:opacity-70 transition-opacity" />
+                <img src={ANTLER_LOGO} alt="Antler" className="h-4 md:h-5 w-auto opacity-40 hover:opacity-70 transition-opacity" />
               </div>
             </div>
           </div>
 
-          {/* Hero Product Screenshot */}
+          {/* Hero Product Mockup */}
           <div className="relative max-w-5xl mx-auto">
-            <div className="absolute -inset-4 bg-gradient-to-r from-blue-200/40 via-indigo-200/30 to-purple-200/40 rounded-2xl blur-2xl opacity-60" />
-            <div className="relative rounded-xl overflow-hidden border border-slate-200 shadow-2xl shadow-slate-900/10">
+            <div className="relative rounded-xl overflow-hidden">
               <img
-                src={imgs.hero}
-                alt="Meridian Deal Intelligence Platform"
+                src={PRODUCT_MOCKUP}
+                alt="Meridian AI Decision Engine"
                 className="w-full"
-                loading="lazy"
+                loading="eager"
               />
-              {/* Gradient overlay at bottom */}
-              <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-white to-transparent" />
             </div>
           </div>
         </div>
       </section>
 
-      {/* ─── SOCIAL PROOF / STATS ────────────────────── */}
-      <section className="py-16 border-y border-slate-200">
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            {[
-              { value: 68, suffix: "%", label: tt("stat_win_rate") },
-              { value: 3, suffix: "x", label: tt("stat_qualification") },
-              { value: 40, suffix: "%", label: tt("stat_stakeholders") },
-              { value: 2, suffix: language === "en" ? "hrs" : "小时", label: tt("stat_time_saved") },
-            ].map((stat) => (
-              <div key={stat.label}>
-                <div className="text-3xl md:text-4xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
-                  <Counter end={stat.value} suffix={stat.suffix} />
-                </div>
-                <p className="text-sm text-slate-500 mt-1">{stat.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* ─── PAIN POINT ──────────────────────────────── */}
+      <PainSection tt={tt} language={language} />
 
-      {/* ─── PROBLEM STATEMENT ───────────────────────── */}
-      <section className="py-24 md:py-32">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <p className="text-sm font-medium text-blue-600 tracking-widest uppercase mb-4">
-            {language === "en" ? "The Problem" : "痛点"}
-          </p>
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold leading-tight mb-8 text-slate-900">
-            {problemTitle.main}{" "}
-            <span className="text-slate-400">{problemTitle.dim}</span>
-          </h2>
-          <p className="text-lg text-slate-500 leading-relaxed max-w-3xl mx-auto mb-16">
-            {problemDesc}
-          </p>
+      {/* ─── PRODUCT ─────────────────────────────────── */}
+      <ProductSection tt={tt} language={language} imgs={imgs} />
 
-          {/* Pain Point Cards */}
-          <div className="grid md:grid-cols-3 gap-6 text-left">
-            {painPoints.map((pain) => (
-              <div
-                key={pain.title}
-                className="group p-6 rounded-xl bg-slate-50 border border-slate-200 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/5 transition-all duration-300"
-              >
-                <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center mb-4">
-                  <pain.icon className="w-5 h-5 text-red-500" />
-                </div>
-                <h3 className="font-display font-semibold text-base mb-2 text-slate-900">{pain.title}</h3>
-                <p className="text-sm text-slate-500 leading-relaxed">{pain.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* ─── DECISION MAP ────────────────────────────── */}
+      <DecisionMapSection tt={tt} language={language} imgs={imgs} />
 
-      {/* ─── FEATURES ────────────────────────────────── */}
-      <section id="features" className="py-24 md:py-32 bg-slate-50">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-20">
-            <p className="text-sm font-medium text-blue-600 tracking-widest uppercase mb-4">{tt("nav_features")}</p>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold leading-tight text-slate-900">
-              {tt("features_title_1")}{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
-                {tt("features_title_2")}
-              </span>
-            </h2>
-          </div>
+      {/* ─── RESULTS ─────────────────────────────────── */}
+      <ResultsSection tt={tt} language={language} />
 
-          {/* Feature 1: AI Deal Insight */}
-          <FeatureRow
-            badge={tt("feature1_label")}
-            title={tt("feature1_title")}
-            desc={tt("feature1_desc")}
-            bullets={[tt("feature1_bullet1"), tt("feature1_bullet2"), tt("feature1_bullet3")]}
-            image={imgs.featureInsight}
-            imageAlt={tt("feature1_title")}
-            imagePosition="right"
-          />
-
-          {/* Feature 2: Stakeholder Map */}
-          <FeatureRow
-            badge={tt("feature2_label")}
-            title={tt("feature2_title")}
-            desc={tt("feature2_desc")}
-            bullets={[tt("feature2_bullet1"), tt("feature2_bullet2"), tt("feature2_bullet3")]}
-            image={imgs.featureMap}
-            imageAlt={tt("feature2_title")}
-            imagePosition="left"
-          />
-
-          {/* Feature 3: Deal Room */}
-          <FeatureRow
-            badge={tt("feature3_label")}
-            title={tt("feature3_title")}
-            desc={tt("feature3_desc")}
-            bullets={[tt("feature3_bullet1"), tt("feature3_bullet2"), tt("feature3_bullet3")]}
-            image={imgs.featureRoom}
-            imageAlt={tt("feature3_title")}
-            imagePosition="right"
-          />
-        </div>
-      </section>
-
-      {/* ─── HOW IT WORKS (Architecture Chip Stack) ──── */}
-      <section id="how-it-works" className="py-24 md:py-32 relative">
-        {/* Background glow */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-50/60 rounded-full blur-3xl" />
-        </div>
-
-        <div className="relative max-w-5xl mx-auto px-6">
-          <div className="text-center mb-20">
-            <p className="text-sm font-medium text-blue-600 tracking-widest uppercase mb-4">
-              {language === "en" ? "How It Works" : "工作原理"}
-            </p>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold leading-tight mb-6 text-slate-900">
-              {howItWorksTitle.pre}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
-                {howItWorksTitle.highlight}
-              </span>
-            </h2>
-            <p className="text-lg text-slate-500 max-w-2xl mx-auto">
-              {howItWorksDesc}
-            </p>
-          </div>
-
-          {/* Chip Stack */}
-          <div className="max-w-lg mx-auto space-y-4">
-            {chipStack.map((chip, i) => (
-              <ChipCard key={chip.title} chip={chip} index={i} />
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* ─── HOW IT WORKS ────────────────────────────── */}
+      <HowSection tt={tt} language={language} />
 
       {/* ─── TEAM ────────────────────────────────────── */}
-      <section id="team" className="py-24 md:py-32 bg-slate-50">
-        <div className="max-w-3xl mx-auto px-6">
-          <div className="text-center mb-12">
-            <p className="text-sm font-medium text-blue-600 tracking-widest uppercase mb-4">{tt("team_badge")}</p>
-            <h2 className="text-3xl md:text-4xl font-display font-bold leading-tight mb-6 text-slate-900">
-              {tt("team_title").split(language === "en" ? "lived the problem" : "亲历过这些问题")[0]}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
-                {language === "en" ? "lived the problem" : "亲历过这些问题"}
-              </span>
-              {language === "zh" ? "的人打造。" : ""}
-            </h2>
-          </div>
+      <TeamSection tt={tt} language={language} />
 
-          <div className="p-8 md:p-10 rounded-2xl bg-white border border-slate-200 shadow-sm">
-            <p className="text-lg md:text-xl text-slate-700 leading-relaxed mb-6">
-              {teamContent.p1}
-            </p>
-            <p className="text-lg md:text-xl text-slate-700 leading-relaxed mb-6">
-              {teamContent.p2}
-            </p>
-            <p className="text-base text-slate-500 leading-relaxed">
-              {teamContent.p3_pre}
-              <span className="text-blue-600 font-medium">MiraclePlus</span>
-              {teamContent.p3_mid}
-              <span className="text-blue-600 font-medium">Antler</span>
-              {teamContent.p3_post}
-            </p>
-
-            {/* Backed by logos inline */}
-            <div className="flex items-center gap-6 mt-8 pt-6 border-t border-slate-200">
-              <img
-                src={MIRACLEPLUS_LOGO}
-                alt="MiraclePlus"
-                className="h-6 w-auto opacity-40 hover:opacity-70 transition-opacity"
-              />
-              <img
-                src={ANTLER_LOGO}
-                alt="Antler"
-                className="h-4 w-auto opacity-40 hover:opacity-70 transition-opacity"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ─── CTA / REQUEST ACCESS ────────────────────── */}
-      <section id="cta" className="py-24 md:py-32 relative">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-t from-blue-50/60 to-transparent rounded-full blur-3xl" />
-        </div>
-
+      {/* ─── CTA ─────────────────────────────────────── */}
+      <section id="cta" className="py-20 md:py-28 relative">
         <div className="relative max-w-2xl mx-auto px-6 text-center">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold leading-tight mb-6 text-slate-900">
-            {tt("cta_title_1")}{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
+          <h2 className="text-3xl md:text-4xl lg:text-[2.75rem] font-display font-bold leading-tight mb-5 text-[#1a2b5e]">
+            {tt("cta_title_1")}
+            <br className="hidden sm:block" />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-500">
               {tt("cta_title_2")}
             </span>
           </h2>
-          <p className="text-lg text-slate-500 mb-10 max-w-lg mx-auto">
-            {waitlistSubtext}
+          <p className="text-base text-slate-500 mb-8 max-w-lg mx-auto leading-relaxed">
+            {tt("cta_subtitle")}
           </p>
-
           <button
             onClick={() => openWaitlist("cta_bottom")}
-            className="group inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium px-8 py-4 rounded-xl transition-all shadow-xl shadow-blue-500/20 hover:shadow-blue-500/30 text-base"
+            className="group inline-flex items-center gap-2 bg-[#1a2b5e] hover:bg-[#243672] text-white font-semibold px-8 py-3.5 rounded-lg transition-all text-[15px]"
           >
             {tt("cta_button")}
             <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
           </button>
-
-          <p className="text-xs text-slate-400 mt-4">
-            {ctaSubtext}
-          </p>
+          <p className="text-xs text-slate-400 mt-3">{tt("cta_subtext")}</p>
         </div>
       </section>
 
       {/* ─── FOOTER ──────────────────────────────────── */}
-      <footer className="border-t border-slate-200 py-12 bg-slate-50">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+      <footer className="border-t border-slate-200/60 py-10 bg-white/50">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-5">
             <a href="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
-              <img src={LOGO_IMG} alt="Meridian" className="h-8 w-auto" />
+              <img src={LOGO_IMG} alt="Meridian" className="h-7 w-auto" />
             </a>
-
-            <div className="flex items-center gap-6 text-sm text-slate-500">
-              <button onClick={() => scrollTo("features")} className="hover:text-slate-700 transition-colors">{tt("nav_features")}</button>
-              <button onClick={() => scrollTo("how-it-works")} className="hover:text-slate-700 transition-colors">{language === "en" ? "How It Works" : "工作原理"}</button>
-              <button onClick={() => scrollTo("team")} className="hover:text-slate-700 transition-colors">{tt("nav_team")}</button>
-              <button onClick={() => navigate("/pricing")} className="hover:text-slate-700 transition-colors">{tt("nav_pricing")}</button>
-              <button onClick={() => navigate("/login")} className="hover:text-slate-700 transition-colors">{tt("nav_login")}</button>
+            <div className="flex items-center gap-6 text-[13px] text-slate-400">
+              <a href={`mailto:${tt("footer_email")}`} className="hover:text-slate-600 transition-colors">{tt("footer_email")}</a>
+              <button onClick={() => scrollTo("product")} className="hover:text-slate-600 transition-colors">{tt("nav_features")}</button>
+              <button onClick={() => scrollTo("team")} className="hover:text-slate-600 transition-colors">{tt("nav_team")}</button>
+              <button onClick={() => navigate("/login")} className="hover:text-slate-600 transition-colors">{tt("nav_login")}</button>
             </div>
-
             <p className="text-xs text-slate-400">
               &copy; {new Date().getFullYear()} {tt("footer_copyright")}
             </p>
@@ -584,120 +305,349 @@ export default function Landing() {
   );
 }
 
-/* ─── Feature Row Component ──────────────────────────── */
-function FeatureRow({
-  badge,
-  title,
-  desc,
-  bullets,
-  image,
-  imageAlt,
-  imagePosition,
-}: {
-  badge: string;
-  title: string;
-  desc: string;
-  bullets: string[];
-  image: string;
-  imageAlt: string;
-  imagePosition: "left" | "right";
-}) {
+
+/* ═══════════════════════════════════════════════════════
+   SECTION COMPONENTS
+   ═══════════════════════════════════════════════════════ */
+
+/* ─── Pain Point Section ─────────────────────────────── */
+function PainSection({ tt, language }: { tt: (k: string) => any; language: string }) {
   const { ref, inView } = useInView(0.1);
-  const isLeft = imagePosition === "left";
+  const painItems = [
+    { icon: Users, titleKey: "pain_item1_title", descKey: "pain_item1_desc" },
+    { icon: Brain, titleKey: "pain_item2_title", descKey: "pain_item2_desc" },
+    { icon: AlertTriangle, titleKey: "pain_item3_title", descKey: "pain_item3_desc" },
+  ];
 
   return (
-    <div
-      ref={ref}
-      className={`flex flex-col ${isLeft ? "md:flex-row-reverse" : "md:flex-row"} items-center gap-12 md:gap-16 py-16 md:py-24 transition-all duration-700 ${
-        inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-      }`}
-    >
-      {/* Text */}
-      <div className="flex-1 max-w-lg">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-600 text-xs font-medium mb-4">
-          <Sparkles className="w-3 h-3" />
-          {badge}
+    <section className="py-20 md:py-28">
+      <div
+        ref={ref}
+        className={`max-w-4xl mx-auto px-6 transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+      >
+        <div className="text-center mb-14">
+          <p className="text-[11px] font-semibold text-amber-600 tracking-[0.2em] uppercase mb-4">{tt("pain_label")}</p>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-display font-bold leading-tight mb-5 text-[#1a2b5e]">
+            {tt("pain_title_1")}
+            <br className="hidden sm:block" />
+            <span className="text-slate-400 font-semibold">{tt("pain_title_2")}</span>
+          </h2>
+          <p className="text-base text-slate-500 leading-relaxed max-w-2xl mx-auto">
+            {tt("pain_desc")}
+          </p>
         </div>
-        <h3 className="text-2xl md:text-3xl font-display font-bold mb-4 text-slate-900">{title}</h3>
-        <p className="text-slate-500 leading-relaxed mb-6">{desc}</p>
-        <ul className="space-y-3">
-          {bullets.map((b) => (
-            <li key={b} className="flex items-start gap-3 text-sm text-slate-700">
-              <CheckCircle2 className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
-              <span>{b}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
 
-      {/* Image */}
-      <div className="flex-1 flex justify-center">
-        <div className="relative w-full max-w-lg">
-          <div className="absolute -inset-3 bg-gradient-to-r from-blue-100/40 to-indigo-100/40 rounded-2xl blur-xl opacity-60" />
-          <img
-            src={image}
-            alt={imageAlt}
-            className="relative w-full max-h-[420px] object-contain rounded-xl border border-slate-200 shadow-2xl shadow-slate-900/10"
-            loading="lazy"
-          />
+        <div className="grid md:grid-cols-3 gap-5">
+          {painItems.map((item, i) => (
+            <div
+              key={item.titleKey}
+              className="p-5 rounded-xl bg-white border border-slate-200/80 transition-all duration-300 hover:border-amber-200 hover:shadow-md"
+              style={{ transitionDelay: `${i * 100}ms` }}
+            >
+              <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center mb-3">
+                <item.icon className="w-4.5 h-4.5 text-amber-600" />
+              </div>
+              <h3 className="font-display font-semibold text-[15px] mb-1.5 text-slate-800">{tt(item.titleKey)}</h3>
+              <p className="text-[13px] text-slate-500 leading-relaxed">{tt(item.descKey)}</p>
+            </div>
+          ))}
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 
-/* ─── Chip Card Component ────────────────────────────── */
-function ChipCard({
-  chip,
-  index,
-}: {
-  chip: {
-    layer: string;
-    title: string;
-    desc: string;
-    icon: React.ComponentType<{ className?: string }>;
-    color: string;
-    glow: string;
-    borderColor: string;
-  };
-  index: number;
-}) {
-  const { ref, inView } = useInView(0.2);
-  const Icon = chip.icon;
+
+/* ─── Product Section ────────────────────────────────── */
+function ProductSection({ tt, language, imgs }: { tt: (k: string) => any; language: string; imgs: any }) {
+  const { ref, inView } = useInView(0.1);
+  const caps = [
+    { titleKey: "product_cap1_title", descKey: "product_cap1_desc", icon: Zap },
+    { titleKey: "product_cap2_title", descKey: "product_cap2_desc", icon: Target },
+    { titleKey: "product_cap3_title", descKey: "product_cap3_desc", icon: MessageSquare },
+  ];
 
   return (
-    <div
-      ref={ref}
-      className={`relative transition-all duration-700 ${
-        inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
-      }`}
-      style={{ transitionDelay: `${index * 150}ms` }}
-    >
-      {/* 3D perspective chip */}
+    <section id="product" className="py-20 md:py-28 bg-white">
       <div
-        className={`relative p-6 rounded-xl bg-white border ${chip.borderColor} shadow-lg ${chip.glow} hover:scale-[1.02] transition-transform duration-300`}
-        style={{
-          transform: inView
-            ? `perspective(800px) rotateX(${2 - index}deg)`
-            : "perspective(800px) rotateX(5deg)",
-        }}
+        ref={ref}
+        className={`max-w-6xl mx-auto px-6 transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
       >
-        {/* Gradient top edge */}
-        <div className={`absolute inset-x-0 top-0 h-[2px] rounded-t-xl bg-gradient-to-r ${chip.color}`} />
+        <div className="text-center mb-14">
+          <p className="text-[11px] font-semibold text-blue-600 tracking-[0.2em] uppercase mb-4">{tt("product_label")}</p>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-display font-bold leading-tight mb-5 text-[#1a2b5e]">
+            {tt("product_title_1")}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-500">
+              {tt("product_title_2")}
+            </span>
+          </h2>
+          <p className="text-base text-slate-500 leading-relaxed max-w-xl mx-auto">
+            {tt("product_desc")}
+          </p>
+        </div>
 
-        <div className="flex items-start gap-4">
-          <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${chip.color} flex items-center justify-center shrink-0 shadow-lg ${chip.glow}`}>
-            <Icon className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">{chip.layer}</span>
-              <h3 className="font-display font-semibold text-base text-slate-900">{chip.title}</h3>
+        {/* Three capabilities */}
+        <div className="grid md:grid-cols-3 gap-6 mb-16">
+          {caps.map((cap, i) => (
+            <div
+              key={cap.titleKey}
+              className="relative p-6 rounded-xl bg-[#F7F8FA] border border-slate-100 transition-all duration-300 hover:shadow-md"
+              style={{ transitionDelay: `${i * 100}ms` }}
+            >
+              <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center mb-4">
+                <cap.icon className="w-5 h-5 text-blue-600" />
+              </div>
+              <h3 className="font-display font-semibold text-base mb-2 text-slate-800">{tt(cap.titleKey)}</h3>
+              <p className="text-[13px] text-slate-500 leading-relaxed">{tt(cap.descKey)}</p>
             </div>
-            <p className="text-sm text-slate-500">{chip.desc}</p>
+          ))}
+        </div>
+
+        {/* Product screenshot — use the latest mockup */}
+        <div className="relative max-w-4xl mx-auto">
+          <div className="absolute -inset-4 bg-gradient-to-r from-blue-100/30 via-indigo-100/20 to-blue-100/30 rounded-2xl blur-2xl opacity-50" />
+          <div className="relative rounded-xl overflow-hidden border border-slate-200/60 shadow-xl">
+            <img
+              src={imgs.productMockup}
+              alt="Meridian AI Decision Engine"
+              className="w-full"
+              loading="lazy"
+            />
           </div>
         </div>
       </div>
-    </div>
+    </section>
+  );
+}
+
+
+/* ─── Decision Map Section ───────────────────────────── */
+function DecisionMapSection({ tt, language, imgs }: { tt: (k: string) => any; language: string; imgs: any }) {
+  const { ref, inView } = useInView(0.1);
+  const items = [
+    { titleKey: "dmap_item1_title", descKey: "dmap_item1_desc", icon: Layers },
+    { titleKey: "dmap_item2_title", descKey: "dmap_item2_desc", icon: Users },
+    { titleKey: "dmap_item3_title", descKey: "dmap_item3_desc", icon: Eye },
+  ];
+
+  return (
+    <section className="py-20 md:py-28">
+      <div
+        ref={ref}
+        className={`max-w-6xl mx-auto px-6 transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+      >
+        <div className="flex flex-col md:flex-row items-center gap-12 md:gap-16">
+          {/* Image left */}
+          <div className="flex-1 flex justify-center order-2 md:order-1">
+            <div className="relative w-full max-w-lg">
+              <div className="absolute -inset-3 bg-gradient-to-r from-indigo-100/30 to-blue-100/30 rounded-2xl blur-xl opacity-50" />
+              <img
+              src={imgs.featureMap}
+              alt="Meridian Decision Map"
+                className="relative w-full rounded-xl border border-slate-200/60 shadow-xl object-contain"
+                loading="lazy"
+              />
+            </div>
+          </div>
+
+          {/* Text right */}
+          <div className="flex-1 order-1 md:order-2">
+            <p className="text-[11px] font-semibold text-indigo-600 tracking-[0.2em] uppercase mb-4">{tt("dmap_label")}</p>
+            <h2 className="text-2xl sm:text-3xl md:text-[2rem] font-display font-bold leading-tight mb-5 text-[#1a2b5e]">
+              {tt("dmap_title_1")}
+              <br />
+              <span className="text-slate-400">{tt("dmap_title_2")}</span>
+            </h2>
+
+            <div className="space-y-5">
+              {items.map((item) => (
+                <div key={item.titleKey} className="flex items-start gap-3.5">
+                  <div className="w-8 h-8 rounded-md bg-indigo-50 flex items-center justify-center shrink-0 mt-0.5">
+                    <item.icon className="w-4 h-4 text-indigo-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-display font-semibold text-[15px] text-slate-800 mb-0.5">{tt(item.titleKey)}</h3>
+                    <p className="text-[13px] text-slate-500 leading-relaxed">{tt(item.descKey)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+
+/* ─── Results Section ────────────────────────────────── */
+function ResultsSection({ tt, language }: { tt: (k: string) => any; language: string }) {
+  const { ref, inView } = useInView(0.1);
+  const stats = [
+    { valueKey: "results_stat1_value", labelKey: "results_stat1_label", descKey: "results_stat1_desc", color: "text-blue-600" },
+    { valueKey: "results_stat2_value", labelKey: "results_stat2_label", descKey: "results_stat2_desc", color: "text-indigo-600" },
+    { valueKey: "results_stat3_value", labelKey: "results_stat3_label", descKey: "results_stat3_desc", color: "text-emerald-600" },
+  ];
+
+  return (
+    <section id="results" className="py-20 md:py-28 bg-[#1a2b5e]">
+      <div
+        ref={ref}
+        className={`max-w-5xl mx-auto px-6 transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+      >
+        <div className="text-center mb-14">
+          <p className="text-[11px] font-semibold text-blue-300 tracking-[0.2em] uppercase mb-4">{tt("results_label")}</p>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-display font-bold leading-tight text-white">
+            {tt("results_title_1")}
+          </h2>
+        </div>
+
+        {/* Stats grid */}
+        <div className="grid md:grid-cols-3 gap-6 mb-14">
+          {stats.map((stat, i) => (
+            <div
+              key={stat.valueKey}
+              className="text-center p-6 rounded-xl bg-white/[0.06] border border-white/10 backdrop-blur-sm"
+              style={{ transitionDelay: `${i * 100}ms` }}
+            >
+              <div className="text-3xl md:text-4xl font-display font-bold text-white mb-2">
+                {tt(stat.valueKey)}
+              </div>
+              <div className="text-sm font-medium text-blue-200 mb-1">{tt(stat.labelKey)}</div>
+              <div className="text-xs text-blue-300/70">{tt(stat.descKey)}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Quote */}
+        <div className="max-w-2xl mx-auto text-center">
+          <div className="relative">
+            <Quote className="w-8 h-8 text-blue-400/30 mx-auto mb-4" />
+            <blockquote className="text-lg md:text-xl text-white/90 leading-relaxed font-medium italic mb-4">
+              "{tt("results_quote")}"
+            </blockquote>
+            <p className="text-sm text-blue-300/70">
+              — {tt("results_quote_attr")}
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+
+/* ─── How It Works Section ───────────────────────────── */
+function HowSection({ tt, language }: { tt: (k: string) => any; language: string }) {
+  const { ref, inView } = useInView(0.1);
+  const weeks = [
+    { num: "W1", titleKey: "how_week1_title", descKey: "how_week1_desc" },
+    { num: "W2", titleKey: "how_week2_title", descKey: "how_week2_desc" },
+    { num: "W3", titleKey: "how_week3_title", descKey: "how_week3_desc" },
+    { num: "W4", titleKey: "how_week4_title", descKey: "how_week4_desc" },
+  ];
+
+  return (
+    <section id="how" className="py-20 md:py-28 bg-white">
+      <div
+        ref={ref}
+        className={`max-w-4xl mx-auto px-6 transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+      >
+        <div className="text-center mb-14">
+          <p className="text-[11px] font-semibold text-blue-600 tracking-[0.2em] uppercase mb-4">{tt("how_label")}</p>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-display font-bold leading-tight text-[#1a2b5e]">
+            {tt("how_title")}
+          </h2>
+        </div>
+
+        {/* Timeline */}
+        <div className="relative">
+          {/* Vertical line */}
+          <div className="absolute left-6 md:left-1/2 top-0 bottom-0 w-px bg-slate-200 -translate-x-1/2 hidden md:block" />
+
+          <div className="space-y-8 md:space-y-0">
+            {weeks.map((week, i) => {
+              const isLeft = i % 2 === 0;
+              return (
+                <div key={week.num} className="relative md:flex md:items-center md:min-h-[120px]">
+                  {/* Desktop: alternating layout */}
+                  <div className={`hidden md:flex w-full items-center ${isLeft ? "" : "flex-row-reverse"}`}>
+                    <div className={`w-[calc(50%-2rem)] ${isLeft ? "text-right pr-8" : "text-left pl-8"}`}>
+                      <h3 className="font-display font-semibold text-base text-slate-800 mb-1">{tt(week.titleKey)}</h3>
+                      <p className="text-[13px] text-slate-500 leading-relaxed">{tt(week.descKey)}</p>
+                    </div>
+                    {/* Center dot */}
+                    <div className="w-16 flex justify-center shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-[#1a2b5e] text-white flex items-center justify-center text-xs font-bold font-display">
+                        {week.num}
+                      </div>
+                    </div>
+                    <div className="w-[calc(50%-2rem)]" />
+                  </div>
+
+                  {/* Mobile: simple list */}
+                  <div className="md:hidden flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-full bg-[#1a2b5e] text-white flex items-center justify-center text-xs font-bold font-display shrink-0">
+                      {week.num}
+                    </div>
+                    <div className="pt-1.5">
+                      <h3 className="font-display font-semibold text-base text-slate-800 mb-1">{tt(week.titleKey)}</h3>
+                      <p className="text-[13px] text-slate-500 leading-relaxed">{tt(week.descKey)}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Security note */}
+        <div className="mt-12 p-4 rounded-lg bg-slate-50 border border-slate-200/60 flex items-start gap-3">
+          <Lock className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
+          <p className="text-[13px] text-slate-500 leading-relaxed">{tt("how_security")}</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+
+/* ─── Team Section ───────────────────────────────────── */
+function TeamSection({ tt, language }: { tt: (k: string) => any; language: string }) {
+  const { ref, inView } = useInView(0.1);
+
+  return (
+    <section id="team" className="py-20 md:py-28">
+      <div
+        ref={ref}
+        className={`max-w-3xl mx-auto px-6 transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+      >
+        <div className="text-center mb-10">
+          <p className="text-[11px] font-semibold text-blue-600 tracking-[0.2em] uppercase mb-4">{tt("team_label")}</p>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-display font-bold leading-tight text-[#1a2b5e]">
+            {tt("team_title_1")}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-500">
+              {tt("team_title_2")}
+            </span>
+          </h2>
+        </div>
+
+        <div className="p-7 md:p-9 rounded-xl bg-white border border-slate-200/80">
+          <p className="text-base md:text-[17px] text-slate-600 leading-relaxed mb-5">
+            {tt("team_p1")}
+          </p>
+          <p className="text-base md:text-[17px] text-slate-600 leading-relaxed mb-6">
+            {tt("team_p2")}
+          </p>
+
+          {/* Backed by logos */}
+          <div className="flex items-center gap-5 pt-5 border-t border-slate-100">
+            <span className="text-[11px] font-medium text-slate-400 tracking-[0.15em] uppercase">{tt("team_backed")}</span>
+            <img src={MIRACLEPLUS_LOGO} alt="MiraclePlus" className="h-5 w-auto opacity-40 hover:opacity-70 transition-opacity" />
+            <img src={ANTLER_LOGO} alt="Antler" className="h-3.5 w-auto opacity-40 hover:opacity-70 transition-opacity" />
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }

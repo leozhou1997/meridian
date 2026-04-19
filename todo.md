@@ -926,3 +926,17 @@
 - [x] BUG: "刷新分析" now fetches latest meetings from DB before calling AI
 - [x] BUG: New snapshot invalidates snapshots + meetings cache after generation
 - [ ] REMAINING: AI-generated snapshots from real-time refresh may not always include [ref:ID] tags (depends on AI output)
+
+## Landing Page Redesign (April 2026)
+
+- [x] Update brand narrative: "Sales Intelligence" → "AI Decision Engine"
+- [x] Redesign Hero section with new headline, product mockup, and CTA
+- [x] Replace stats section with updated metrics from product PDF (-35%, 3mo→4d, minute-level)
+- [x] Redesign pain point section with real scenario (¥500万 deal, 9 decision makers)
+- [x] Redesign product features: AI军师 3 capabilities + Decision Map
+- [x] Add customer testimonial / social proof
+- [x] Add "4 weeks to go live" delivery section
+- [x] Update team section
+- [x] Redesign CTA section
+- [x] Update i18n translations for all new content
+- [x] Update visual design: deep navy + orange accent, aligned with PDF brand

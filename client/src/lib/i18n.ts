@@ -10,12 +10,14 @@ export const images = {
     featureInsight: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-insight-en-light-v4_c43b2426.png",
     featureMap: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-map-en-light-v4_d24cd793.png",
     featureRoom: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-room-en-light-v4_580f18fa.png",
+    productMockup: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/product-mockup-bg-2x_35ae52f0.png",
   },
   zh: {
     hero: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/hero-zh-light-v4_ac963f49.png",
     featureInsight: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-insight-zh-light-v4_a66adf65.png",
     featureMap: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-map-zh-light-v4_9eaf39f4.png",
     featureRoom: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-room-zh-light-v4_95941fac.png",
+    productMockup: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/product-mockup-bg-2x_35ae52f0.png",
   },
 } as const;
 
@@ -23,75 +25,103 @@ export const images = {
 export const translations = {
   en: {
     /* ─── Landing: Nav ─── */
-    nav_features: "Features",
+    nav_features: "Product",
+    nav_how: "How It Works",
+    nav_results: "Results",
     nav_pricing: "Pricing",
     nav_team: "Team",
     nav_login: "Log In",
-    nav_dashboard: "Go to Dashboard",
+    nav_dashboard: "Dashboard",
     nav_request_access: "Request Access",
 
     /* ─── Landing: Hero ─── */
-    hero_badge: "AI-Powered Sales Intelligence",
-    hero_title_1: "See the deal.",
-    hero_title_2: "Not just the data.",
+    hero_title_1: "Navigate every deal.",
+    hero_title_2: "Close with confidence.",
     hero_subtitle:
-      "Meridian reads between the lines of every stakeholder interaction — surfacing hidden risks, mapping buying committees, and telling you exactly what to do next.",
+      "Meridian is an AI decision engine for complex B2B sales. It tells you who to talk to, what to say, and what to do next.",
     hero_cta_primary: "Request Early Access",
-    hero_cta_secondary: "See How It Works",
 
-    /* ─── Landing: Stats ─── */
-    stat_win_rate: "Win-rate improvement",
-    stat_qualification: "Faster qualification",
-    stat_stakeholders: "Shorter deal cycles",
-    stat_time_saved: "Saved daily per rep",
+    /* ─── Landing: Pain Point ─── */
+    pain_label: "The Problem",
+    pain_title_1: "A $500K deal. Nine decision-makers.",
+    pain_title_2: "What's your next move?",
+    pain_desc: "The real intelligence is scattered across chat groups, emails, meeting notes, CRM records, and your head. No single view. No clear path. Just guesswork.",
+    pain_item1_title: "Invisible buying committees",
+    pain_item1_desc: "You don't know who's really deciding, who's blocking, or who you haven't met yet.",
+    pain_item2_title: "Insights trapped in conversations",
+    pain_item2_desc: "Critical signals from calls and emails never make it into your deal strategy.",
+    pain_item3_title: "Reactive deal management",
+    pain_item3_desc: "By the time you realize a deal is at risk, it's already too late.",
 
-    /* ─── Landing: Features section header ─── */
-    features_badge: "Core Capabilities",
-    features_title_1: "Intelligence at every stage",
-    features_title_2: "of the deal.",
+    /* ─── Landing: Product ─── */
+    product_label: "The Product",
+    product_title_1: "Your AI ",
+    product_title_2: "Sales Strategist.",
+    product_desc: "Meridian reads every signal across your deal — then tells you exactly what to do next.",
+    product_cap1_title: "Auto-generate strategy",
+    product_cap1_desc: "Feed it a deal. Get a battle plan based on your sales process.",
+    product_cap2_title: "Multi-thread penetration",
+    product_cap2_desc: "Leverage internal experience and public intel to find breakthrough angles.",
+    product_cap3_title: "Proactive alerts",
+    product_cap3_desc: "When the situation changes, Meridian pushes updates. No waiting for you to ask.",
 
-    /* ─── Landing: Feature 1 — AI Deal Insight ─── */
-    feature1_label: "AI Deal Insight",
-    feature1_title: "An AI that reads between the lines.",
-    feature1_desc:
-      "Meridian doesn't just summarize meetings — it synthesizes every interaction into a living deal narrative, identifies hidden risks before they surface, and recommends specific next actions with confidence scoring.",
-    feature1_bullet1: "Confidence scoring with trend analysis",
-    feature1_bullet2: "Risk identification across all interactions",
-    feature1_bullet3: "AI-suggested next actions per stakeholder",
+    /* ─── Landing: Decision Map ─── */
+    dmap_label: "Decision Map",
+    dmap_title_1: "See the entire deal.",
+    dmap_title_2: "At a glance.",
+    dmap_item1_title: "Six dimensions",
+    dmap_item1_desc: "Tech validation, business breakthrough, executive push, competitive defense, budget, and case support.",
+    dmap_item2_title: "Stakeholder clarity",
+    dmap_item2_desc: "Every person's role, stance, and influence. Who supports you. Who's blocking.",
+    dmap_item3_title: "Spot the bottleneck",
+    dmap_item3_desc: "Red = blocked. Green = done. Blue = in progress. No more digging through chat logs.",
 
-    /* ─── Landing: Feature 2 — Stakeholder Map ─── */
-    feature2_label: "Buying Committee",
-    feature2_title: "Map the people who actually decide.",
-    feature2_desc:
-      "Automatically build and maintain a dynamic stakeholder map from meeting transcripts. See who's a champion, who's blocking, and who you haven't engaged yet — before it's too late.",
-    feature2_bullet1: "Auto-detected roles and influence levels",
-    feature2_bullet2: "Relationship strength tracking over time",
-    feature2_bullet3: "Gap analysis for missing decision-makers",
+    /* ─── Landing: Results ─── */
+    results_label: "Results",
+    results_title_1: "After using Meridian",
+    results_stat1_value: "-35%",
+    results_stat1_label: "Sales cycle reduction",
+    results_stat1_desc: "From first contact to close",
+    results_stat2_value: "3mo → 4d",
+    results_stat2_label: "New rep ramp-up",
+    results_stat2_desc: "From 3 months to 4 days to work independently",
+    results_stat3_value: "Minutes",
+    results_stat3_label: "Bottleneck detection",
+    results_stat3_desc: "From gut feeling to automatic early warning",
+    results_quote: "The key is those 34 idle days — what should my reps be doing? Meridian gave them a Todo list.",
+    results_quote_attr: "CEO, $100M+ annual revenue customer · 300+ active deals",
 
-    /* ─── Landing: Feature 3 — Deal Room ─── */
-    feature3_label: "Deal Room",
-    feature3_title: "Every interaction. One timeline.",
-    feature3_desc:
-      "A unified deal room that captures every meeting, email, and touchpoint in chronological context. AI-generated summaries surface what matters — so your team never walks into a meeting unprepared.",
-    feature3_bullet1: "Multi-source interaction capture",
-    feature3_bullet2: "AI-generated meeting summaries",
-    feature3_bullet3: "Pre-meeting stakeholder briefs",
+    /* ─── Landing: How It Works ─── */
+    how_label: "How It Works",
+    how_title: "4 weeks to go live. Pay for results.",
+    how_week1_title: "Business Deconstruction",
+    how_week1_desc: "Map your deal flow and decision chains. Select 2-3 high-value target deals.",
+    how_week2_title: "Data Integration",
+    how_week2_desc: "Read-only access to existing systems (CRM, Feishu/DingTalk, email). Zero workflow disruption.",
+    how_week3_title: "First Delivery",
+    how_week3_desc: "Deliver the first deal battle briefing — complete with decision map and penetration strategy.",
+    how_week4_title: "Full Rollout",
+    how_week4_desc: "Team goes live. Weekly action recommendations. Continuous optimization.",
+    how_security: "Data security: Read-only access. Encrypted transmission. Strict isolation. IT-controlled permissions. Supports private deployment.",
 
     /* ─── Landing: Team section ─── */
-    team_badge: "Our Team",
-    team_title: "Built by people who've lived the problem.",
-    team_subtitle:
-      "We've spent years in enterprise sales — navigating complex buying committees, multi-threaded deals, and the chaos of long sales cycles. Meridian is the tool we wished we had. Backed by MiraclePlus and Antler.",
+    team_label: "Our Team",
+    team_title_1: "Built by people who've ",
+    team_title_2: "lived the problem.",
+    team_p1: "We've spent years running complex enterprise deals — managing buying committees, navigating multi-threaded negotiations, and losing sleep over pipeline reviews.",
+    team_p2: "We built Meridian because we believe deal intelligence shouldn't be trapped in spreadsheets and tribal knowledge. Every deal tells a story. We're building the AI that reads it.",
+    team_backed: "Backed by",
 
     /* ─── Landing: Bottom CTA ─── */
     cta_title_1: "Stop guessing.",
-    cta_title_2: "Start knowing.",
-    cta_subtitle:
-      "Join the sales teams using Meridian to close complex deals with confidence.",
+    cta_title_2: "Make every deal evidence-based.",
+    cta_subtitle: "Join the waitlist for early access. We're onboarding select teams tackling complex, multi-stakeholder deals.",
     cta_button: "Request Early Access",
+    cta_subtext: "No credit card required. We'll reach out within 48 hours.",
 
     /* ─── Landing: Footer ─── */
-    footer_copyright: "Meridian Sales Intelligence. All rights reserved.",
+    footer_copyright: "Meridian. All rights reserved.",
+    footer_email: "leo@meridianos.ai",
 
     /* ─── Pricing: Hero ─── */
     pricing_badge: "Simple, Transparent Pricing",
@@ -192,7 +222,7 @@ export const translations = {
 
     /* ─── WaitlistDialog ─── */
     waitlist_title: "Request Early Access",
-    waitlist_desc: "Join the waitlist for Meridian's AI-powered deal intelligence platform.",
+    waitlist_desc: "Join the waitlist for Meridian's AI decision engine for complex B2B sales.",
     waitlist_email_label: "Work Email",
     waitlist_name_label: "Full Name",
     waitlist_company_label: "Company",
@@ -215,7 +245,9 @@ export const translations = {
 
   zh: {
     /* ─── Landing: Nav ─── */
-    nav_features: "核心功能",
+    nav_features: "产品",
+    nav_how: "如何上线",
+    nav_results: "效果",
     nav_pricing: "定价",
     nav_team: "团队",
     nav_login: "登录",
@@ -223,67 +255,93 @@ export const translations = {
     nav_request_access: "申请体验",
 
     /* ─── Landing: Hero ─── */
-    hero_badge: "AI驱动的销售智能平台",
-    hero_title_1: "看透交易本质，",
-    hero_title_2: "而非只看数据。",
+    hero_title_1: "给你的每一笔销售订单，",
+    hero_title_2: "都装上导航。",
     hero_subtitle:
-      "子午线深度解读每一次客户互动——发现隐藏风险、绘制采购决策链、精准推荐下一步行动。",
+      "子午线是复杂B2B销售的AI决策引擎。告诉你该找谁、该说什么、下一步该做什么。",
     hero_cta_primary: "申请抢先体验",
-    hero_cta_secondary: "了解产品",
 
-    /* ─── Landing: Stats ─── */
-    stat_win_rate: "赢单率提升",
-    stat_qualification: "更快的商机评估",
-    stat_stakeholders: "缩短成交周期",
-    stat_time_saved: "每天节省准备时间",
+    /* ─── Landing: Pain Point ─── */
+    pain_label: "痛点",
+    pain_title_1: "¥500万订单，九个决策人，",
+    pain_title_2: "下一步该做什么？",
+    pain_desc: "真正的情报散落在群聊、邮件、会议纪要、CRM 和你的脑子里。没有全局视图，没有清晰路径，只有猜测。",
+    pain_item1_title: "看不见的采购委员会",
+    pain_item1_desc: "你不知道谁在真正做决策、谁在阻碍、谁还没有接触过。",
+    pain_item2_title: "洞察被困在对话中",
+    pain_item2_desc: "来自电话和邮件的关键信号从未进入你的交易策略。",
+    pain_item3_title: "被动的交易管理",
+    pain_item3_desc: "当你意识到交易有风险时，往往已经来不及了。",
 
-    /* ─── Landing: Features section header ─── */
-    features_badge: "核心能力",
-    features_title_1: "覆盖交易全周期的",
-    features_title_2: "深度洞察。",
+    /* ─── Landing: Product ─── */
+    product_label: "产品",
+    product_title_1: "你的AI",
+    product_title_2: "销售军师。",
+    product_desc: "子午线读取交易中的每一个信号，然后精确告诉你下一步该做什么。",
+    product_cap1_title: "输入交易，自动生成策略",
+    product_cap1_desc: "给它一笔交易，自动生成基于你的销售流程的作战策略。",
+    product_cap2_title: "多线程渗透策略",
+    product_cap2_desc: "基于内部经验和外部公开信息源检索，寻找突破口，加速交易。",
+    product_cap3_title: "主动推送，不等你来问",
+    product_cap3_desc: "局势变化时自动推送更新，不错过任何关键窗口。",
 
-    /* ─── Landing: Feature 1 — AI Deal Insight ─── */
-    feature1_label: "AI 交易洞察",
-    feature1_title: "读懂字里行间的 AI。",
-    feature1_desc:
-      "子午线不只是总结会议——它将每一次互动综合为动态交易叙事，在风险浮出水面之前识别它们，并以置信度评分推荐具体的下一步行动。",
-    feature1_bullet1: "带趋势分析的置信度评分",
-    feature1_bullet2: "跨所有互动的风险识别",
-    feature1_bullet3: "按决策人的 AI 行动建议",
+    /* ─── Landing: Decision Map ─── */
+    dmap_label: "决策全景图",
+    dmap_title_1: "看清整笔交易。",
+    dmap_title_2: "一目了然。",
+    dmap_item1_title: "六个维度拆解",
+    dmap_item1_desc: "技术验证、商务突破、高层推动、竞对防御、预算推进、案例支撑。",
+    dmap_item2_title: "决策人关系一目了然",
+    dmap_item2_desc: "每个人的角色、态度、影响力。谁支持你，谁在阻碍。",
+    dmap_item3_title: "哪里卡住，一眼看出",
+    dmap_item3_desc: "红色阻塞、绿色完成、蓝色进行中。不需要翻聊天记录。",
 
-    /* ─── Landing: Feature 2 — Stakeholder Map ─── */
-    feature2_label: "采购委员会",
-    feature2_title: "绘制真正做决策的人。",
-    feature2_desc:
-      "从会议记录中自动构建并维护动态决策人关系图。清楚看到谁是支持者、谁在阻碍、谁还没有接触——在为时已晚之前。",
-    feature2_bullet1: "自动识别角色和影响力等级",
-    feature2_bullet2: "关系强度的持续追踪",
-    feature2_bullet3: "缺失决策人的差距分析",
+    /* ─── Landing: Results ─── */
+    results_label: "效果",
+    results_title_1: "用了子午线后...",
+    results_stat1_value: "-35%",
+    results_stat1_label: "销售周期缩短",
+    results_stat1_desc: "从首次接触到最初成单",
+    results_stat2_value: "3个月→4天",
+    results_stat2_label: "新人上手时间",
+    results_stat2_desc: "从3个月压缩到4天独立打单",
+    results_stat3_value: "分钟级",
+    results_stat3_label: "卡点判断",
+    results_stat3_desc: "从靠经验判断变为自动预警",
+    results_quote: "关键是这34天空白期，我的销售该做什么？它直接给了Todo。",
+    results_quote_attr: "年营收过亿客户CEO · 300+条在途交易",
 
-    /* ─── Landing: Feature 3 — Deal Room ─── */
-    feature3_label: "交易室",
-    feature3_title: "所有互动，一条时间线。",
-    feature3_desc:
-      "统一的交易室捕捉每一次会议、邮件和触点，按时间顺序呈现。AI 生成的摘要提炼关键信息——让你的团队永远不会毫无准备地走进会议。",
-    feature3_bullet1: "多来源互动记录",
-    feature3_bullet2: "AI 生成的会议摘要",
-    feature3_bullet3: "会前决策人简报",
+    /* ─── Landing: How It Works ─── */
+    how_label: "如何上线",
+    how_title: "4周上线，按效果说话。",
+    how_week1_title: "业务解构",
+    how_week1_desc: "梳理你的交易流程和决策链路，选定2-3笔高价值目标交易。",
+    how_week2_title: "数据接入",
+    how_week2_desc: "只读接入现有系统（CRM、飞书/钉钉、邮件），不改变你的任何工作流。",
+    how_week3_title: "首次交付",
+    how_week3_desc: "交付第一份交易作战简报，包含决策人图谱和渗透策略。",
+    how_week4_title: "全员上线",
+    how_week4_desc: "团队开始使用，每周收到行动建议，持续优化。",
+    how_security: "数据安全：所有数据只读接入、传输加密、严格隔离。权限由你的IT团队控制，随时可撤回。支持私有化部署。",
 
     /* ─── Landing: Team section ─── */
-    team_badge: "我们的团队",
-    team_title: "由亲历过这些问题的人打造。",
-    team_subtitle:
-      "我们在企业级销售领域深耕多年——经历过复杂的采购委员会、多线程交易和漫长销售周期的混乱。子午线是我们一直想要的工具。由奇绩创坛和 Antler 支持，扎根深圳，服务全球出海一线。",
+    team_label: "我们的团队",
+    team_title_1: "由",
+    team_title_2: "亲历过这些问题的人打造。",
+    team_p1: "我们在企业级销售的战壕中摸爬滚打多年——运营复杂交易、管理采购委员会、为 Pipeline Review 彻夜难眠。",
+    team_p2: "我们创建子午线，是因为我们相信交易智能不应该被困在电子表格和口口相传的经验中。每笔交易都在讲述一个故事。我们正在构建能读懂这个故事的 AI。",
+    team_backed: "投资方",
 
     /* ─── Landing: Bottom CTA ─── */
-    cta_title_1: "不再猜测，",
-    cta_title_2: "开始洞察。",
-    cta_subtitle:
-      "加入正在使用子午线自信成交复杂交易的销售团队。",
+    cta_title_1: "别再猜了，",
+    cta_title_2: "让每一笔交易都有据可依。",
+    cta_subtitle: "加入等候名单获取抢先体验资格。我们正在邀请攻克复杂、多决策人交易的精选团队。",
     cta_button: "申请抢先体验",
+    cta_subtext: "无需信用卡。我们将在 48 小时内联系您。",
 
     /* ─── Landing: Footer ─── */
-    footer_copyright: "子午线销售智能平台。保留所有权利。",
+    footer_copyright: "子午线 Meridian. 保留所有权利。",
+    footer_email: "leo@meridianos.ai",
 
     /* ─── Pricing: Hero ─── */
     pricing_badge: "简洁透明的定价",
@@ -384,7 +442,7 @@ export const translations = {
 
     /* ─── WaitlistDialog ─── */
     waitlist_title: "申请抢先体验",
-    waitlist_desc: "加入子午线 AI 销售智能平台的等候名单。",
+    waitlist_desc: "加入子午线 AI 决策引擎的等候名单。",
     waitlist_email_label: "工作邮箱",
     waitlist_name_label: "姓名",
     waitlist_company_label: "公司",

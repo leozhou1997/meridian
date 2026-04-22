@@ -992,3 +992,29 @@
 - [x] Visual polish and responsive design
 - [x] Write vitest tests for new procedures (11 tests, all passing)
 - [x] Bug fixes (AI insights now dimension-derived)
+
+## UI/UX Comprehensive Fix (Apr 2026)
+
+### Phase 1: Audit
+- [x] Full page-by-page visual audit
+
+### Phase 2: Language & Text
+- [x] Fix all mixed Chinese/English text inconsistencies (UI labels all bilingual)
+- [x] Ensure all UI labels match selected language
+- Note: Remaining English text is in seed/demo data, not UI code
+
+### Phase 3: Interactions & Layout
+- [x] Fix broken/non-functional buttons
+- [x] Fix container overflow issues (Decision Map SVG sizing)
+- [x] Fix scaling/proportion issues (aspect-ratio approach)
+- [x] Ensure all elements are within their containers
+
+### Phase 4: Dimension Detail Panel
+- [x] Click dimension node to open detail panel
+- [x] Show AI summary, action items, status toggle
+- [x] Allow adding/completing action items from panel
+
+### Phase 5: AI Generate Button
+- [x] Add "AI 分析" button to deal detail page
+- [x] Wire to generateMap procedure
+- [x] Show loading state and refresh map after generation

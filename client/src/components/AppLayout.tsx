@@ -2,7 +2,7 @@ import { useState, useEffect, createContext, useContext, useRef } from 'react';
 import { useLocation, Link } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
-import { formatCurrency, getConfidenceColor } from '@/lib/data';
+import { formatCurrency, getConfidenceColor, getStageName } from '@/lib/data';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Compass, LayoutDashboard, Users, FileText, MessageSquare,
@@ -273,7 +273,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                               className="flex items-center gap-1.5 w-full px-2 py-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors rounded"
                             >
                               {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                              <span>{stage}</span>
+                              <span>{getStageName(stage, language === 'zh')}</span>
                               <span className="ml-auto text-[10px] bg-muted rounded px-1.5 py-0.5">{stageDeals.length}</span>
                             </button>
 

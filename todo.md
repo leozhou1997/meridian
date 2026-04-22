@@ -1074,3 +1074,13 @@
 - [x] Seed 3 strategy notes (internal, competitive, pricing)
 - [x] Verify login and data display
 - [x] Test BattleMap AI generation on the new deal (17 needs generated across 5 stakeholders)
+
+## Multimodal Demo Images for Chinese Demo (Apr 2026)
+- [x] Generate WeChat chat screenshots (1v1 林雪梅↔张伟 + group chat POC更新)
+- [x] Generate email screenshots (POC方案提交邮件)
+- [x] Generate factory/site visit photos (robot welding scene)
+- [x] Generate POC data report screenshot (one-pager for CFO)
+- [x] Generate whiteboard strategy photo (stakeholder influence map)
+- [x] Upload all 6 images to CDN
+- [x] Update all 10 meeting records in DB with image attachments
+- [x] Verify images display correctly in meeting timeline (all 10 meetings have thumbnails)

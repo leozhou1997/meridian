@@ -120,6 +120,13 @@
       "when": 1775092674131,
       "tag": "0016_stiff_thor",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "5",
+      "when": 1776848569436,
+      "tag": "0017_chubby_penance",
+      "breakpoints": true
     }
   ]
 }

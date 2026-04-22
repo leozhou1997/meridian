@@ -28,6 +28,7 @@ export const nextActionsRouter = router({
       priority: z.enum(["high", "medium", "low"]).default("medium"),
       stakeholderId: z.number().optional(),
       snapshotId: z.number().optional(),
+      dimensionKey: z.string().optional(),
       status: z.enum(STATUS_VALUES).default("pending"),
       source: z.enum(SOURCE_VALUES).default("manual"),
     }))

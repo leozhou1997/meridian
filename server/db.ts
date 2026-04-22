@@ -4,6 +4,8 @@ import {
   aiLogs,
   companyProfiles,
   deals,
+  dealChatMessages,
+  dealDimensions,
   dealStrategyNotes,
   kbDocuments,
   meetings,
@@ -18,6 +20,8 @@ import {
   type InsertAiLog,
   type InsertCompanyProfile,
   type InsertDeal,
+  type InsertDealChatMessage,
+  type InsertDealDimension,
   type InsertDealStrategyNote,
   type InsertKbDocument,
   type InsertMeeting,
@@ -557,4 +561,106 @@ export async function deleteStrategyNote(id: number, tenantId: number) {
   if (!db) throw new Error("Database not available");
   await db.delete(dealStrategyNotes)
     .where(and(eq(dealStrategyNotes.id, id), eq(dealStrategyNotes.tenantId, tenantId)));
+}
+
+
+// ─── Deal Dimensions (Decision Map) ─────────────────────────────────────────
+
+const DEFAULT_DIMENSIONS = [
+  { key: "tech_validation", sortOrder: 0 },
+  { key: "commercial_breakthrough", sortOrder: 1 },
+  { key: "executive_engagement", sortOrder: 2 },
+  { key: "competitive_defense", sortOrder: 3 },
+  { key: "budget_advancement", sortOrder: 4 },
+  { key: "case_support", sortOrder: 5 },
+] as const;
+
+export async function getDealDimensions(dealId: number, tenantId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(dealDimensions)
+    .where(and(eq(dealDimensions.dealId, dealId), eq(dealDimensions.tenantId, tenantId)))
+    .orderBy(dealDimensions.sortOrder);
+}
+
+export async function ensureDealDimensions(dealId: number, tenantId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const existing = await getDealDimensions(dealId, tenantId);
+  if (existing.length > 0) return existing;
+  // Create default 6 dimensions for this deal
+  const toInsert: InsertDealDimension[] = DEFAULT_DIMENSIONS.map(d => ({
+    dealId,
+    tenantId,
+    dimensionKey: d.key,
+    status: "not_started" as const,
+    sortOrder: d.sortOrder,
+  }));
+  await db.insert(dealDimensions).values(toInsert);
+  return getDealDimensions(dealId, tenantId);
+}
+
+export async function updateDealDimension(
+  id: number,
+  tenantId: number,
+  data: Partial<InsertDealDimension>
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(dealDimensions).set(data)
+    .where(and(eq(dealDimensions.id, id), eq(dealDimensions.tenantId, tenantId)));
+}
+
+export async function bulkUpdateDealDimensions(
+  dealId: number,
+  tenantId: number,
+  updates: Array<{ dimensionKey: string; status: string; aiSummary?: string; notes?: string }>
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  for (const u of updates) {
+    await db.update(dealDimensions)
+      .set({
+        status: u.status as any,
+        aiSummary: u.aiSummary ?? null,
+        notes: u.notes ?? null,
+      })
+      .where(and(
+        eq(dealDimensions.dealId, dealId),
+        eq(dealDimensions.tenantId, tenantId),
+        eq(dealDimensions.dimensionKey, u.dimensionKey),
+      ));
+  }
+}
+
+// ─── Deal Chat Messages ─────────────────────────────────────────────────────
+
+export async function getDealChatMessages(dealId: number, tenantId: number, limit = 50) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(dealChatMessages)
+    .where(and(eq(dealChatMessages.dealId, dealId), eq(dealChatMessages.tenantId, tenantId)))
+    .orderBy(dealChatMessages.createdAt)
+    .limit(limit);
+}
+
+export async function createDealChatMessage(data: InsertDealChatMessage) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [result] = await db.insert(dealChatMessages).values(data);
+  return (result as any).insertId as number;
+}
+
+// ─── Next Actions by Dimension ──────────────────────────────────────────────
+
+export async function getNextActionsByDimension(dealId: number, tenantId: number, dimensionKey: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(nextActions)
+    .where(and(
+      eq(nextActions.dealId, dealId),
+      eq(nextActions.tenantId, tenantId),
+      eq(nextActions.dimensionKey, dimensionKey),
+    ))
+    .orderBy(nextActions.createdAt);
 }

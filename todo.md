@@ -940,3 +940,55 @@
 - [x] Redesign CTA section
 - [x] Update i18n translations for all new content
 - [x] Update visual design: deep navy + orange accent, aligned with PDF brand
+
+## Decision Map Core Rebuild (Apr 2026)
+
+### Phase 1: Schema & Data Model
+- [x] Add `dealDimensions` table (per-deal dimension status tracking: dimension key, status, notes)
+- [x] Add `dimension` field to `nextActions` table (link actions to dimensions)
+- [x] Add `dealChatMessages` table for deal-level AI Q&A
+- [x] Run `pnpm db:push` to migrate
+
+### Phase 2: Backend Routers
+- [x] CRUD procedures for dealDimensions (get/update status per dimension)
+- [x] Update nextActions procedures to support dimension filtering
+- [x] Add deal chat procedures (send message, get history, AI response)
+- [ ] Update AI generation to produce dimension-based analysis
+
+### Phase 3: DecisionMap Component
+- [x] Build six-dimension radial visualization (SVG-based)
+- [x] Each dimension node: icon, label, status badge, action items
+- [x] Center node: company logo + name
+- [x] Connection lines from center to dimensions
+- [x] Status color coding (green=done, blue=in-progress, yellow=pending, red=blocked)
+- [x] Click dimension to expand/view action items
+
+### Phase 4: Stakeholder Sidebar + AI Insights
+- [x] Left panel: stakeholder list with attitude badges
+- [x] Bottom section: AI quick insights (3 items)
+- [x] Stakeholder attitude mapping (support/neutral/blocker/leaning/unknown)
+
+### Phase 5: Deal Chat Panel
+- [x] Chat interface for deal-level Q&A (embedded in deal view)
+- [x] AI responses with structured penetration plans
+- [x] Message history persistence
+
+### Phase 6: DealDetail Page Rebuild
+- [x] New tab structure: Overview | Decision Map | Timeline | Documents
+- [x] Decision Map as the primary/default tab
+- [ ] Wire all new components together
+- [ ] Remove old StakeholderMap and DealInsightPanel from deal view
+
+### Phase 7: AI Prompt Updates
+- [x] New prompt for dimension-based deal analysis
+- [x] Generate dimension statuses + action items per dimension
+- [x] Generate stakeholder attitude assessments
+- [x] Generate 3 quick insights
+
+### Phase 8: Seed Data
+- [x] Create demo deal with realistic Decision Map data (seeded all 5 deals)
+
+### Phase 9: Testing & Polish
+- [x] Visual polish and responsive design
+- [x] Write vitest tests for new procedures (11 tests, all passing)
+- [x] Bug fixes (AI insights now dimension-derived)

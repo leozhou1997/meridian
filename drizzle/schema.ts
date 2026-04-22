@@ -203,6 +203,7 @@ export const nextActions = mysqlTable("nextActions", {
   tenantId: int("tenantId").notNull(),
   stakeholderId: int("stakeholderId"),
   snapshotId: int("snapshotId"),
+  dimensionKey: varchar("dimensionKey", { length: 50 }),
   text: text("text").notNull(),
   dueDate: timestamp("dueDate"),
   completed: boolean("completed").default(false).notNull(),
@@ -368,3 +369,42 @@ export const dealStrategyNotes = mysqlTable("dealStrategyNotes", {
 
 export type DealStrategyNote = typeof dealStrategyNotes.$inferSelect;
 export type InsertDealStrategyNote = typeof dealStrategyNotes.$inferInsert;
+
+// ─── Deal Dimensions (Decision Map) ─────────────────────────────────────────
+
+export const dealDimensions = mysqlTable("dealDimensions", {
+  id: int("id").autoincrement().primaryKey(),
+  dealId: int("dealId").notNull(),
+  tenantId: int("tenantId").notNull(),
+  dimensionKey: varchar("dimensionKey", { length: 50 }).notNull(),
+  status: mysqlEnum("status", [
+    "not_started",
+    "in_progress",
+    "completed",
+    "blocked",
+  ]).default("not_started").notNull(),
+  notes: text("notes"),
+  aiSummary: text("aiSummary"),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type DealDimension = typeof dealDimensions.$inferSelect;
+export type InsertDealDimension = typeof dealDimensions.$inferInsert;
+
+// ─── Deal Chat Messages (Agent Q&A) ─────────────────────────────────────────
+
+export const dealChatMessages = mysqlTable("dealChatMessages", {
+  id: int("id").autoincrement().primaryKey(),
+  dealId: int("dealId").notNull(),
+  tenantId: int("tenantId").notNull(),
+  userId: int("userId").notNull(),
+  role: mysqlEnum("role", ["user", "assistant"]).default("user").notNull(),
+  content: text("content").notNull(),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type DealChatMessage = typeof dealChatMessages.$inferSelect;
+export type InsertDealChatMessage = typeof dealChatMessages.$inferInsert;

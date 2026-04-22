@@ -53,6 +53,9 @@ type NextAction = {
 };
 import StakeholderMap from '@/components/StakeholderMap';
 import DealInsightPanel from '@/components/DealInsightPanel';
+import { DecisionMap, DIMENSION_CONFIG } from '@/components/DecisionMap';
+import { StakeholderSidebar } from '@/components/StakeholderSidebar';
+import { DealChatPanel } from '@/components/DealChatPanel';
 import DealTimeline from '@/components/DealTimeline';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -262,6 +265,10 @@ export default function DealDetail() {
     { enabled: dealId > 0, refetchOnWindowFocus: false }
   );
   const { data: strategyNotesData = [] } = trpc.strategyNotes.listByDeal.useQuery(
+    { dealId },
+    { enabled: dealId > 0, refetchOnWindowFocus: false }
+  );
+  const { data: dimensionsData = [] } = trpc.dimensions.listByDeal.useQuery(
     { dealId },
     { enabled: dealId > 0, refetchOnWindowFocus: false }
   );
@@ -910,8 +917,8 @@ export default function DealDetail() {
               <TabsList className="bg-transparent h-10 gap-0.5 md:gap-1 p-0">
                 <TabsTrigger value="map" className="data-[state=active]:bg-muted/50 data-[state=active]:shadow-none rounded-lg text-xs font-display gap-1 md:gap-1.5 px-2 md:px-3 h-8">
                   <Map className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">{t('deal.buyingCommittee')}</span>
-                  <span className="sm:hidden">{isZh ? '洞察' : 'Insight'}</span>
+                  <span className="hidden sm:inline">Decision Map</span>
+                  <span className="sm:hidden">Map</span>
                 </TabsTrigger>
                 <TabsTrigger value="timeline" className="data-[state=active]:bg-muted/50 data-[state=active]:shadow-none rounded-lg text-xs font-display gap-1 md:gap-1.5 px-2 md:px-3 h-8">
                   <Activity className="w-3.5 h-3.5" />
@@ -929,84 +936,96 @@ export default function DealDetail() {
             <TabsContent value="map" className="flex-1 m-0 overflow-hidden min-h-0">
               <div className="h-full flex overflow-hidden">
 
-                {/* ── Deal Insight Panel — full width on mobile, left side on desktop ── */}
-                <DealInsightPanel
-                  deal={deal}
-                  latestSnapshot={latestSnapshot}
-                  nextActions={nextActions}
-                  addingAction={addingAction}
-                  setAddingAction={setAddingAction}
-                  newActionText={newActionText}
-                  setNewActionText={setNewActionText}
-                  newActionDue={newActionDue}
-                  setNewActionDue={setNewActionDue}
-                  addAction={addAction}
-                  toggleAction={toggleAction}
-                  deleteAction={deleteAction}
-                  updateActionStatus={updateActionStatus}
-                  createAiAction={(text: string, snapshotId?: number, status?: string) => {
-                    createActionMutation.mutate({
-                      dealId,
-                      text,
-                      source: 'ai_suggested',
-                      status: (status ?? 'pending') as any,
-                      snapshotId,
-                    });
-                  }}
-                  setActiveTab={setActiveTab}
-                  onStakeholderHover={setHoveredStakeholderId}
-                  onStakeholderClick={(id) => {
-                    const s = deal.stakeholders.find((st: any) => st.id === id);
-                    if (s) handleStakeholderClick(s as Stakeholder);
-                  }}
-                  onOpenMapSheet={() => setMapSheetOpen(true)}
-                />
-
-                {/* ── Stakeholder Map canvas — hidden on mobile, right side on desktop ── */}
-                <div className={`hidden md:block relative overflow-hidden transition-all duration-300 ease-in-out ${mapCollapsed ? 'w-[48px] shrink-0' : 'flex-1'}`}>
-                  {/* Map collapse toggle */}
-                  <button
-                    onClick={() => setMapCollapsed(c => !c)}
-                    className="absolute top-2 left-2 z-20 flex items-center justify-center w-7 h-7 rounded-lg bg-card/80 backdrop-blur-sm border border-border/40 hover:bg-card text-muted-foreground/60 hover:text-foreground transition-all shadow-sm"
-                    title={mapCollapsed ? (isZh ? '展开利益相关者地图' : 'Expand Stakeholder Map') : (isZh ? '收起利益相关者地图' : 'Minimize Stakeholder Map')}
-                  >
-                    {mapCollapsed
-                      ? <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-                      : <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                    }
-                  </button>
-                  {mapCollapsed ? (
-                    <div className="h-full flex flex-col items-center justify-center gap-2 bg-card/20">
-                      <Map className="w-4 h-4 text-muted-foreground/40" />
-                      <div className="text-[10px] text-muted-foreground/40 uppercase tracking-widest font-medium select-none" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
-                        {isZh ? '利益相关者' : 'Stakeholder Map'}
-                      </div>
-                    </div>
-                  ) : (
-                    <StakeholderMap
-                      key={deal.id}
-                      deal={deal as any}
-                      highlightedStakeholderId={hoveredStakeholderId}
-                      onStakeholderClick={(s: any) => handleStakeholderClick(s as Stakeholder)}
-                      onStakeholdersChange={() => utils.stakeholders.listByDeal.invalidate({ dealId })}
-                      onBuyingStagesChange={(stages) => updateDealMutation.mutate({ id: dealId, buyingStages: stages })}
-                    />
-                  )}
+                {/* ── Left: Stakeholder Sidebar + AI Insights + Chat ── */}
+                <div className="hidden md:flex flex-col w-[260px] shrink-0 border-r border-border/30 bg-card/30">
+                  <StakeholderSidebar
+                    stakeholders={localStakeholders.map((s: any) => ({
+                      id: s.id,
+                      name: s.name,
+                      title: s.title,
+                      role: s.role,
+                      sentiment: s.sentiment,
+                      engagement: s.engagement,
+                      avatar: s.avatar,
+                    }))}
+                    aiInsights={(() => {
+                      const insights: { text: string; type: 'warning' | 'opportunity' | 'info' }[] = [];
+                      // Derive insights from dimension statuses
+                      const blocked = dimensionsData.filter((d: any) => d.status === 'blocked');
+                      const inProgress = dimensionsData.filter((d: any) => d.status === 'in_progress');
+                      const completed = dimensionsData.filter((d: any) => d.status === 'completed');
+                      if (blocked.length > 0) {
+                        const dimLabel = (DIMENSION_CONFIG as any)[blocked[0].dimensionKey]?.label || blocked[0].dimensionKey;
+                        insights.push({ text: `${dimLabel}维度受阻，需要优先突破`, type: 'warning' });
+                      }
+                      if (inProgress.length > 0) {
+                        insights.push({ text: `${inProgress.length} 个维度推进中，${completed.length} 个已完成`, type: 'info' });
+                      }
+                      const highPriorityPending = actionsData.filter((a: any) => a.priority === 'high' && a.status !== 'done');
+                      if (highPriorityPending.length > 0) {
+                        insights.push({ text: `${highPriorityPending.length} 个高优先级动作待执行`, type: 'opportunity' });
+                      }
+                      return insights.length > 0 ? insights : (latestSnapshot ? [
+                        ...(latestSnapshot.keyRisks ? (latestSnapshot.keyRisks as any[]).slice(0, 2).map((r: any) => ({ text: typeof r === 'string' ? r : r.text || r.risk || '', type: 'warning' as const })) : []),
+                      ] : []);
+                    })()}
+                    onStakeholderClick={(id) => {
+                      const s = deal.stakeholders.find((st: any) => st.id === id);
+                      if (s) handleStakeholderClick(s as Stakeholder);
+                    }}
+                    className="flex-1 min-h-0"
+                  />
+                  <DealChatPanel dealId={dealId} compact />
                 </div>
 
+                {/* ── Center: Decision Map ── */}
+                <div className="flex-1 overflow-auto">
+                  <div className="p-4 md:p-6">
+                    <div className="mb-4">
+                      <h2 className="font-display text-base font-semibold text-foreground">
+                        Decision Map · {deal.company}{isZh ? '渗透全景' : ' Penetration Overview'}
+                      </h2>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {isZh ? `AI 置信度 ${deal.confidenceScore}% · ${dimensionsData.length || 6} 个决策维度 · ${actionsData.length} 个关键动作` : `AI Confidence ${deal.confidenceScore}% · ${dimensionsData.length || 6} Dimensions · ${actionsData.length} Actions`}
+                      </p>
+                    </div>
+                    <DecisionMap
+                      companyName={deal.company}
+                      companyLogo={deal.logo}
+                      dimensions={dimensionsData.length > 0 ? dimensionsData : [
+                        { id: 1, dimensionKey: 'tech_validation', status: 'not_started' as const, aiSummary: null, notes: null },
+                        { id: 2, dimensionKey: 'commercial_breakthrough', status: 'not_started' as const, aiSummary: null, notes: null },
+                        { id: 3, dimensionKey: 'executive_engagement', status: 'not_started' as const, aiSummary: null, notes: null },
+                        { id: 4, dimensionKey: 'competitive_defense', status: 'not_started' as const, aiSummary: null, notes: null },
+                        { id: 5, dimensionKey: 'budget_advancement', status: 'not_started' as const, aiSummary: null, notes: null },
+                        { id: 6, dimensionKey: 'case_support', status: 'not_started' as const, aiSummary: null, notes: null },
+                      ]}
+                      actions={actionsData.map((a: any) => ({
+                        id: a.id,
+                        text: a.text,
+                        status: a.status || (a.completed ? 'done' : 'pending'),
+                        dimensionKey: a.dimensionKey || null,
+                        priority: a.priority,
+                      }))}
+                      onDimensionClick={(key) => {
+                        // TODO: Open dimension detail panel
+                        toast.info(isZh ? `${DIMENSION_CONFIG[key]?.label || key} 维度详情即将上线` : `${DIMENSION_CONFIG[key]?.labelEn || key} details coming soon`);
+                      }}
+                      onActionClick={(actionId) => {
+                        const action = actionsData.find((a: any) => a.id === actionId);
+                        if (action) {
+                          toast.info(action.text);
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
 
+                {/* ── Mobile: Stakeholder list (simplified) ── */}
+                <div className="md:hidden">
+                  {/* Mobile users see Decision Map inline, stakeholders via bottom sheet */}
+                </div>
               </div>
-
-              {/* ── Mobile Stakeholder Map Bottom Sheet ── */}
-              <MobileMapSheet
-                open={mapSheetOpen}
-                onClose={() => setMapSheetOpen(false)}
-                deal={deal as any}
-                hoveredStakeholderId={hoveredStakeholderId}
-                onStakeholderClick={(s: any) => handleStakeholderClick(s as Stakeholder)}
-                onStakeholdersChange={() => utils.stakeholders.listByDeal.invalidate({ dealId })}
-                onBuyingStagesChange={(stages: any) => updateDealMutation.mutate({ id: dealId, buyingStages: stages })}
-              />
             </TabsContent>
 
             <TabsContent value="timeline" className="flex-1 m-0 overflow-auto">

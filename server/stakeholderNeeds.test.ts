@@ -59,6 +59,13 @@ vi.mock("./db", async () => {
     ensureDealDimensions: vi.fn().mockResolvedValue([
       { dimensionKey: "tech_validation", status: "in_progress", aiSummary: "POC进行中" },
     ]),
+    getCompanyProfile: vi.fn().mockResolvedValue({
+      id: 1, tenantId: 1, companyName: "测试公司", products: ["产品A"],
+      companyDescription: "测试描述", keyDifferentiator: "测试优势",
+      targetMarket: "中大型企业", icpPainPoints: "效率低",
+      knowledgeBaseText: null,
+    }),
+    getKbDocuments: vi.fn().mockResolvedValue([]),
   };
 });
 

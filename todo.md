@@ -1084,3 +1084,73 @@
 - [x] Upload all 6 images to CDN
 - [x] Update all 10 meeting records in DB with image attachments
 - [x] Verify images display correctly in meeting timeline (all 10 meetings have thumbnails)
+
+## Knowledge Base Documents for Chinese Demo (Apr 2026)
+- [ ] Generate product manual PDF (具身智能机器人产品手册 — 图文并茂)
+- [ ] Generate ICP profile document (理想客户画像)
+- [ ] Generate customer persona documents (典型客户案例)
+- [ ] Upload documents and seed into knowledge base
+- [ ] Verify AI reads real KB docs for deal context (not hardcoded prompts)
+
+## BattleMap UI Redesign — React Flow Node Graph (Apr 2026)
+
+### Phase 1: Foundation
+- [x] Install @xyflow/react and dependencies
+- [x] Design color system (sentiment, need types, dimensions)
+- [x] Build custom StakeholderNode component
+- [x] Build custom NeedNode component
+- [x] Build custom DimensionNode component
+- [x] Build custom edge components
+- [x] Build layout engine (people lens + dimension lens position computation)
+
+### Phase 2: People Lens
+- [x] Force-directed layout with stakeholders as primary nodes
+- [x] Needs branch out from stakeholder on click/expand
+- [x] Sentiment border color encoding
+- [x] Hover tooltip with key stats
+- [x] Draggable nodes
+
+### Phase 3: Dimension Lens
+- [x] Six dimension nodes in radial layout
+- [x] Related stakeholders connected to each dimension
+- [x] Dimension health score on each node
+- [x] Weight adjustment slider (in DimensionNode)
+
+### Phase 4: Lens Switching
+- [x] Smooth animated transition between People and Dimension views (fade out/in)
+- [x] Toggle button in toolbar (People/Dimension toggle)
+
+### Phase 5: Bottom Timeline
+- [x] Per-stakeholder horizontal swim lanes
+- [x] Phase zone dividers (establish/expand/harvest columns)
+- [x] NOW marker (current phase highlighted)
+- [x] Completed vs pending action nodes (check/circle/alert icons with tooltips)
+
+### Phase 6: CRUD & Drill-down
+- [x] Need card edit (title, description, type, status) — NeedEditDialog component
+- [x] Need card delete with confirmation (two-click confirm)
+- [x] Edit/delete triggered from NeedNode icons
+
+### Phase 7: Integration
+- [x] Replace old BattleMap in DealDetail with BattleMapGraph + TimelinePanel
+- [x] Keep ActionCenter as separate tab (渗透路径)
+- [x] Wire NeedEditDialog with tRPC mutations (update/delete)
+- [x] Add deleteNeedMutation + needType to update schema
+- [x] Minimap for navigation (built into React Flow)
+
+### Phase 8: AI Knowledge Source Fix
+- [x] Created shared buildSellerContext() helper (server/routers/sellerContext.ts)
+- [x] Aggregates companyProfile + kbDocuments extractedContent with 6000 char budget
+- [x] Updated ai.ts (generateDealInsight) — replaced inline seller context
+- [x] Updated dimensions.ts (generateMap + deepDive) — added seller context
+- [x] Updated stakeholderNeeds.ts (aiGenerate) — added seller context
+- [x] Updated dealChat.ts (send) — added seller context
+- [x] All 130 tests passing
+
+### Phase 9: Knowledge Base Documents
+- [x] 星辰具身智能 — 产品手册 v3.0 (3516 chars extractedContent)
+- [x] 星辰具身智能 — 竞品分析与差异化定位 (3383 chars)
+- [x] 星辰具身智能 — 理想客户画像 ICP (3074 chars)
+- [x] 星辰具身智能 — 企业级销售流程手册 (4329 chars)
+- [x] All 4 docs seeded to tenant 180001 with processingStatus=completed
+- [x] 星辰具身智能 — 销售手册 (covered by 企业级销售流程手册)

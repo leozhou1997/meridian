@@ -11,6 +11,7 @@ import {
   getMeetings,
 } from "../db";
 import { invokeLLM } from "../_core/llm";
+import { buildSellerContext } from "./sellerContext";
 
 export const dealChatRouter = router({
   /** Get chat history for a deal */
@@ -46,6 +47,9 @@ export const dealChatRouter = router({
       const actions = await getNextActions(input.dealId, tenant.id);
       const meetings = await getMeetings(input.dealId, tenant.id);
 
+      // Fetch seller context from company profile + knowledge base documents
+      const { contextBlock: chatSellerCtx } = await buildSellerContext(tenant.id);
+
       const contextStr = buildDealContext(deal, stakeholders, dimensions, actions, meetings);
 
       // Call LLM
@@ -66,6 +70,7 @@ export const dealChatRouter = router({
 - 给出的建议必须基于已有的交易数据，不要编造信息
 - 如果数据不足，明确说明需要补充什么信息
 - 回答要结构化，使用标题和要点
+${chatSellerCtx}
 
 当前交易上下文：
 ${contextStr}`,

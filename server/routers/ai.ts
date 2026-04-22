@@ -13,13 +13,13 @@ import {
   setActivePrompt,
   rateAiLog,
   getSalesModelById,
-  getCompanyProfile,
   getLatestSnapshot,
   getNextActions,
   updateSnapshotSuggestionActions,
   getStrategyNotes,
 } from "../db";
 import { BUILT_IN_MODELS, getModelDimensions, getModelName } from "./salesModels";
+import { buildSellerContext } from "./sellerContext";
 
 const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
 const OPENAI_MODEL = "gpt-4o";
@@ -413,21 +413,8 @@ ${input.transcript}`;
     .mutation(async ({ ctx, input }) => {
       const tenant = await getOrCreateDefaultTenant(ctx.user.id, ctx.user.name ?? "User");
 
-      // Fetch seller's own company profile (Knowledge Base) to ground AI in seller context
-      const sellerProfile = await getCompanyProfile(tenant.id);
-      const sellerContext = sellerProfile ? `
-
-=== SELLER CONTEXT (CRITICAL — READ FIRST) ===
-You are analyzing deals on behalf of **${sellerProfile.companyName}**.
-Seller Company: ${sellerProfile.companyName}
-Seller Products: ${(sellerProfile.products as string[] | null)?.join(', ') ?? 'Not specified'}
-Seller Description: ${sellerProfile.companyDescription ?? ''}
-Key Differentiators: ${sellerProfile.keyDifferentiator ?? ''}
-Target Market: ${sellerProfile.targetMarket ?? ''}
-ICP Pain Points: ${sellerProfile.icpPainPoints ?? ''}
-${sellerProfile.knowledgeBaseText ? `\nKnowledge Base:\n${sellerProfile.knowledgeBaseText.slice(0, 2000)}` : ''}
-
-CRITICAL: All deal analysis must be from the perspective of ${sellerProfile.companyName} selling their products to the prospect. The "company" in the deal is the PROSPECT (buyer), not the seller.` : '';
+      // Fetch seller context from company profile + knowledge base documents
+      const { contextBlock: sellerContext } = await buildSellerContext(tenant.id);
 
       // Resolve sales model dimensions
       let modelDimensions = BUILT_IN_MODELS.meddic.dimensions;

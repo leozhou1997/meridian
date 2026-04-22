@@ -16,6 +16,7 @@ import {
   ensureDealDimensions,
 } from "../db";
 import { invokeLLM } from "../_core/llm";
+import { buildSellerContext } from "./sellerContext";
 
 const NEED_TYPE = ["organizational", "professional", "personal"] as const;
 const NEED_STATUS = ["unmet", "in_progress", "satisfied", "blocked"] as const;
@@ -58,6 +59,7 @@ export const stakeholderNeedsRouter = router({
       id: z.number(),
       title: z.string().optional(),
       description: z.string().optional(),
+      needType: z.enum(NEED_TYPE).optional(),
       status: z.enum(NEED_STATUS).optional(),
       priority: z.enum(NEED_PRIORITY).optional(),
       dimensionKey: z.string().nullable().optional(),
@@ -91,6 +93,9 @@ export const stakeholderNeedsRouter = router({
 
       const deal = await getDealById(input.dealId, tenant.id);
       if (!deal) throw new Error("Deal not found");
+
+      // Fetch seller context from company profile + knowledge base documents
+      const { contextBlock: needsSellerCtx } = await buildSellerContext(tenant.id);
 
       const stakeholderList = await getStakeholders(input.dealId, tenant.id);
       if (stakeholderList.length === 0) {
@@ -140,7 +145,7 @@ export const stakeholderNeedsRouter = router({
         ? '\n\nIMPORTANT: All output MUST be in Simplified Chinese (中文). Only proper nouns may remain in English.'
         : '';
 
-      const systemPrompt = `You are Meridian, an elite B2B enterprise sales strategist specializing in complex deal analysis.
+      const systemPrompt = `You are Meridian, an elite B2B enterprise sales strategist specializing in complex deal analysis.${needsSellerCtx}
 
 Your task: Analyze each stakeholder in this deal and identify their **needs** across three categories:
 

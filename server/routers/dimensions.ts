@@ -15,6 +15,7 @@ import {
   createNextAction,
 } from "../db";
 import { invokeLLM } from "../_core/llm";
+import { buildSellerContext } from "./sellerContext";
 
 const DIMENSION_STATUS = ["not_started", "in_progress", "completed", "blocked"] as const;
 
@@ -83,6 +84,9 @@ export const dimensionsRouter = router({
       const deal = await getDealById(input.dealId, tenant.id);
       if (!deal) throw new Error("Deal not found");
 
+      // Fetch seller context from company profile + knowledge base documents
+      const { contextBlock: sellerContext } = await buildSellerContext(tenant.id);
+
       const stakeholders = await getStakeholders(input.dealId, tenant.id);
       const meetings = await getMeetings(input.dealId, tenant.id);
       const existingActions = await getNextActions(input.dealId, tenant.id);
@@ -116,7 +120,7 @@ export const dimensionsRouter = router({
         ? '\n\nIMPORTANT: All output MUST be in Simplified Chinese (中文). Only proper nouns (names, company names) may remain in English.'
         : '';
 
-      const systemPrompt = `You are Meridian, an elite B2B enterprise sales strategist. You analyze complex deals through 6 Decision Dimensions to create a penetration roadmap.
+      const systemPrompt = `You are Meridian, an elite B2B enterprise sales strategist. You analyze complex deals through 6 Decision Dimensions to create a penetration roadmap.${sellerContext}
 
 The 6 Decision Dimensions:
 1. tech_validation (技术验证): Has the prospect validated our technical solution? POC status, technical champion engagement, integration concerns.
@@ -247,6 +251,9 @@ ${meetingEvidence}`;
       const deal = await getDealById(input.dealId, tenant.id);
       if (!deal) throw new Error("Deal not found");
 
+      // Fetch seller context from company profile + knowledge base documents
+      const { contextBlock: deepDiveSellerCtx } = await buildSellerContext(tenant.id);
+
       const stakeholders = await getStakeholders(input.dealId, tenant.id);
       const meetings = await getMeetings(input.dealId, tenant.id);
       const existingActions = await getNextActions(input.dealId, tenant.id);
@@ -280,7 +287,7 @@ ${meetingEvidence}`;
         ? '\n\nIMPORTANT: All output MUST be in Simplified Chinese (中文). Only proper nouns may remain in English.'
         : '';
 
-      const systemPrompt = `You are Meridian, an elite B2B enterprise sales strategist. A sales rep is asking for a deep-dive analysis on the "${dimLabels[input.dimensionKey] || input.dimensionKey}" dimension of their deal.
+      const systemPrompt = `You are Meridian, an elite B2B enterprise sales strategist. A sales rep is asking for a deep-dive analysis on the "${dimLabels[input.dimensionKey] || input.dimensionKey}" dimension of their deal.${deepDiveSellerCtx}
 
 Provide a thorough, actionable analysis that includes:
 1. **Current Assessment**: What's the current state based on evidence? What signals have we seen?

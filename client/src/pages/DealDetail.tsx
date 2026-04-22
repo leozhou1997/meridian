@@ -58,7 +58,9 @@ import { DimensionDetailPanel } from '@/components/DimensionDetailPanel';
 import { StakeholderSidebar } from '@/components/StakeholderSidebar';
 import { DealChatPanel } from '@/components/DealChatPanel';
 import { ActionCenter } from '@/components/ActionCenter';
-import { BattleMap } from '@/components/BattleMap';
+import { BattleMapGraph, TimelinePanel } from '@/components/battlemap';
+import { NeedEditDialog } from '@/components/battlemap/NeedEditDialog';
+import { DIMENSION_CONFIG as DIM_META } from '@/components/DecisionMap';
 import DealTimeline from '@/components/DealTimeline';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -331,6 +333,12 @@ export default function DealDetail() {
   const createNeedMutation = trpc.stakeholderNeeds.create.useMutation({
     onSuccess: () => utils.stakeholderNeeds.listByDeal.invalidate({ dealId }),
   });
+  const deleteNeedMutation = trpc.stakeholderNeeds.delete.useMutation({
+    onSuccess: () => {
+      utils.stakeholderNeeds.listByDeal.invalidate({ dealId });
+      toast.success(isZh ? '需求已删除' : 'Need deleted');
+    },
+  });
   const deepDiveMutation = trpc.dimensions.deepDive.useMutation({
     onSuccess: (data) => {
       utils.dimensions.listByDeal.invalidate({ dealId });
@@ -393,6 +401,7 @@ export default function DealDetail() {
   const [isGeneratingMap, setIsGeneratingMap] = useState(false);
   const [isGeneratingNeeds, setIsGeneratingNeeds] = useState(false);
   const [centerView, setCenterView] = useState<'battle' | 'actions'>('battle');
+  const [editingNeed, setEditingNeed] = useState<{ id: number; title: string; description?: string | null; needType: string; status: string } | null>(null);
   const [showSummary, setShowSummary] = useState(true);
   const [hoveredStakeholderId, setHoveredStakeholderId] = useState<number | null>(null);
   const [mapCollapsed, setMapCollapsed] = useState(false);
@@ -1100,69 +1109,98 @@ export default function DealDetail() {
                     </button>
                   </div>
 
-                  <div className="flex-1 min-h-0 p-4 md:p-5 pt-2">
+                  <div className="flex-1 min-h-0 flex flex-col p-4 md:p-5 pt-2">
                     {centerView === 'battle' ? (
-                      <BattleMap
-                        stakeholders={(stakeholdersData || []).map((s: any) => ({
-                          id: s.id,
-                          name: s.name,
-                          title: s.title,
-                          role: s.role,
-                          sentiment: s.sentiment,
-                          engagement: s.engagement,
-                          avatar: s.avatar,
-                        }))}
-                        needs={stakeholderNeedsData.map((n: any) => ({
-                          id: n.id,
-                          stakeholderId: n.stakeholderId,
-                          needType: n.needType,
-                          title: n.title,
-                          description: n.description,
-                          status: n.status,
-                          dimensionKey: n.dimensionKey,
-                          priority: n.priority,
-                          aiGenerated: n.aiGenerated,
-                          sortOrder: n.sortOrder,
-                        }))}
-                        actions={actionsData.map((a: any) => ({
-                          id: a.id,
-                          text: a.text,
-                          status: a.status || (a.completed ? 'done' : 'pending'),
-                          dimensionKey: a.dimensionKey || null,
-                          priority: a.priority,
-                          stakeholderId: a.stakeholderId || null,
-                          needId: a.needId || null,
-                        }))}
-                        isGenerating={isGeneratingNeeds}
-                        onGenerate={() => {
-                          setIsGeneratingNeeds(true);
-                          generateNeedsMutation.mutate({
-                            dealId,
-                            language: language as 'zh' | 'en',
-                            regenerate: stakeholderNeedsData.length > 0,
-                          });
-                        }}
-                        onNeedStatusChange={(needId, newStatus) => {
-                          updateNeedStatusMutation.mutate({ id: needId, status: newStatus });
-                        }}
-                        onActionToggle={(actionId, newStatus) => {
-                          updateActionStatusMutation.mutate({ id: actionId, status: newStatus as 'pending' | 'done' | 'in_progress' | 'blocked' | 'accepted' | 'rejected' | 'later' });
-                        }}
-                        onAddNeed={(stakeholderId) => {
-                          const title = prompt(isZh ? '输入需求标题：' : 'Enter need title:');
-                          if (title) {
-                            createNeedMutation.mutate({
-                              dealId,
-                              stakeholderId,
-                              needType: 'organizational',
-                              title,
-                              status: 'unmet',
-                              priority: 'important',
-                            });
-                          }
-                        }}
-                        className="h-full"
-                      />
+                      <>
+                        <div className="flex-1 min-h-0" style={{ minHeight: 420 }}>
+                          <BattleMapGraph
+                            stakeholders={(stakeholdersData || []).map((s: any) => ({
+                              id: s.id,
+                              name: s.name,
+                              title: s.title || '',
+                              role: s.role,
+                              sentiment: s.sentiment,
+                              avatarUrl: s.avatar || null,
+                            }))}
+                            needs={stakeholderNeedsData.map((n: any) => ({
+                              id: n.id,
+                              stakeholderId: n.stakeholderId,
+                              needType: n.needType,
+                              title: n.title,
+                              description: n.description,
+                              status: n.status,
+                              dimensionKey: n.dimensionKey,
+                            }))}
+                            actions={actionsData.map((a: any) => ({
+                              id: a.id,
+                              action: a.text,
+                              isDone: a.status === 'done' || a.completed === true,
+                              stakeholderId: a.stakeholderId || null,
+                              needId: a.needId || null,
+                              dimensionKey: a.dimensionKey || null,
+                            }))}
+                            dimensions={Object.entries(DIM_META).map(([key, meta]) => {
+                              const dim = dimensionsData.find((d: any) => d.dimensionKey === key);
+                              return {
+                                dimensionKey: key,
+                                label: isZh ? meta.label : meta.labelEn,
+                                score: dim ? (['completed', 'in_progress', 'not_started', 'blocked'].indexOf(dim.status) === 0 ? 100 : dim.status === 'in_progress' ? 60 : dim.status === 'blocked' ? 20 : 0) : 0,
+                                weight: (dim as any)?.weight ?? 1,
+                              };
+                            })}
+                            isZh={isZh}
+                            onNeedStatusCycle={(needId: number) => {
+                              const need = stakeholderNeedsData.find((n: any) => n.id === needId);
+                              if (!need) return;
+                              const cycle = ['unmet', 'in_progress', 'satisfied', 'blocked'];
+                              const idx = cycle.indexOf(need.status);
+                              const next = cycle[(idx + 1) % cycle.length];
+                              updateNeedStatusMutation.mutate({ id: needId, status: next as 'unmet' | 'in_progress' | 'satisfied' | 'blocked' });
+                            }}
+                            onNeedEdit={(needId: number) => {
+                              const need = stakeholderNeedsData.find((n: any) => n.id === needId);
+                              if (need) setEditingNeed({ id: need.id, title: need.title, description: need.description, needType: need.needType, status: need.status });
+                            }}
+                            onNeedDelete={(needId: number) => {
+                              deleteNeedMutation.mutate({ id: needId });
+                            }}
+                            onStakeholderClick={(id: number) => {
+                              const s = (stakeholdersData || []).find((st: any) => st.id === id);
+                              if (s) handleStakeholderClick(s as Stakeholder);
+                            }}
+                            onAiGenerate={() => {
+                              setIsGeneratingNeeds(true);
+                              generateNeedsMutation.mutate({
+                                dealId,
+                                language: language as 'zh' | 'en',
+                                regenerate: stakeholderNeedsData.length > 0,
+                              });
+                            }}
+                            isGenerating={isGeneratingNeeds}
+                          />
+                        </div>
+                        {/* Bottom Timeline */}
+                        <TimelinePanel
+                          stakeholders={(stakeholdersData || []).map((s: any) => ({
+                            id: s.id,
+                            name: s.name,
+                            title: s.title || '',
+                            role: s.role,
+                            sentiment: s.sentiment,
+                          }))}
+                          actions={actionsData.map((a: any) => ({
+                            id: a.id,
+                            action: a.text,
+                            isDone: a.status === 'done' || a.completed === true,
+                            stakeholderId: a.stakeholderId || null,
+                            dimensionKey: a.dimensionKey || null,
+                            phase: null,
+                            priority: a.priority || null,
+                            createdAt: a.createdAt ? String(a.createdAt) : null,
+                          }))}
+                          isZh={isZh}
+                        />
+                      </>
                     ) : (
                       <ActionCenter
                         dimensions={dimensionsData.length > 0 ? dimensionsData : [
@@ -2356,6 +2394,29 @@ export default function DealDetail() {
           </div>
         );
       })()}
+      {/* NeedEditDialog modal */}
+      {editingNeed && (
+        <NeedEditDialog
+          need={editingNeed}
+          isZh={isZh}
+          onSave={(id, data) => {
+            updateNeedStatusMutation.mutate({
+              id,
+              title: data.title,
+              description: data.description,
+              needType: data.needType as 'organizational' | 'professional' | 'personal',
+              status: data.status as 'unmet' | 'in_progress' | 'satisfied' | 'blocked',
+            });
+            setEditingNeed(null);
+            toast.success(isZh ? '需求已更新' : 'Need updated');
+          }}
+          onDelete={(id) => {
+            deleteNeedMutation.mutate({ id });
+            setEditingNeed(null);
+          }}
+          onClose={() => setEditingNeed(null)}
+        />
+      )}
     </div>
   );
 }

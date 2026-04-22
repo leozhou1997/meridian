@@ -31,6 +31,8 @@ import {
   type InsertStakeholder,
   type InsertSalesModel,
   type InsertUser,
+  stakeholderNeeds,
+  type InsertStakeholderNeed,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -649,6 +651,61 @@ export async function createDealChatMessage(data: InsertDealChatMessage) {
   if (!db) throw new Error("Database not available");
   const [result] = await db.insert(dealChatMessages).values(data);
   return (result as any).insertId as number;
+}
+
+// ─── Stakeholder Needs (Battle Map) ────────────────────────────────────────
+
+export async function getStakeholderNeeds(dealId: number, tenantId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(stakeholderNeeds)
+    .where(and(eq(stakeholderNeeds.dealId, dealId), eq(stakeholderNeeds.tenantId, tenantId)))
+    .orderBy(stakeholderNeeds.sortOrder, stakeholderNeeds.createdAt);
+}
+
+export async function getStakeholderNeedsByStakeholder(stakeholderId: number, tenantId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(stakeholderNeeds)
+    .where(and(eq(stakeholderNeeds.stakeholderId, stakeholderId), eq(stakeholderNeeds.tenantId, tenantId)))
+    .orderBy(stakeholderNeeds.sortOrder, stakeholderNeeds.createdAt);
+}
+
+export async function createStakeholderNeed(data: InsertStakeholderNeed) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [result] = await db.insert(stakeholderNeeds).values(data);
+  return (result as any).insertId as number;
+}
+
+export async function updateStakeholderNeed(id: number, tenantId: number, data: Partial<InsertStakeholderNeed>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(stakeholderNeeds).set(data).where(and(eq(stakeholderNeeds.id, id), eq(stakeholderNeeds.tenantId, tenantId)));
+}
+
+export async function deleteStakeholderNeed(id: number, tenantId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(stakeholderNeeds).where(and(eq(stakeholderNeeds.id, id), eq(stakeholderNeeds.tenantId, tenantId)));
+}
+
+export async function bulkCreateStakeholderNeeds(dataArr: InsertStakeholderNeed[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  if (dataArr.length === 0) return [];
+  const ids: number[] = [];
+  for (const data of dataArr) {
+    const [result] = await db.insert(stakeholderNeeds).values(data);
+    ids.push((result as any).insertId as number);
+  }
+  return ids;
+}
+
+export async function deleteStakeholderNeedsByDeal(dealId: number, tenantId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(stakeholderNeeds).where(and(eq(stakeholderNeeds.dealId, dealId), eq(stakeholderNeeds.tenantId, tenantId)));
 }
 
 // ─── Next Actions by Dimension ──────────────────────────────────────────────

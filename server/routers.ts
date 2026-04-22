@@ -15,6 +15,7 @@ import { landingRouter } from "./routers/landing";
 import { strategyNotesRouter } from "./routers/strategyNotes";
 import { dimensionsRouter } from "./routers/dimensions";
 import { dealChatRouter } from "./routers/dealChat";
+import { stakeholderNeedsRouter } from "./routers/stakeholderNeeds";
 
 export const appRouter = router({
   system: systemRouter,
@@ -33,6 +34,7 @@ export const appRouter = router({
   strategyNotes: strategyNotesRouter,
   dimensions: dimensionsRouter,
   dealChat: dealChatRouter,
+  stakeholderNeeds: stakeholderNeedsRouter,
 });
 
 export type AppRouter = typeof appRouter;

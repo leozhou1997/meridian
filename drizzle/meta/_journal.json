@@ -127,6 +127,13 @@
       "when": 1776848569436,
       "tag": "0017_chubby_penance",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "5",
+      "when": 1776857096875,
+      "tag": "0018_secret_sersi",
+      "breakpoints": true
     }
   ]
 }

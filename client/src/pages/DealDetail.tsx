@@ -58,13 +58,14 @@ import { DimensionDetailPanel } from '@/components/DimensionDetailPanel';
 import { StakeholderSidebar } from '@/components/StakeholderSidebar';
 import { DealChatPanel } from '@/components/DealChatPanel';
 import { ActionCenter } from '@/components/ActionCenter';
+import { BattleMap } from '@/components/BattleMap';
 import DealTimeline from '@/components/DealTimeline';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Globe, Clock, TrendingUp, TrendingDown, AlertTriangle,
   ChevronRight, User, MessageSquare, FileText, Map, BarChart3, X, ExternalLink,
   Mic, Check, Edit2, Save, Camera, GripHorizontal, ChevronDown, ChevronUp,
-  Plus, Trash2, Pencil, Calendar, Lightbulb, Lock, Target, Sparkles, Heart, StickyNote, UserCircle, Activity, Users, Loader2, Wand2
+  Plus, Trash2, Pencil, Calendar, Lightbulb, Lock, Target, Sparkles, Heart, StickyNote, UserCircle, Activity, Users, Loader2, Wand2, Swords
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -76,6 +77,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { CompanyLogo, StakeholderAvatar } from '@/components/Avatars';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { cn } from '@/lib/utils';
 import { PipelineToggleButton } from '@/components/AppLayout';
 import DealPDFExport from '@/components/DealPDFExport';
 
@@ -274,6 +276,10 @@ export default function DealDetail() {
     { dealId },
     { enabled: dealId > 0, refetchOnWindowFocus: false }
   );
+  const { data: stakeholderNeedsData = [] } = trpc.stakeholderNeeds.listByDeal.useQuery(
+    { dealId },
+    { enabled: dealId > 0, refetchOnWindowFocus: false }
+  );
 
   // ── tRPC mutations ────────────────────────────────────────────────────────
   const utils = trpc.useUtils();
@@ -303,6 +309,27 @@ export default function DealDetail() {
       setIsGeneratingMap(false);
       toast.error(isZh ? 'AI 分析失败，请重试' : 'AI analysis failed, please retry');
     },
+  });
+  const generateNeedsMutation = trpc.stakeholderNeeds.aiGenerate.useMutation({
+    onSuccess: (data) => {
+      utils.stakeholderNeeds.listByDeal.invalidate({ dealId });
+      if (data.success) {
+        toast.success(isZh ? `已生成 ${data.needsCreated} 个需求分析` : `Generated ${data.needsCreated} needs`);
+      } else {
+        toast.error((data as any).error || (isZh ? '分析失败' : 'Analysis failed'));
+      }
+      setIsGeneratingNeeds(false);
+    },
+    onError: () => {
+      toast.error(isZh ? '需求分析失败，请重试' : 'Needs analysis failed, please retry');
+      setIsGeneratingNeeds(false);
+    },
+  });
+  const updateNeedStatusMutation = trpc.stakeholderNeeds.update.useMutation({
+    onSuccess: () => utils.stakeholderNeeds.listByDeal.invalidate({ dealId }),
+  });
+  const createNeedMutation = trpc.stakeholderNeeds.create.useMutation({
+    onSuccess: () => utils.stakeholderNeeds.listByDeal.invalidate({ dealId }),
   });
   const deepDiveMutation = trpc.dimensions.deepDive.useMutation({
     onSuccess: (data) => {
@@ -364,6 +391,8 @@ export default function DealDetail() {
   const [activeTab, setActiveTab] = useState('map');
   const [selectedDimension, setSelectedDimension] = useState<string | null>(null);
   const [isGeneratingMap, setIsGeneratingMap] = useState(false);
+  const [isGeneratingNeeds, setIsGeneratingNeeds] = useState(false);
+  const [centerView, setCenterView] = useState<'battle' | 'actions'>('battle');
   const [showSummary, setShowSummary] = useState(true);
   const [hoveredStakeholderId, setHoveredStakeholderId] = useState<number | null>(null);
   const [mapCollapsed, setMapCollapsed] = useState(false);
@@ -1041,41 +1070,133 @@ export default function DealDetail() {
                   />
                 </div>
 
-                {/* ── Center: Action Center (main content) ── */}
-                <div className="flex-1 overflow-auto min-w-0">
-                  <div className="p-4 md:p-5 h-full">
-                    <ActionCenter
-                      dimensions={dimensionsData.length > 0 ? dimensionsData : [
-                        { id: 1, dimensionKey: 'tech_validation', status: 'not_started' as const, aiSummary: null },
-                        { id: 2, dimensionKey: 'commercial_breakthrough', status: 'not_started' as const, aiSummary: null },
-                        { id: 3, dimensionKey: 'executive_engagement', status: 'not_started' as const, aiSummary: null },
-                        { id: 4, dimensionKey: 'competitive_defense', status: 'not_started' as const, aiSummary: null },
-                        { id: 5, dimensionKey: 'budget_advancement', status: 'not_started' as const, aiSummary: null },
-                        { id: 6, dimensionKey: 'case_support', status: 'not_started' as const, aiSummary: null },
-                      ]}
-                      actions={actionsData.map((a: any) => ({
-                        id: a.id,
-                        text: a.text,
-                        status: a.status || (a.completed ? 'done' : 'pending'),
-                        dimensionKey: a.dimensionKey || null,
-                        priority: a.priority,
-                      }))}
-                      selectedDimension={selectedDimension}
-                      onDimensionSelect={(key) => setSelectedDimension(key)}
-                      onActionToggle={(actionId, newStatus) => {
-                        updateActionStatusMutation.mutate({ id: actionId, status: newStatus as 'pending' | 'done' | 'in_progress' | 'blocked' | 'accepted' | 'rejected' | 'later' });
-                      }}
-                      onAddAction={(dimKey) => {
-                        const text = prompt(isZh ? '输入新的行动项：' : 'Enter new action item:');
-                        if (text) {
-                          createActionMutation.mutate({ dealId, text, priority: 'medium', dimensionKey: dimKey });
-                        }
-                      }}
-                      onAiDeepDive={async (dimKey) => {
-                        await deepDiveMutation.mutateAsync({ dealId, dimensionKey: dimKey, language: language as 'zh' | 'en' });
-                      }}
-                      className="h-full"
-                    />
+                {/* ── Center: Battle Map / Action Center (toggle view) ── */}
+                <div className="flex-1 overflow-auto min-w-0 flex flex-col">
+                  {/* View toggle */}
+                  <div className="flex items-center gap-1 px-4 pt-3 pb-1 flex-shrink-0">
+                    <button
+                      className={cn(
+                        'flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-md transition-colors',
+                        centerView === 'battle'
+                          ? 'bg-primary/10 text-primary'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                      )}
+                      onClick={() => setCenterView('battle')}
+                    >
+                      <Swords size={12} />
+                      {isZh ? '战役态势' : 'Battle Map'}
+                    </button>
+                    <button
+                      className={cn(
+                        'flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-md transition-colors',
+                        centerView === 'actions'
+                          ? 'bg-primary/10 text-primary'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                      )}
+                      onClick={() => setCenterView('actions')}
+                    >
+                      <Target size={12} />
+                      {isZh ? '渗透路径' : 'Action Plan'}
+                    </button>
+                  </div>
+
+                  <div className="flex-1 min-h-0 p-4 md:p-5 pt-2">
+                    {centerView === 'battle' ? (
+                      <BattleMap
+                        stakeholders={(stakeholdersData || []).map((s: any) => ({
+                          id: s.id,
+                          name: s.name,
+                          title: s.title,
+                          role: s.role,
+                          sentiment: s.sentiment,
+                          engagement: s.engagement,
+                          avatar: s.avatar,
+                        }))}
+                        needs={stakeholderNeedsData.map((n: any) => ({
+                          id: n.id,
+                          stakeholderId: n.stakeholderId,
+                          needType: n.needType,
+                          title: n.title,
+                          description: n.description,
+                          status: n.status,
+                          dimensionKey: n.dimensionKey,
+                          priority: n.priority,
+                          aiGenerated: n.aiGenerated,
+                          sortOrder: n.sortOrder,
+                        }))}
+                        actions={actionsData.map((a: any) => ({
+                          id: a.id,
+                          text: a.text,
+                          status: a.status || (a.completed ? 'done' : 'pending'),
+                          dimensionKey: a.dimensionKey || null,
+                          priority: a.priority,
+                          stakeholderId: a.stakeholderId || null,
+                          needId: a.needId || null,
+                        }))}
+                        isGenerating={isGeneratingNeeds}
+                        onGenerate={() => {
+                          setIsGeneratingNeeds(true);
+                          generateNeedsMutation.mutate({
+                            dealId,
+                            language: language as 'zh' | 'en',
+                            regenerate: stakeholderNeedsData.length > 0,
+                          });
+                        }}
+                        onNeedStatusChange={(needId, newStatus) => {
+                          updateNeedStatusMutation.mutate({ id: needId, status: newStatus });
+                        }}
+                        onActionToggle={(actionId, newStatus) => {
+                          updateActionStatusMutation.mutate({ id: actionId, status: newStatus as 'pending' | 'done' | 'in_progress' | 'blocked' | 'accepted' | 'rejected' | 'later' });
+                        }}
+                        onAddNeed={(stakeholderId) => {
+                          const title = prompt(isZh ? '输入需求标题：' : 'Enter need title:');
+                          if (title) {
+                            createNeedMutation.mutate({
+                              dealId,
+                              stakeholderId,
+                              needType: 'organizational',
+                              title,
+                              status: 'unmet',
+                              priority: 'important',
+                            });
+                          }
+                        }}
+                        className="h-full"
+                      />
+                    ) : (
+                      <ActionCenter
+                        dimensions={dimensionsData.length > 0 ? dimensionsData : [
+                          { id: 1, dimensionKey: 'tech_validation', status: 'not_started' as const, aiSummary: null },
+                          { id: 2, dimensionKey: 'commercial_breakthrough', status: 'not_started' as const, aiSummary: null },
+                          { id: 3, dimensionKey: 'executive_engagement', status: 'not_started' as const, aiSummary: null },
+                          { id: 4, dimensionKey: 'competitive_defense', status: 'not_started' as const, aiSummary: null },
+                          { id: 5, dimensionKey: 'budget_advancement', status: 'not_started' as const, aiSummary: null },
+                          { id: 6, dimensionKey: 'case_support', status: 'not_started' as const, aiSummary: null },
+                        ]}
+                        actions={actionsData.map((a: any) => ({
+                          id: a.id,
+                          text: a.text,
+                          status: a.status || (a.completed ? 'done' : 'pending'),
+                          dimensionKey: a.dimensionKey || null,
+                          priority: a.priority,
+                        }))}
+                        selectedDimension={selectedDimension}
+                        onDimensionSelect={(key) => setSelectedDimension(key)}
+                        onActionToggle={(actionId, newStatus) => {
+                          updateActionStatusMutation.mutate({ id: actionId, status: newStatus as 'pending' | 'done' | 'in_progress' | 'blocked' | 'accepted' | 'rejected' | 'later' });
+                        }}
+                        onAddAction={(dimKey) => {
+                          const text = prompt(isZh ? '输入新的行动项：' : 'Enter new action item:');
+                          if (text) {
+                            createActionMutation.mutate({ dealId, text, priority: 'medium', dimensionKey: dimKey });
+                          }
+                        }}
+                        onAiDeepDive={async (dimKey) => {
+                          await deepDiveMutation.mutateAsync({ dealId, dimensionKey: dimKey, language: language as 'zh' | 'en' });
+                        }}
+                        className="h-full"
+                      />
+                    )}
                   </div>
                 </div>
 

@@ -202,6 +202,7 @@ export const nextActions = mysqlTable("nextActions", {
   dealId: int("dealId").notNull(),
   tenantId: int("tenantId").notNull(),
   stakeholderId: int("stakeholderId"),
+  needId: int("needId"),
   snapshotId: int("snapshotId"),
   dimensionKey: varchar("dimensionKey", { length: 50 }),
   text: text("text").notNull(),
@@ -408,3 +409,25 @@ export const dealChatMessages = mysqlTable("dealChatMessages", {
 
 export type DealChatMessage = typeof dealChatMessages.$inferSelect;
 export type InsertDealChatMessage = typeof dealChatMessages.$inferInsert;
+
+// ─── Stakeholder Needs (Battle Map) ────────────────────────────────────────
+
+export const stakeholderNeeds = mysqlTable("stakeholderNeeds", {
+  id: int("id").autoincrement().primaryKey(),
+  dealId: int("dealId").notNull(),
+  tenantId: int("tenantId").notNull(),
+  stakeholderId: int("stakeholderId").notNull(),
+  needType: mysqlEnum("needType", ["organizational", "professional", "personal"]).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  status: mysqlEnum("status", ["unmet", "in_progress", "satisfied", "blocked"]).default("unmet").notNull(),
+  dimensionKey: varchar("dimensionKey", { length: 50 }),
+  priority: mysqlEnum("priority", ["critical", "important", "nice_to_have"]).default("important").notNull(),
+  aiGenerated: boolean("aiGenerated").default(false).notNull(),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type StakeholderNeed = typeof stakeholderNeeds.$inferSelect;
+export type InsertStakeholderNeed = typeof stakeholderNeeds.$inferInsert;

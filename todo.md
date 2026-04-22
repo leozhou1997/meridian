@@ -1034,3 +1034,43 @@
 - [x] AI deep-dive result displayed inline in dimension block (Streamdown markdown rendering)
 - [x] Wire frontend to backend end-to-end
 - [x] Vitest tests for deepDive procedure (3 new tests, 119 total passing)
+
+## Battle Map — 战役态势图 (Apr 2026)
+
+### Phase 1: Data Model
+- [x] Add `stakeholderNeeds` table (id, dealId, tenantId, stakeholderId, needType, title, description, status, dimensionKey, priority, aiGenerated)
+- [x] Add `needId` foreign key to `nextActions` table
+- [x] Run DB migration (pnpm db:push)
+
+### Phase 2: Backend API
+- [x] CRUD procedures for stakeholderNeeds (list by deal, create, update, delete)
+- [x] AI auto-generate needs for stakeholders (based on deal context, meetings, stakeholder data)
+- [x] Link existing actions to needs where possible (needId FK on nextActions)
+
+### Phase 3: Frontend — BattleMap Component
+- [x] BattleMap component: horizontal swimlanes per stakeholder
+- [x] Fixed sort order: Decision Maker/Champion → Influencer/Evaluator → Blocker/User, then by join time
+- [x] Need cards with color coding (blue=organizational, purple=professional, warm-orange=personal)
+- [x] Need card expand to show linked action items
+- [ ] Click stakeholder avatar → open profile modal (deferred)
+- [x] Overall progress bar at top (per-stakeholder segments)
+
+### Phase 4: Integration
+- [x] Tab switching: BattleMap (default) ↔ ActionCenter (execution view)
+- [ ] Click action in BattleMap → highlight in ActionCenter tab (deferred)
+- [x] AI generate button to auto-populate needs for all stakeholders
+
+### Phase 5: Testing
+- [x] Vitest tests for stakeholderNeeds CRUD procedures (11 tests)
+- [x] Vitest tests for AI needs generation
+- [x] Visual review and checkpoint
+
+## Demo CN Account — 具身机器人交易 (Apr 2026)
+- [x] Create demo CN user (democn@meridianos.ai / demo123) with separate tenant
+- [x] Create company profile: 星辰具身智能科技有限公司
+- [x] Create 2 realistic deals (华锐汽车焊装线 ¥1200万 + 鼎盛精密3C组装线 ¥650万)
+- [x] Seed 8 stakeholders across 2 deals with different roles/sentiments
+- [x] Seed 10 meeting records (discovery, demo, technical review, site visit, executive briefing, etc.)
+- [x] Seed 3 strategy notes (internal, competitive, pricing)
+- [x] Verify login and data display
+- [x] Test BattleMap AI generation on the new deal (17 needs generated across 5 stakeholders)

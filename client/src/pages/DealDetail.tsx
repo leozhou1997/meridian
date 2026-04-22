@@ -57,6 +57,7 @@ import { DecisionMap, DIMENSION_CONFIG } from '@/components/DecisionMap';
 import { DimensionDetailPanel } from '@/components/DimensionDetailPanel';
 import { StakeholderSidebar } from '@/components/StakeholderSidebar';
 import { DealChatPanel } from '@/components/DealChatPanel';
+import { ActionCenter } from '@/components/ActionCenter';
 import DealTimeline from '@/components/DealTimeline';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -301,6 +302,20 @@ export default function DealDetail() {
     onError: (err) => {
       setIsGeneratingMap(false);
       toast.error(isZh ? 'AI 分析失败，请重试' : 'AI analysis failed, please retry');
+    },
+  });
+  const deepDiveMutation = trpc.dimensions.deepDive.useMutation({
+    onSuccess: (data) => {
+      utils.dimensions.listByDeal.invalidate({ dealId });
+      utils.nextActions.listByDeal.invalidate({ dealId });
+      if (data.success) {
+        toast.success(isZh ? 'AI 深入分析完成' : 'AI deep-dive complete');
+      } else {
+        toast.error((data as any).error || (isZh ? '分析失败' : 'Analysis failed'));
+      }
+    },
+    onError: () => {
+      toast.error(isZh ? 'AI 深入分析失败，请重试' : 'AI deep-dive failed, please retry');
     },
   });
   const updateStakeholderMutation = trpc.stakeholders.update.useMutation({
@@ -954,75 +969,28 @@ export default function DealDetail() {
             <TabsContent value="map" className="flex-1 m-0 overflow-hidden min-h-0">
               <div className="h-full flex overflow-hidden">
 
-                {/* ── Left: Stakeholder Sidebar + AI Insights + Chat ── */}
-                <div className="hidden md:flex flex-col w-[300px] shrink-0 border-r border-border/30 bg-card/30">
-                  <StakeholderSidebar
-                    stakeholders={localStakeholders.map((s: any) => ({
-                      id: s.id,
-                      name: s.name,
-                      title: s.title,
-                      role: s.role,
-                      sentiment: s.sentiment,
-                      engagement: s.engagement,
-                      avatar: s.avatar,
-                    }))}
-                    aiInsights={(() => {
-                      const insights: { text: string; type: 'warning' | 'opportunity' | 'info' }[] = [];
-                      // Derive insights from dimension statuses
-                      const blocked = dimensionsData.filter((d: any) => d.status === 'blocked');
-                      const inProgress = dimensionsData.filter((d: any) => d.status === 'in_progress');
-                      const completed = dimensionsData.filter((d: any) => d.status === 'completed');
-                      if (blocked.length > 0) {
-                        const dimLabel = isZh ? ((DIMENSION_CONFIG as any)[blocked[0].dimensionKey]?.label || blocked[0].dimensionKey) : ((DIMENSION_CONFIG as any)[blocked[0].dimensionKey]?.labelEn || blocked[0].dimensionKey);
-                        insights.push({ text: isZh ? `${dimLabel}维度受阻，需要优先突破` : `${dimLabel} dimension blocked — needs priority action`, type: 'warning' });
-                      }
-                      if (inProgress.length > 0) {
-                        insights.push({ text: isZh ? `${inProgress.length} 个维度推进中，${completed.length} 个已完成` : `${inProgress.length} dimensions in progress, ${completed.length} completed`, type: 'info' });
-                      }
-                      const highPriorityPending = actionsData.filter((a: any) => a.priority === 'high' && a.status !== 'done');
-                      if (highPriorityPending.length > 0) {
-                        insights.push({ text: isZh ? `${highPriorityPending.length} 个高优先级动作待执行` : `${highPriorityPending.length} high-priority actions pending`, type: 'opportunity' });
-                      }
-                      return insights.length > 0 ? insights : (latestSnapshot ? [
-                        ...(latestSnapshot.keyRisks ? (latestSnapshot.keyRisks as any[]).slice(0, 2).map((r: any) => ({ text: typeof r === 'string' ? r : r.text || r.risk || '', type: 'warning' as const })) : []),
-                      ] : []);
-                    })()}
-                    onStakeholderClick={(id) => {
-                      const s = deal.stakeholders.find((st: any) => st.id === id);
-                      if (s) handleStakeholderClick(s as Stakeholder);
-                    }}
-                    className="flex-1 min-h-0"
-                  />
-                  <DealChatPanel dealId={dealId} compact />
-                </div>
-
-                {/* ── Center: Decision Map ── */}
-                <div className="flex-1 overflow-auto min-w-0">
-                  <div className="p-4 md:p-6">
-                    {/* Header with AI Generate button */}
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h2 className="font-display text-base font-semibold text-foreground">
-                          {isZh ? '决策地图' : 'Decision Map'} · {deal.company}{isZh ? ' 渗透全景' : ' Penetration Overview'}
-                        </h2>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {isZh ? `AI 置信度 ${deal.confidenceScore}% · ${dimensionsData.length || 6} 个决策维度 · ${actionsData.length} 个关键动作` : `AI Confidence ${deal.confidenceScore}% · ${dimensionsData.length || 6} Dimensions · ${actionsData.length} Actions`}
-                        </p>
-                      </div>
+                {/* ── Left Column: Decision Map (compact) + Stakeholders ── */}
+                <div className="hidden md:flex flex-col w-[280px] shrink-0 border-r border-border/30 bg-card/30">
+                  {/* Compact Decision Map */}
+                  <div className="p-3 border-b border-border/30">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-xs font-semibold text-foreground">
+                        {isZh ? '决策地图' : 'Decision Map'}
+                      </h3>
                       <Button
                         size="sm"
-                        variant="outline"
+                        variant="ghost"
                         disabled={isGeneratingMap}
                         onClick={() => {
                           setIsGeneratingMap(true);
                           generateMapMutation.mutate({ dealId, language: isZh ? 'zh' : 'en' });
                         }}
-                        className="shrink-0 gap-1.5 text-xs h-8"
+                        className="h-6 gap-1 text-[10px] px-2"
                       >
                         {isGeneratingMap ? (
-                          <><Loader2 size={13} className="animate-spin" />{isZh ? 'AI 分析中...' : 'Analyzing...'}</>
+                          <><Loader2 size={10} className="animate-spin" />{isZh ? '分析中' : 'Analyzing'}</>
                         ) : (
-                          <><Wand2 size={13} />{isZh ? 'AI 分析' : 'AI Analyze'}</>
+                          <><Wand2 size={10} />{isZh ? 'AI 分析' : 'AI'}</>
                         )}
                       </Button>
                     </div>
@@ -1046,49 +1014,75 @@ export default function DealDetail() {
                       }))}
                       onDimensionClick={(key) => {
                         setSelectedDimension(prev => prev === key ? null : key);
+                        // Scroll to dimension in ActionCenter
+                        const el = document.getElementById(`dim-${key}`);
+                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                       }}
-                      onActionClick={(actionId) => {
-                        const action = actionsData.find((a: any) => a.id === actionId);
-                        if (action) {
-                          // Toggle action completion
-                          const newStatus = action.status === 'done' ? 'pending' : 'done';
-                          updateActionStatusMutation.mutate({ id: actionId, status: newStatus });
-                        }
-                      }}
+                      selectedDimension={selectedDimension}
                     />
                   </div>
+                  {/* Stakeholders */}
+                  <StakeholderSidebar
+                    stakeholders={localStakeholders.map((s: any) => ({
+                      id: s.id,
+                      name: s.name,
+                      title: s.title,
+                      role: s.role,
+                      sentiment: s.sentiment,
+                      engagement: s.engagement,
+                      avatar: s.avatar,
+                    }))}
+                    aiInsights={[]}
+                    onStakeholderClick={(id) => {
+                      const s = deal.stakeholders.find((st: any) => st.id === id);
+                      if (s) handleStakeholderClick(s as Stakeholder);
+                    }}
+                    className="flex-1 min-h-0"
+                  />
                 </div>
 
-                {/* ── Right: Dimension Detail Panel ── */}
-                {selectedDimension && (
-                  <DimensionDetailPanel
-                    dimensionKey={selectedDimension}
-                    dimension={dimensionsData.find((d: any) => d.dimensionKey === selectedDimension) || null}
-                    actions={actionsData
-                      .filter((a: any) => a.dimensionKey === selectedDimension)
-                      .map((a: any) => ({
+                {/* ── Center: Action Center (main content) ── */}
+                <div className="flex-1 overflow-auto min-w-0">
+                  <div className="p-4 md:p-5 h-full">
+                    <ActionCenter
+                      dimensions={dimensionsData.length > 0 ? dimensionsData : [
+                        { id: 1, dimensionKey: 'tech_validation', status: 'not_started' as const, aiSummary: null },
+                        { id: 2, dimensionKey: 'commercial_breakthrough', status: 'not_started' as const, aiSummary: null },
+                        { id: 3, dimensionKey: 'executive_engagement', status: 'not_started' as const, aiSummary: null },
+                        { id: 4, dimensionKey: 'competitive_defense', status: 'not_started' as const, aiSummary: null },
+                        { id: 5, dimensionKey: 'budget_advancement', status: 'not_started' as const, aiSummary: null },
+                        { id: 6, dimensionKey: 'case_support', status: 'not_started' as const, aiSummary: null },
+                      ]}
+                      actions={actionsData.map((a: any) => ({
                         id: a.id,
                         text: a.text,
                         status: a.status || (a.completed ? 'done' : 'pending'),
                         dimensionKey: a.dimensionKey || null,
                         priority: a.priority,
                       }))}
-                    isOpen={true}
-                    onClose={() => setSelectedDimension(null)}
-                    onStatusChange={(dimKey, newStatus) => {
-                      const dim = dimensionsData.find((d: any) => d.dimensionKey === dimKey);
-                      if (dim) {
-                        updateDimensionMutation.mutate({ id: dim.id, status: newStatus as any });
-                      }
-                    }}
-                    onActionToggle={(actionId, completed) => {
-                      updateActionStatusMutation.mutate({ id: actionId, status: completed ? 'done' : 'pending' });
-                    }}
-                    onAddAction={(text, dimKey) => {
-                      createActionMutation.mutate({ dealId, text, priority: 'medium', dimensionKey: dimKey });
-                    }}
-                  />
-                )}
+                      selectedDimension={selectedDimension}
+                      onDimensionSelect={(key) => setSelectedDimension(key)}
+                      onActionToggle={(actionId, newStatus) => {
+                        updateActionStatusMutation.mutate({ id: actionId, status: newStatus as 'pending' | 'done' | 'in_progress' | 'blocked' | 'accepted' | 'rejected' | 'later' });
+                      }}
+                      onAddAction={(dimKey) => {
+                        const text = prompt(isZh ? '输入新的行动项：' : 'Enter new action item:');
+                        if (text) {
+                          createActionMutation.mutate({ dealId, text, priority: 'medium', dimensionKey: dimKey });
+                        }
+                      }}
+                      onAiDeepDive={async (dimKey) => {
+                        await deepDiveMutation.mutateAsync({ dealId, dimensionKey: dimKey, language: language as 'zh' | 'en' });
+                      }}
+                      className="h-full"
+                    />
+                  </div>
+                </div>
+
+                {/* ── Right: AI Chat Panel ── */}
+                <div className="hidden lg:flex flex-col w-[320px] shrink-0 border-l border-border/30">
+                  <DealChatPanel dealId={dealId} />
+                </div>
               </div>
             </TabsContent>
 

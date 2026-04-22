@@ -953,7 +953,7 @@
 - [x] CRUD procedures for dealDimensions (get/update status per dimension)
 - [x] Update nextActions procedures to support dimension filtering
 - [x] Add deal chat procedures (send message, get history, AI response)
-- [ ] Update AI generation to produce dimension-based analysis
+- [x] Update AI generation to produce dimension-based analysis
 
 ### Phase 3: DecisionMap Component
 - [x] Build six-dimension radial visualization (SVG-based)
@@ -976,8 +976,8 @@
 ### Phase 6: DealDetail Page Rebuild
 - [x] New tab structure: Overview | Decision Map | Timeline | Documents
 - [x] Decision Map as the primary/default tab
-- [ ] Wire all new components together
-- [ ] Remove old StakeholderMap and DealInsightPanel from deal view
+- [x] Wire all new components together
+- [x] Remove old StakeholderMap and DealInsightPanel from deal view
 
 ### Phase 7: AI Prompt Updates
 - [x] New prompt for dimension-based deal analysis
@@ -1018,3 +1018,19 @@
 - [x] Add "AI 分析" button to deal detail page
 - [x] Wire to generateMap procedure
 - [x] Show loading state and refresh map after generation
+
+## Decision Map Layout Redesign (Apr 2026)
+- [x] Compact DecisionMap: vertical list with progress bars, ~25% width, navigation-only
+- [x] Build ActionCenter component: dimension-grouped action items as main content
+- [x] New 3-column layout: Map+Stakeholders (25%) | ActionCenter (45%) | AI Panel (30%)
+- [x] Scroll-to-dimension: clicking left nav scrolls ActionCenter to that section
+- [x] Auto-collapse completed dimensions
+- [x] Visual polish: spacing, status badges, priority tags
+
+## Penetration Phases + AI Deep-Dive (Apr 2026)
+- [x] ActionCenter: group dimensions by penetration phase (建立据点 / 扩大战果 / 收割)
+- [x] Per-dimension "AI 深入分析" button
+- [x] Backend: per-dimension AI deep analysis procedure (generates deep strategy for one dimension)
+- [x] AI deep-dive result displayed inline in dimension block (Streamdown markdown rendering)
+- [x] Wire frontend to backend end-to-end
+- [x] Vitest tests for deepDive procedure (3 new tests, 119 total passing)

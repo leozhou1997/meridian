@@ -53,25 +53,53 @@ vi.mock("./db", async () => {
   };
 });
 
-vi.mock("./_core/llm", () => ({
-  invokeLLM: vi.fn().mockResolvedValue({
-    choices: [{
-      message: {
-        content: JSON.stringify({
-          dimensions: [
-            { dimensionKey: "tech_validation", status: "in_progress", aiSummary: "POC进行中", actions: [{ text: "安排技术演示", priority: "high", status: "pending" }] },
-            { dimensionKey: "commercial_breakthrough", status: "not_started", aiSummary: "尚未开始", actions: [] },
-            { dimensionKey: "executive_engagement", status: "blocked", aiSummary: "无高管接触", actions: [{ text: "寻找高管引荐路径", priority: "high", status: "pending" }] },
-            { dimensionKey: "competitive_defense", status: "completed", aiSummary: "竞对已出局", actions: [] },
-            { dimensionKey: "budget_advancement", status: "in_progress", aiSummary: "预算审批中", actions: [] },
-            { dimensionKey: "case_support", status: "not_started", aiSummary: "需要准备案例", actions: [] },
-          ],
-          quickInsights: ["技术验证是当前关键路径", "需要尽快接触高管", "竞对已出局是好消息"],
-        }),
-      },
-    }],
-  }),
-}));
+vi.mock("./_core/llm", () => {
+  let callCount = 0;
+  return {
+    invokeLLM: vi.fn().mockImplementation((args: any) => {
+      callCount++;
+      // Detect deepDive calls by checking the system prompt content
+      const systemMsg = args?.messages?.[0]?.content || '';
+      const isDeepDive = systemMsg.includes('deep-dive');
+
+      if (isDeepDive) {
+        return {
+          choices: [{
+            message: {
+              content: JSON.stringify({
+                analysis: "## 当前评估\n\n技术验证阶段进展顺利。Jennifer Walsh确认了POC时间线。\n\n## 关键风险\n\n- 技术团队可能需要更多时间\n- 竞对可能反扑\n\n## 推荐策略\n\n1. 加速POC演示\n2. 准备技术白皮书\n3. 安排技术团队深度交流\n\n## 话术建议\n\n**关键问题**: \"贵司技术团队对集成方案还有哪些顾虑？\"",
+                newActions: [
+                  { text: "准备技术集成白皮书", priority: "high", status: "pending" },
+                  { text: "安排CTO级别技术交流", priority: "medium", status: "pending" },
+                ],
+                updatedStatus: "in_progress",
+              }),
+            },
+          }],
+        };
+      }
+
+      // Default: generateMap / chat response
+      return {
+        choices: [{
+          message: {
+            content: JSON.stringify({
+              dimensions: [
+                { dimensionKey: "tech_validation", status: "in_progress", aiSummary: "POC进行中", actions: [{ text: "安排技术演示", priority: "high", status: "pending" }] },
+                { dimensionKey: "commercial_breakthrough", status: "not_started", aiSummary: "尚未开始", actions: [] },
+                { dimensionKey: "executive_engagement", status: "blocked", aiSummary: "无高管接触", actions: [{ text: "寻找高管引荐路径", priority: "high", status: "pending" }] },
+                { dimensionKey: "competitive_defense", status: "completed", aiSummary: "竞对已出局", actions: [] },
+                { dimensionKey: "budget_advancement", status: "in_progress", aiSummary: "预算审批中", actions: [] },
+                { dimensionKey: "case_support", status: "not_started", aiSummary: "需要准备案例", actions: [] },
+              ],
+              quickInsights: ["技术验证是当前关键路径", "需要尽快接触高管", "竞对已出局是好消息"],
+            }),
+          },
+        }],
+      };
+    }),
+  };
+});
 
 // ── Import router AFTER mocks ───────────────────────────────────────────────
 
@@ -249,5 +277,51 @@ describe("dealChat.send", () => {
     expect(result.aiMessage.role).toBe("assistant");
     expect(result.userMessage.content).toBe("分析一下当前的渗透策略");
     expect(result.aiMessage.content).toBeTruthy();
+  });
+});
+
+// ── Deep Dive Tests ────────────────────────────────────────────────────────
+
+describe("dimensions.deepDive", () => {
+  it("returns analysis and creates new actions", async () => {
+    const ctx = createTestContext();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.dimensions.deepDive({
+      dealId: 1,
+      dimensionKey: "tech_validation",
+      language: "zh",
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.analysis).toBeDefined();
+    expect(typeof result.analysis).toBe("string");
+    expect((result.analysis as string).length).toBeGreaterThan(0);
+    expect(result.actionsCreated).toBeGreaterThanOrEqual(0);
+  });
+
+  it("analysis contains markdown content", async () => {
+    const ctx = createTestContext();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.dimensions.deepDive({
+      dealId: 1,
+      dimensionKey: "tech_validation",
+      language: "zh",
+    });
+
+    expect(result.success).toBe(true);
+    // The mock returns markdown with ## headers
+    expect(result.analysis).toContain("##");
+  });
+
+  it("works with English language parameter", async () => {
+    const ctx = createTestContext();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.dimensions.deepDive({
+      dealId: 1,
+      dimensionKey: "commercial_breakthrough",
+      language: "en",
+    });
+
+    expect(result.success).toBe(true);
   });
 });

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import {
   Cog,
   Handshake,
@@ -8,8 +8,8 @@ import {
   Trophy,
   Check,
   Play,
-  X,
-  Sparkles,
+  AlertTriangle,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -37,80 +37,46 @@ export interface DecisionMapProps {
   companyLogo?: string | null;
   dimensions: DimensionData[];
   actions: ActionItem[];
+  selectedDimension?: string | null;
   onDimensionClick?: (dimensionKey: string) => void;
-  onActionClick?: (actionId: number) => void;
   className?: string;
 }
 
-// ─── Dimension Config ────────────────────────────────────────────────────────
+// ─── Dimension Config (exported for use by ActionCenter etc.) ────────────────
 
-const DIMENSION_CONFIG: Record<
+export const DIMENSION_CONFIG: Record<
   string,
-  {
-    label: string;
-    labelEn: string;
-    icon: typeof Cog;
-    color: string;
-  }
+  { label: string; labelEn: string; icon: typeof Cog; color: string }
 > = {
-  tech_validation: {
-    label: "技术验证",
-    labelEn: "Tech Validation",
-    icon: Cog,
-    color: "#3B82F6",
-  },
-  commercial_breakthrough: {
-    label: "商务突破",
-    labelEn: "Commercial",
-    icon: Handshake,
-    color: "#10B981",
-  },
-  executive_engagement: {
-    label: "高层推动",
-    labelEn: "Executive",
-    icon: Rocket,
-    color: "#EF4444",
-  },
-  competitive_defense: {
-    label: "竞对防御",
-    labelEn: "Competitive",
-    icon: Shield,
-    color: "#8B5CF6",
-  },
-  budget_advancement: {
-    label: "预算推进",
-    labelEn: "Budget",
-    icon: DollarSign,
-    color: "#F59E0B",
-  },
-  case_support: {
-    label: "案例支撑",
-    labelEn: "Case Study",
-    icon: Trophy,
-    color: "#EC4899",
-  },
+  tech_validation: { label: "技术验证", labelEn: "Tech Validation", icon: Cog, color: "#3B82F6" },
+  commercial_breakthrough: { label: "商务突破", labelEn: "Commercial", icon: Handshake, color: "#10B981" },
+  executive_engagement: { label: "高层推动", labelEn: "Executive", icon: Rocket, color: "#EF4444" },
+  competitive_defense: { label: "竞对防御", labelEn: "Competitive", icon: Shield, color: "#8B5CF6" },
+  budget_advancement: { label: "预算推进", labelEn: "Budget", icon: DollarSign, color: "#F59E0B" },
+  case_support: { label: "案例支撑", labelEn: "Case Study", icon: Trophy, color: "#EC4899" },
 };
 
-const STATUS_CONFIG: Record<
+export const DIMENSION_ORDER = [
+  "tech_validation",
+  "commercial_breakthrough",
+  "executive_engagement",
+  "competitive_defense",
+  "budget_advancement",
+  "case_support",
+];
+
+export const STATUS_CONFIG: Record<
   string,
-  { label: string; labelEn: string; color: string; dotClass: string }
+  { label: string; labelEn: string; icon: typeof Check; color: string; bg: string }
 > = {
-  completed: { label: "已完成", labelEn: "Done", color: "#10B981", dotClass: "bg-emerald-500" },
-  in_progress: { label: "进行中", labelEn: "Active", color: "#3B82F6", dotClass: "bg-blue-500" },
-  not_started: { label: "待启动", labelEn: "Pending", color: "#F59E0B", dotClass: "bg-amber-500" },
-  blocked: { label: "阻塞", labelEn: "Blocked", color: "#EF4444", dotClass: "bg-red-500" },
+  completed: { label: "已完成", labelEn: "Done", icon: Check, color: "#10B981", bg: "bg-emerald-500/10" },
+  in_progress: { label: "进行中", labelEn: "Active", icon: Play, color: "#3B82F6", bg: "bg-blue-500/10" },
+  not_started: { label: "待启动", labelEn: "Pending", icon: Clock, color: "#9CA3AF", bg: "bg-muted/50" },
+  blocked: { label: "阻塞", labelEn: "Blocked", icon: AlertTriangle, color: "#EF4444", bg: "bg-red-500/10" },
 };
 
-const ACTION_STATUS_ICON: Record<string, { icon: typeof Check; className: string }> = {
-  done: { icon: Check, className: "text-emerald-600" },
-  in_progress: { icon: Play, className: "text-blue-600" },
-  blocked: { icon: X, className: "text-red-600" },
-  accepted: { icon: Play, className: "text-blue-600" },
-};
-
-// ─── Dimension positions (angle in degrees, 0 = top, clockwise) ─────────────
-
-const DIMENSION_POSITIONS: Record<string, number> = {
+// Keep for backward compat (used in DealDetail)
+export const DIMENSION_POSITIONS: Record<string, number> = {
   tech_validation: 30,
   executive_engagement: 90,
   case_support: 150,
@@ -119,349 +85,137 @@ const DIMENSION_POSITIONS: Record<string, number> = {
   commercial_breakthrough: 330,
 };
 
-// ─── Helper: polar to cartesian ──────────────────────────────────────────────
-
-function polarToCartesian(
-  cx: number,
-  cy: number,
-  radius: number,
-  angleDeg: number
-): { x: number; y: number } {
-  const angleRad = ((angleDeg - 90) * Math.PI) / 180;
-  return {
-    x: cx + radius * Math.cos(angleRad),
-    y: cy + radius * Math.sin(angleRad),
-  };
-}
-
-// ─── Action Card Positions (offset from dimension node) ──────────────────────
-
-function getActionCardOffset(
-  angleDeg: number,
-  index: number
-): { x: number; y: number } {
-  const outwardAngle = ((angleDeg - 90) * Math.PI) / 180;
-  const baseOffset = 75;
-  const stackOffset = index * 24;
-  return {
-    x: Math.cos(outwardAngle) * baseOffset,
-    y: Math.sin(outwardAngle) * baseOffset + stackOffset,
-  };
-}
-
-// ─── Component ───────────────────────────────────────────────────────────────
+// ─── Compact Vertical Decision Map ───────────────────────────────────────────
 
 export function DecisionMap({
-  companyName,
-  companyLogo,
   dimensions,
   actions,
+  selectedDimension,
   onDimensionClick,
-  onActionClick,
   className,
 }: DecisionMapProps) {
-  const [hoveredDimension, setHoveredDimension] = useState<string | null>(null);
   const { language } = useLanguage();
-  const isZh = language === 'zh';
+  const isZh = language === "zh";
 
-  // Map dimensions by key for quick lookup
   const dimensionMap = useMemo(() => {
     const map: Record<string, DimensionData> = {};
-    for (const d of dimensions) {
-      map[d.dimensionKey] = d;
-    }
+    for (const d of dimensions) map[d.dimensionKey] = d;
     return map;
   }, [dimensions]);
 
-  // Group actions by dimension
-  const actionsByDimension = useMemo(() => {
-    const map: Record<string, ActionItem[]> = {};
+  const actionCountByDim = useMemo(() => {
+    const counts: Record<string, { total: number; done: number }> = {};
+    for (const key of DIMENSION_ORDER) counts[key] = { total: 0, done: 0 };
     for (const a of actions) {
-      const key = a.dimensionKey || "unassigned";
-      if (!map[key]) map[key] = [];
-      map[key].push(a);
+      const key = a.dimensionKey || "";
+      if (counts[key]) {
+        counts[key].total++;
+        if (a.status === "done") counts[key].done++;
+      }
     }
-    return map;
+    return counts;
   }, [actions]);
 
-  // SVG dimensions — more compact
-  const svgWidth = 680;
-  const svgHeight = 560;
-  const cx = svgWidth / 2;
-  const cy = svgHeight / 2;
-  const orbitRadius = 165;
-  const centerRadius = 36;
-  const dimNodeRadius = 28;
-
-  const dimensionKeys = Object.keys(DIMENSION_POSITIONS);
+  const totalDone = dimensions.filter((d) => d.status === "completed").length;
+  const totalBlocked = dimensions.filter((d) => d.status === "blocked").length;
 
   return (
-    <div className={cn("relative w-full", className)}>
-      {/* Status Legend */}
-      <div className="flex items-center gap-4 mb-3 justify-end text-xs text-muted-foreground">
-        {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
-          <div key={key} className="flex items-center gap-1.5">
-            <span className={cn("w-2 h-2 rounded-full", cfg.dotClass)} />
-            <span>{isZh ? cfg.label : cfg.labelEn}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* SVG Canvas */}
-      <div className="relative w-full overflow-visible">
-        <svg
-          viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-          className="w-full"
-          style={{ overflow: "visible", aspectRatio: `${svgWidth} / ${svgHeight}` }}
-        >
-          {/* Gradient definitions */}
-          <defs>
-            <linearGradient id="centerGradient" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#6366F1" />
-              <stop offset="100%" stopColor="#4F46E5" />
-            </linearGradient>
-          </defs>
-
-          {/* Connection lines from center to dimensions */}
-          {dimensionKeys.map((key) => {
-            const angle = DIMENSION_POSITIONS[key];
-            const pos = polarToCartesian(cx, cy, orbitRadius, angle);
-            const isHovered = hoveredDimension === key;
-            const dim = dimensionMap[key];
-            const statusColor = dim ? STATUS_CONFIG[dim.status]?.color || "#6B7280" : "#6B7280";
-
-            return (
-              <line
-                key={`line-${key}`}
-                x1={cx}
-                y1={cy}
-                x2={pos.x}
-                y2={pos.y}
-                stroke={isHovered ? statusColor : "currentColor"}
-                strokeOpacity={isHovered ? 0.6 : 0.15}
-                strokeWidth={isHovered ? 2.5 : 1.5}
-                strokeDasharray={isHovered ? "none" : "6 4"}
-                style={{ transition: "all 0.3s ease" }}
-              />
-            );
-          })}
-
-          {/* Center node */}
-          <g>
-            <circle
-              cx={cx}
-              cy={cy}
-              r={centerRadius}
-              fill="url(#centerGradient)"
-              style={{ filter: "drop-shadow(0 4px 12px rgba(99, 102, 241, 0.25))" }}
-            />
-            {companyLogo ? (
-              <image
-                href={companyLogo}
-                x={cx - 16}
-                y={cy - 16}
-                width={32}
-                height={32}
-                clipPath="circle(16px)"
-              />
-            ) : (
-              <text
-                x={cx}
-                y={cy + 1}
-                textAnchor="middle"
-                dominantBaseline="central"
-                fill="white"
-                fontSize={16}
-                fontWeight={700}
-              >
-                {companyName.charAt(0)}
-              </text>
-            )}
-            <text
-              x={cx}
-              y={cy + centerRadius + 16}
-              textAnchor="middle"
-              fill="currentColor"
-              className="fill-foreground"
-              fontSize={12}
-              fontWeight={600}
-            >
-              {companyName}
-            </text>
-          </g>
-
-          {/* Dimension nodes */}
-          {dimensionKeys.map((key) => {
-            const config = DIMENSION_CONFIG[key];
-            const angle = DIMENSION_POSITIONS[key];
-            const pos = polarToCartesian(cx, cy, orbitRadius, angle);
+    <div className={cn("space-y-0.5", className)}>
+      {/* Overall progress bar */}
+      <div className="flex items-center gap-2 px-1 mb-1.5">
+        <div className="flex-1 h-1.5 rounded-full bg-muted/30 overflow-hidden flex gap-px">
+          {DIMENSION_ORDER.map((key) => {
             const dim = dimensionMap[key];
             const status = dim?.status || "not_started";
             const statusCfg = STATUS_CONFIG[status];
-            const isHovered = hoveredDimension === key;
-            const Icon = config.icon;
-            const dimActions = actionsByDimension[key] || [];
-
             return (
-              <g key={key}>
-                {/* Dimension circle */}
-                <g
-                  style={{ cursor: "pointer", transition: "transform 0.2s ease" }}
-                  onMouseEnter={() => setHoveredDimension(key)}
-                  onMouseLeave={() => setHoveredDimension(null)}
-                  onClick={() => onDimensionClick?.(key)}
-                >
-                  {/* Outer glow on hover */}
-                  {isHovered && (
-                    <circle
-                      cx={pos.x}
-                      cy={pos.y}
-                      r={dimNodeRadius + 5}
-                      fill="none"
-                      stroke={config.color}
-                      strokeWidth={2}
-                      opacity={0.3}
-                    />
-                  )}
-                  <circle
-                    cx={pos.x}
-                    cy={pos.y}
-                    r={dimNodeRadius}
-                    fill={config.color}
-                    opacity={isHovered ? 1 : 0.9}
-                    style={{
-                      filter: isHovered
-                        ? `drop-shadow(0 4px 12px ${config.color}40)`
-                        : "drop-shadow(0 2px 6px rgba(0,0,0,0.12))",
-                      transition: "all 0.2s ease",
-                    }}
-                  />
-                  {/* Icon */}
-                  <foreignObject
-                    x={pos.x - 10}
-                    y={pos.y - 10}
-                    width={20}
-                    height={20}
-                    style={{ pointerEvents: "none" }}
-                  >
-                    <div style={{ pointerEvents: "none" }}>
-                      <Icon size={20} color="white" strokeWidth={2} />
-                    </div>
-                  </foreignObject>
-                </g>
-
-                {/* Label + status below node */}
-                <text
-                  x={pos.x}
-                  y={pos.y + dimNodeRadius + 14}
-                  textAnchor="middle"
-                  fill="currentColor"
-                  className="fill-foreground"
-                  fontSize={11}
-                  fontWeight={600}
-                >
-                  {isZh ? config.label : config.labelEn}
-                </text>
-                <g>
-                  <rect
-                    x={pos.x - 20}
-                    y={pos.y + dimNodeRadius + 19}
-                    width={40}
-                    height={16}
-                    rx={8}
-                    fill={statusCfg.color}
-                    opacity={0.12}
-                  />
-                  <text
-                    x={pos.x}
-                    y={pos.y + dimNodeRadius + 30}
-                    textAnchor="middle"
-                    fill={statusCfg.color}
-                    fontSize={9}
-                    fontWeight={500}
-                  >
-                    {isZh ? statusCfg.label : statusCfg.labelEn}
-                  </text>
-                </g>
-
-                {/* Action items floating near the dimension */}
-                {dimActions.slice(0, 3).map((action, idx) => {
-                  const offset = getActionCardOffset(angle, idx);
-                  const cardX = pos.x + offset.x;
-                  const cardY = pos.y + offset.y - 12;
-                  const statusColor =
-                    action.status === "done"
-                      ? "#10B981"
-                      : action.status === "in_progress" || action.status === "accepted"
-                      ? "#3B82F6"
-                      : action.status === "blocked"
-                      ? "#EF4444"
-                      : "#6B7280";
-                  const statusPrefix =
-                    action.status === "done"
-                      ? "✓"
-                      : action.status === "in_progress" || action.status === "accepted"
-                      ? "▶"
-                      : action.status === "blocked"
-                      ? "✗"
-                      : "";
-
-                  const truncatedText =
-                    action.text.length > 10
-                      ? action.text.slice(0, 10) + "…"
-                      : action.text;
-
-                  return (
-                    <g
-                      key={action.id}
-                      style={{ cursor: "pointer" }}
-                      onClick={() => onActionClick?.(action.id)}
-                    >
-                      <rect
-                        x={cardX - 52}
-                        y={cardY - 9}
-                        width={104}
-                        height={20}
-                        rx={5}
-                        fill="currentColor"
-                        className="fill-card"
-                        stroke={isHovered ? config.color + "40" : "currentColor"}
-                        strokeOpacity={isHovered ? 1 : 0.15}
-                        strokeWidth={1}
-                        style={{
-                          filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.06))",
-                        }}
-                      />
-                      <text
-                        x={cardX - 42}
-                        y={cardY + 4}
-                        fill={statusColor}
-                        fontSize={9}
-                        fontWeight={600}
-                      >
-                        {statusPrefix}
-                      </text>
-                      <text
-                        x={cardX - 34}
-                        y={cardY + 4}
-                        fill="currentColor"
-                        className="fill-foreground"
-                        fontSize={9}
-                        fontWeight={400}
-                      >
-                        {truncatedText}
-                      </text>
-                    </g>
-                  );
-                })}
-              </g>
+              <div
+                key={key}
+                className="h-full flex-1 first:rounded-l-full last:rounded-r-full transition-all"
+                style={{
+                  backgroundColor: statusCfg.color,
+                  opacity: status === "not_started" ? 0.2 : 0.75,
+                }}
+              />
             );
           })}
-        </svg>
+        </div>
+        <span className="text-[10px] text-muted-foreground font-medium tabular-nums">
+          {totalDone}/6
+        </span>
       </div>
+
+      {/* Dimension rows */}
+      {DIMENSION_ORDER.map((key) => {
+        const meta = DIMENSION_CONFIG[key];
+        const dim = dimensionMap[key];
+        const status = dim?.status || "not_started";
+        const statusCfg = STATUS_CONFIG[status];
+        const StatusIcon = statusCfg.icon;
+        const DimIcon = meta.icon;
+        const counts = actionCountByDim[key];
+        const isSelected = selectedDimension === key;
+        const progress = counts.total > 0 ? (counts.done / counts.total) * 100 : 0;
+
+        return (
+          <button
+            key={key}
+            className={cn(
+              "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left transition-all",
+              isSelected
+                ? "bg-primary/8 ring-1 ring-primary/20"
+                : "hover:bg-muted/40"
+            )}
+            onClick={() => onDimensionClick?.(key)}
+          >
+            {/* Dimension icon */}
+            <div
+              className="w-6 h-6 rounded flex items-center justify-center flex-shrink-0"
+              style={{ backgroundColor: meta.color + "18" }}
+            >
+              <DimIcon size={13} style={{ color: meta.color }} strokeWidth={2} />
+            </div>
+
+            {/* Label + mini progress */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1">
+                <span className="text-xs font-medium text-foreground truncate leading-tight">
+                  {isZh ? meta.label : meta.labelEn}
+                </span>
+              </div>
+              <div className="h-1 rounded-full bg-muted/30 mt-0.5 overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-300"
+                  style={{
+                    width: `${Math.max(progress, counts.total > 0 ? 4 : 0)}%`,
+                    backgroundColor: status === "blocked" ? "#EF4444" : meta.color,
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Status + count */}
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <StatusIcon size={10} style={{ color: statusCfg.color }} />
+              <span className="text-[10px] text-muted-foreground tabular-nums">
+                {counts.done}/{counts.total}
+              </span>
+            </div>
+          </button>
+        );
+      })}
+
+      {/* Blocked warning */}
+      {totalBlocked > 0 && (
+        <div className="flex items-center gap-1 px-2 pt-1">
+          <AlertTriangle size={10} className="text-red-500 flex-shrink-0" />
+          <span className="text-[10px] text-red-500 font-medium">
+            {totalBlocked} {isZh ? "个维度阻塞" : "blocked"}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
 
-export { DIMENSION_CONFIG, STATUS_CONFIG, DIMENSION_POSITIONS };
 export default DecisionMap;

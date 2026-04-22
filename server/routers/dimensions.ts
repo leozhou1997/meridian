@@ -233,4 +233,147 @@ ${meetingEvidence}`;
         quickInsights: parsed.quickInsights || [],
       };
     }),
+
+  /** AI deep-dive: generate in-depth analysis for a single dimension */
+  deepDive: protectedProcedure
+    .input(z.object({
+      dealId: z.number(),
+      dimensionKey: z.string(),
+      language: z.enum(["en", "zh"]).default("zh"),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const tenant = await getOrCreateDefaultTenant(ctx.user.id, ctx.user.name ?? "User");
+
+      const deal = await getDealById(input.dealId, tenant.id);
+      if (!deal) throw new Error("Deal not found");
+
+      const stakeholders = await getStakeholders(input.dealId, tenant.id);
+      const meetings = await getMeetings(input.dealId, tenant.id);
+      const existingActions = await getNextActions(input.dealId, tenant.id);
+      const strategyNotes = await getStrategyNotes(input.dealId, tenant.id);
+      const currentDimensions = await ensureDealDimensions(input.dealId, tenant.id);
+
+      const meetingsWithContent = meetings.filter(m => m.summary && String(m.summary).trim().length > 20);
+
+      const meetingEvidence = meetingsWithContent.map((m, i) => {
+        const dateStr = new Date(m.date).toISOString().split('T')[0];
+        return `Meeting ${i + 1} (${m.type}, ${dateStr}${m.keyParticipant ? `, with ${m.keyParticipant}` : ''}):\n${m.summary}`;
+      }).join('\n\n');
+
+      const stakeholderSummary = stakeholders.map(s =>
+        `- ${s.name} | ${s.title || 'Unknown'} | Role: ${s.role} | Sentiment: ${s.sentiment}`
+      ).join('\n');
+
+      const dimLabels: Record<string, string> = {
+        tech_validation: '技术验证 (Tech Validation)',
+        commercial_breakthrough: '商务突破 (Commercial Breakthrough)',
+        executive_engagement: '高层推动 (Executive Engagement)',
+        competitive_defense: '竞对防御 (Competitive Defense)',
+        budget_advancement: '预算推进 (Budget Advancement)',
+        case_support: '案例支撑 (Case Support)',
+      };
+
+      const currentDim = currentDimensions.find(d => d.dimensionKey === input.dimensionKey);
+      const dimActions = existingActions.filter(a => a.dimensionKey === input.dimensionKey);
+
+      const langInstruction = input.language === 'zh'
+        ? '\n\nIMPORTANT: All output MUST be in Simplified Chinese (中文). Only proper nouns may remain in English.'
+        : '';
+
+      const systemPrompt = `You are Meridian, an elite B2B enterprise sales strategist. A sales rep is asking for a deep-dive analysis on the "${dimLabels[input.dimensionKey] || input.dimensionKey}" dimension of their deal.
+
+Provide a thorough, actionable analysis that includes:
+1. **Current Assessment**: What's the current state based on evidence? What signals have we seen?
+2. **Key Risks**: What could go wrong? What are we missing?
+3. **Recommended Strategy**: A concrete 3-5 step action plan with named stakeholders and specific tactics
+4. **External Intelligence**: What external signals should the rep look for? (competitor moves, industry trends, procurement cycles, etc.)
+5. **Talk Track**: 1-2 specific talking points or questions the rep should use in their next conversation
+
+Be specific. Name people. Reference meetings. Give actionable advice, not generic platitudes.
+
+Also suggest 2-3 NEW action items that don't already exist.${langInstruction}
+
+Return ONLY valid JSON:
+{
+  "analysis": "Full deep-dive analysis in markdown format (use ## headers, bullet points, bold for emphasis)",
+  "newActions": [
+    { "text": "Specific action", "priority": "high", "status": "pending" }
+  ],
+  "updatedStatus": "in_progress"
+}`;
+
+      const userPrompt = `Deal: ${deal.company} — ${deal.name}
+Stage: ${deal.stage} | Value: $${(deal.value || 0).toLocaleString()} | Confidence: ${deal.confidenceScore}%
+
+Dimension: ${dimLabels[input.dimensionKey] || input.dimensionKey}
+Current Status: ${currentDim?.status || 'not_started'}
+Current AI Summary: ${currentDim?.aiSummary || 'None'}
+
+Existing Actions for this dimension:
+${dimActions.map(a => `- [${a.status}] ${a.text}`).join('\n') || 'None'}
+
+Stakeholders:\n${stakeholderSummary}
+
+Strategy Notes:\n${strategyNotes.map(n => `[${n.category}] ${n.content}`).join('\n') || 'None'}
+
+=== MEETING EVIDENCE ===\n${meetingEvidence || 'No meetings recorded yet.'}`;
+
+      const response = await invokeLLM({
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+      });
+
+      const rawContent = response.choices?.[0]?.message?.content;
+      const content = typeof rawContent === 'string' ? rawContent : '';
+
+      let parsed: {
+        analysis: string;
+        newActions?: Array<{ text: string; priority?: string; status?: string }>;
+        updatedStatus?: string;
+      } | null = null;
+
+      try {
+        const cleaned = content.replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
+        parsed = JSON.parse(cleaned);
+      } catch {
+        return { success: false, error: 'Failed to parse AI response' };
+      }
+
+      if (!parsed?.analysis) {
+        return { success: false, error: 'Invalid AI response' };
+      }
+
+      // Update the dimension's AI summary with the deep-dive analysis
+      if (currentDim) {
+        await updateDealDimension(currentDim.id, tenant.id, {
+          aiSummary: parsed.analysis,
+          ...(parsed.updatedStatus ? { status: parsed.updatedStatus as "not_started" | "in_progress" | "completed" | "blocked" } : {}),
+        });
+      }
+
+      // Create new action items
+      let actionsCreated = 0;
+      if (parsed.newActions) {
+        for (const action of parsed.newActions) {
+          await createNextAction({
+            dealId: input.dealId,
+            tenantId: tenant.id,
+            text: action.text,
+            priority: (action.priority as any) || 'medium',
+            source: 'ai_suggested',
+            status: (action.status as any) || 'pending',
+            dimensionKey: input.dimensionKey,
+          });
+          actionsCreated++;
+        }
+      }
+
+      return {
+        success: true,
+        analysis: parsed.analysis,
+        actionsCreated,
+      };
+    }),
 });

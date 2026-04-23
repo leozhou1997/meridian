@@ -175,7 +175,7 @@ Return ONLY valid JSON:
           "title": "Concise need title",
           "description": "Why this matters, evidence from meetings",
           "status": "unmet",
-          "dimensionKey": "tech_validation",
+          "dimensionKey": "need_discovery",
           "priority": "critical"
         }
       ]

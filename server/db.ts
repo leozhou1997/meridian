@@ -569,12 +569,12 @@ export async function deleteStrategyNote(id: number, tenantId: number) {
 // ─── Deal Dimensions (Decision Map) ─────────────────────────────────────────
 
 const DEFAULT_DIMENSIONS = [
-  { key: "tech_validation", sortOrder: 0 },
-  { key: "commercial_breakthrough", sortOrder: 1 },
-  { key: "executive_engagement", sortOrder: 2 },
-  { key: "competitive_defense", sortOrder: 3 },
-  { key: "budget_advancement", sortOrder: 4 },
-  { key: "case_support", sortOrder: 5 },
+  { key: "need_discovery", sortOrder: 0 },
+  { key: "value_proposition", sortOrder: 1 },
+  { key: "commercial_close", sortOrder: 2 },
+  { key: "relationship_penetration", sortOrder: 3 },
+  { key: "tech_validation", sortOrder: 4 },
+  { key: "competitive_defense", sortOrder: 5 },
 ] as const;
 
 export async function getDealDimensions(dealId: number, tenantId: number) {

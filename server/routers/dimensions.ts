@@ -122,13 +122,19 @@ export const dimensionsRouter = router({
 
       const systemPrompt = `You are Meridian, an elite B2B enterprise sales strategist. You analyze complex deals through 6 Decision Dimensions to create a penetration roadmap.${sellerContext}
 
-The 6 Decision Dimensions:
-1. tech_validation (技术验证): Has the prospect validated our technical solution? POC status, technical champion engagement, integration concerns.
-2. commercial_breakthrough (商务突破): Commercial terms progress. Pricing discussions, contract negotiations, procurement engagement.
-3. executive_engagement (高层推动): Executive sponsor identification and engagement. C-level access, strategic alignment.
-4. competitive_defense (竞对防御): Competitive landscape awareness. Incumbent displacement strategy, differentiation positioning.
-5. budget_advancement (预算推进): Budget allocation and approval progress. Funding source, fiscal year timing, approval chain.
-6. case_support (案例支撑): Reference cases and proof points. Similar industry wins, ROI evidence, customer testimonials.
+The 6 Decision Dimensions (ordered by strategic importance):
+
+[CRITICAL PATH — must progress sequentially]
+1. need_discovery (需求确认): Foundation of the deal. Has the customer's real pain been identified and quantified? Business impact, urgency, stakeholder alignment on the problem.
+2. value_proposition (价值论证): Has the business value been proven? ROI analysis, reference cases, proof points, success metrics alignment.
+3. commercial_close (商务突破): Commercial negotiation progress. Pricing, contract terms, budget approval, procurement process, timeline to signature.
+
+[PARALLEL TRACK — continuous throughout]
+4. relationship_penetration (关系渗透): Stakeholder mapping and relationship depth. Champion development, decision-maker access, internal coalition building.
+
+[SIDE QUESTS — conditional, may not apply to all deals]
+5. tech_validation (技术验证): Technical solution validation. POC/demo status, integration feasibility, technical champion engagement.
+6. competitive_defense (竞争防御): Competitive landscape. Incumbent displacement, differentiation positioning. Mark N/A if no competition.
 
 For each dimension, assess:
 - Status: "not_started" (no evidence), "in_progress" (active engagement), "completed" (dimension secured), "blocked" (obstacle identified)
@@ -141,7 +147,7 @@ Return ONLY valid JSON:
 {
   "dimensions": [
     {
-      "dimensionKey": "tech_validation",
+      "dimensionKey": "need_discovery",
       "status": "in_progress",
       "aiSummary": "Evidence-based summary...",
       "actions": [
@@ -272,12 +278,12 @@ ${meetingEvidence}`;
       ).join('\n');
 
       const dimLabels: Record<string, string> = {
+        need_discovery: '需求确认 (Need Discovery)',
+        value_proposition: '价值论证 (Value Proposition)',
+        commercial_close: '商务突破 (Commercial Close)',
+        relationship_penetration: '关系渗透 (Relationship Penetration)',
         tech_validation: '技术验证 (Tech Validation)',
-        commercial_breakthrough: '商务突破 (Commercial Breakthrough)',
-        executive_engagement: '高层推动 (Executive Engagement)',
-        competitive_defense: '竞对防御 (Competitive Defense)',
-        budget_advancement: '预算推进 (Budget Advancement)',
-        case_support: '案例支撑 (Case Support)',
+        competitive_defense: '竞争防御 (Competitive Defense)',
       };
 
       const currentDim = currentDimensions.find(d => d.dimensionKey === input.dimensionKey);

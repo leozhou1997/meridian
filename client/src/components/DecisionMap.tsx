@@ -2,14 +2,14 @@ import { useMemo } from "react";
 import {
   Cog,
   Handshake,
-  Rocket,
   Shield,
-  DollarSign,
-  Trophy,
   Check,
   Play,
   AlertTriangle,
   Clock,
+  Search,
+  TrendingUp,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -46,23 +46,23 @@ export interface DecisionMapProps {
 
 export const DIMENSION_CONFIG: Record<
   string,
-  { label: string; labelEn: string; icon: typeof Cog; color: string }
+  { label: string; labelEn: string; icon: typeof Cog; color: string; nature: 'critical' | 'parallel' | 'side' }
 > = {
-  tech_validation: { label: "技术验证", labelEn: "Tech Validation", icon: Cog, color: "#3B82F6" },
-  commercial_breakthrough: { label: "商务突破", labelEn: "Commercial", icon: Handshake, color: "#10B981" },
-  executive_engagement: { label: "高层推动", labelEn: "Executive", icon: Rocket, color: "#EF4444" },
-  competitive_defense: { label: "竞对防御", labelEn: "Competitive", icon: Shield, color: "#8B5CF6" },
-  budget_advancement: { label: "预算推进", labelEn: "Budget", icon: DollarSign, color: "#F59E0B" },
-  case_support: { label: "案例支撑", labelEn: "Case Study", icon: Trophy, color: "#EC4899" },
+  need_discovery: { label: "需求确认", labelEn: "Need Discovery", icon: Search, color: "#2563EB", nature: 'critical' },
+  value_proposition: { label: "价值论证", labelEn: "Value Proposition", icon: TrendingUp, color: "#059669", nature: 'critical' },
+  commercial_close: { label: "商务突破", labelEn: "Commercial Close", icon: Handshake, color: "#D97706", nature: 'critical' },
+  relationship_penetration: { label: "关系渗透", labelEn: "Relationship", icon: Users, color: "#7C3AED", nature: 'parallel' },
+  tech_validation: { label: "技术验证", labelEn: "Tech Validation", icon: Cog, color: "#0891B2", nature: 'side' },
+  competitive_defense: { label: "竞争防御", labelEn: "Competitive", icon: Shield, color: "#DC2626", nature: 'side' },
 };
 
 export const DIMENSION_ORDER = [
+  "need_discovery",
+  "value_proposition",
+  "commercial_close",
+  "relationship_penetration",
   "tech_validation",
-  "commercial_breakthrough",
-  "executive_engagement",
   "competitive_defense",
-  "budget_advancement",
-  "case_support",
 ];
 
 export const STATUS_CONFIG: Record<
@@ -77,12 +77,12 @@ export const STATUS_CONFIG: Record<
 
 // Keep for backward compat (used in DealDetail)
 export const DIMENSION_POSITIONS: Record<string, number> = {
-  tech_validation: 30,
-  executive_engagement: 90,
-  case_support: 150,
-  budget_advancement: 210,
-  competitive_defense: 270,
-  commercial_breakthrough: 330,
+  need_discovery: 30,
+  value_proposition: 90,
+  commercial_close: 150,
+  relationship_penetration: 210,
+  tech_validation: 270,
+  competitive_defense: 330,
 };
 
 // ─── Compact Vertical Decision Map ───────────────────────────────────────────

@@ -15,6 +15,8 @@ import {
   Plus,
   Sparkles,
   Loader2,
+  Target,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -55,12 +57,12 @@ const DIMENSION_META: Record<
   string,
   { label: string; labelEn: string; icon: typeof Cog; color: string }
 > = {
+  need_discovery: { label: "需求确认", labelEn: "Need Discovery", icon: Target, color: "#2563EB" },
+  value_proposition: { label: "价值论证", labelEn: "Value Proposition", icon: Trophy, color: "#059669" },
+  commercial_close: { label: "商务突破", labelEn: "Commercial Close", icon: Handshake, color: "#D97706" },
+  relationship_penetration: { label: "关系渗透", labelEn: "Relationships", icon: Users, color: "#7C3AED" },
   tech_validation: { label: "技术验证", labelEn: "Tech Validation", icon: Cog, color: "#3B82F6" },
-  commercial_breakthrough: { label: "商务突破", labelEn: "Commercial", icon: Handshake, color: "#10B981" },
-  executive_engagement: { label: "高层推动", labelEn: "Executive", icon: Rocket, color: "#EF4444" },
-  competitive_defense: { label: "竞对防御", labelEn: "Competitive", icon: Shield, color: "#8B5CF6" },
-  budget_advancement: { label: "预算推进", labelEn: "Budget", icon: DollarSign, color: "#F59E0B" },
-  case_support: { label: "案例支撑", labelEn: "Case Study", icon: Trophy, color: "#EC4899" },
+  competitive_defense: { label: "竞争防御", labelEn: "Competitive", icon: Shield, color: "#8B5CF6" },
 };
 
 const STATUS_META: Record<string, { label: string; labelEn: string; color: string }> = {
@@ -84,31 +86,31 @@ interface Phase {
 
 const PENETRATION_PHASES: Phase[] = [
   {
-    key: "establish",
-    label: "建立据点",
-    labelEn: "Establish Foothold",
-    description: "证明产品价值，建立初始信任",
-    descriptionEn: "Prove product value, build initial trust",
-    dimensions: ["tech_validation", "case_support", "competitive_defense"],
-    color: "#3B82F6",
+    key: "discover",
+    label: "探索需求",
+    labelEn: "Discover Needs",
+    description: "采集客户痛点，建立关系网络",
+    descriptionEn: "Uncover pain points, build relationships",
+    dimensions: ["need_discovery", "relationship_penetration"],
+    color: "#2563EB",
   },
   {
-    key: "expand",
-    label: "扩大战果",
-    labelEn: "Expand Influence",
-    description: "推动商务进展，获取高层背书",
-    descriptionEn: "Drive commercial progress, gain executive buy-in",
-    dimensions: ["commercial_breakthrough", "executive_engagement"],
-    color: "#8B5CF6",
+    key: "prove",
+    label: "论证价值",
+    labelEn: "Prove Value",
+    description: "验证方案可行性，论证业务价值",
+    descriptionEn: "Validate solution, prove business value",
+    dimensions: ["value_proposition", "tech_validation"],
+    color: "#059669",
   },
   {
     key: "close",
-    label: "收割成果",
-    labelEn: "Close & Win",
-    description: "推动预算落地，完成签约",
-    descriptionEn: "Secure budget, close the deal",
-    dimensions: ["budget_advancement"],
-    color: "#10B981",
+    label: "推进成交",
+    labelEn: "Drive to Close",
+    description: "推动商务谈判，应对竞争压力",
+    descriptionEn: "Drive commercial negotiation, handle competition",
+    dimensions: ["commercial_close", "competitive_defense"],
+    color: "#D97706",
   },
 ];
 

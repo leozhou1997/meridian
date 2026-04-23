@@ -151,12 +151,12 @@ const SENTIMENT_CONFIG: Record<string, { label: string; labelEn: string; color: 
 };
 
 const DIMENSION_LABELS: Record<string, { zh: string; en: string }> = {
+  need_discovery: { zh: "需求确认", en: "Need Discovery" },
+  value_proposition: { zh: "价值论证", en: "Value" },
+  commercial_close: { zh: "商务突破", en: "Commercial" },
+  relationship_penetration: { zh: "关系渗透", en: "Relationships" },
   tech_validation: { zh: "技术验证", en: "Tech" },
-  commercial_breakthrough: { zh: "商务突破", en: "Commercial" },
-  executive_engagement: { zh: "高层推动", en: "Executive" },
-  competitive_defense: { zh: "竞对防御", en: "Competitive" },
-  budget_advancement: { zh: "预算推进", en: "Budget" },
-  case_support: { zh: "案例支撑", en: "Case Study" },
+  competitive_defense: { zh: "竞争防御", en: "Competitive" },
 };
 
 // ─── Component ───────────────────────────────────────────────────────────────

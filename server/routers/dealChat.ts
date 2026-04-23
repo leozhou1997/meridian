@@ -124,12 +124,12 @@ ${stakeholders.map(s => `- ${s.name} | ${s.title || '未知职位'} | 角色:${s
 
   if (dimensions.length > 0) {
     const dimLabels: Record<string, string> = {
+      need_discovery: "需求确认",
+      value_proposition: "价值论证",
+      commercial_close: "商务突破",
+      relationship_penetration: "关系渗透",
       tech_validation: "技术验证",
-      commercial_breakthrough: "商务突破",
-      executive_engagement: "高层推动",
-      competitive_defense: "竞对防御",
-      budget_advancement: "预算推进",
-      case_support: "案例支撑",
+      competitive_defense: "竞争防御",
     };
     parts.push(`## 决策维度状态
 ${dimensions.map(d => `- ${dimLabels[d.dimensionKey] || d.dimensionKey}: ${d.status}${d.aiSummary ? ` — ${d.aiSummary}` : ''}`).join('\n')}`);

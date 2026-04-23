@@ -58,7 +58,7 @@ import { DimensionDetailPanel } from '@/components/DimensionDetailPanel';
 import { StakeholderSidebar } from '@/components/StakeholderSidebar';
 import { DealChatPanel } from '@/components/DealChatPanel';
 import { ActionCenter } from '@/components/ActionCenter';
-import { BattleMapGraph, TimelinePanel } from '@/components/battlemap';
+import { DealScorecard } from '@/components/DealScorecard';
 import { NeedEditDialog } from '@/components/battlemap/NeedEditDialog';
 import { DIMENSION_CONFIG as DIM_META } from '@/components/DecisionMap';
 import DealTimeline from '@/components/DealTimeline';
@@ -1036,12 +1036,12 @@ export default function DealDetail() {
                       companyName={deal.company}
                       companyLogo={deal.logo}
                       dimensions={dimensionsData.length > 0 ? dimensionsData : [
-                        { id: 1, dimensionKey: 'tech_validation', status: 'not_started' as const, aiSummary: null, notes: null },
-                        { id: 2, dimensionKey: 'commercial_breakthrough', status: 'not_started' as const, aiSummary: null, notes: null },
-                        { id: 3, dimensionKey: 'executive_engagement', status: 'not_started' as const, aiSummary: null, notes: null },
-                        { id: 4, dimensionKey: 'competitive_defense', status: 'not_started' as const, aiSummary: null, notes: null },
-                        { id: 5, dimensionKey: 'budget_advancement', status: 'not_started' as const, aiSummary: null, notes: null },
-                        { id: 6, dimensionKey: 'case_support', status: 'not_started' as const, aiSummary: null, notes: null },
+                        { id: 1, dimensionKey: 'need_discovery', status: 'not_started' as const, aiSummary: null, notes: null },
+                        { id: 2, dimensionKey: 'value_proposition', status: 'not_started' as const, aiSummary: null, notes: null },
+                        { id: 3, dimensionKey: 'commercial_close', status: 'not_started' as const, aiSummary: null, notes: null },
+                        { id: 4, dimensionKey: 'relationship_penetration', status: 'not_started' as const, aiSummary: null, notes: null },
+                        { id: 5, dimensionKey: 'tech_validation', status: 'not_started' as const, aiSummary: null, notes: null },
+                        { id: 6, dimensionKey: 'competitive_defense', status: 'not_started' as const, aiSummary: null, notes: null },
                       ]}
                       actions={actionsData.map((a: any) => ({
                         id: a.id,
@@ -1111,105 +1111,58 @@ export default function DealDetail() {
 
                   <div className="flex-1 min-h-0 flex flex-col p-4 md:p-5 pt-2">
                     {centerView === 'battle' ? (
-                      <>
-                        <div className="flex-1 min-h-0" style={{ minHeight: 420 }}>
-                          <BattleMapGraph
-                            stakeholders={(stakeholdersData || []).map((s: any) => ({
-                              id: s.id,
-                              name: s.name,
-                              title: s.title || '',
-                              role: s.role,
-                              sentiment: s.sentiment,
-                              avatarUrl: s.avatar || null,
-                            }))}
-                            needs={stakeholderNeedsData.map((n: any) => ({
-                              id: n.id,
-                              stakeholderId: n.stakeholderId,
-                              needType: n.needType,
-                              title: n.title,
-                              description: n.description,
-                              status: n.status,
-                              dimensionKey: n.dimensionKey,
-                            }))}
-                            actions={actionsData.map((a: any) => ({
-                              id: a.id,
-                              action: a.text,
-                              isDone: a.status === 'done' || a.completed === true,
-                              stakeholderId: a.stakeholderId || null,
-                              needId: a.needId || null,
-                              dimensionKey: a.dimensionKey || null,
-                            }))}
-                            dimensions={Object.entries(DIM_META).map(([key, meta]) => {
-                              const dim = dimensionsData.find((d: any) => d.dimensionKey === key);
-                              return {
-                                dimensionKey: key,
-                                label: isZh ? meta.label : meta.labelEn,
-                                score: dim ? (['completed', 'in_progress', 'not_started', 'blocked'].indexOf(dim.status) === 0 ? 100 : dim.status === 'in_progress' ? 60 : dim.status === 'blocked' ? 20 : 0) : 0,
-                                weight: (dim as any)?.weight ?? 1,
-                              };
-                            })}
-                            isZh={isZh}
-                            onNeedStatusCycle={(needId: number) => {
-                              const need = stakeholderNeedsData.find((n: any) => n.id === needId);
-                              if (!need) return;
-                              const cycle = ['unmet', 'in_progress', 'satisfied', 'blocked'];
-                              const idx = cycle.indexOf(need.status);
-                              const next = cycle[(idx + 1) % cycle.length];
-                              updateNeedStatusMutation.mutate({ id: needId, status: next as 'unmet' | 'in_progress' | 'satisfied' | 'blocked' });
-                            }}
-                            onNeedEdit={(needId: number) => {
-                              const need = stakeholderNeedsData.find((n: any) => n.id === needId);
-                              if (need) setEditingNeed({ id: need.id, title: need.title, description: need.description, needType: need.needType, status: need.status });
-                            }}
-                            onNeedDelete={(needId: number) => {
-                              deleteNeedMutation.mutate({ id: needId });
-                            }}
-                            onStakeholderClick={(id: number) => {
-                              const s = (stakeholdersData || []).find((st: any) => st.id === id);
-                              if (s) handleStakeholderClick(s as Stakeholder);
-                            }}
-                            onAiGenerate={() => {
-                              setIsGeneratingNeeds(true);
-                              generateNeedsMutation.mutate({
-                                dealId,
-                                language: language as 'zh' | 'en',
-                                regenerate: stakeholderNeedsData.length > 0,
-                              });
-                            }}
-                            isGenerating={isGeneratingNeeds}
-                          />
-                        </div>
-                        {/* Bottom Timeline */}
-                        <TimelinePanel
-                          stakeholders={(stakeholdersData || []).map((s: any) => ({
-                            id: s.id,
-                            name: s.name,
-                            title: s.title || '',
-                            role: s.role,
-                            sentiment: s.sentiment,
-                          }))}
-                          actions={actionsData.map((a: any) => ({
-                            id: a.id,
-                            action: a.text,
-                            isDone: a.status === 'done' || a.completed === true,
-                            stakeholderId: a.stakeholderId || null,
-                            dimensionKey: a.dimensionKey || null,
-                            phase: null,
-                            priority: a.priority || null,
-                            createdAt: a.createdAt ? String(a.createdAt) : null,
-                          }))}
-                          isZh={isZh}
-                        />
-                      </>
+                      <DealScorecard
+                        dimensions={dimensionsData.length > 0 ? dimensionsData : [
+                          { id: 1, dimensionKey: 'need_discovery', status: 'not_started' as const, aiSummary: null },
+                          { id: 2, dimensionKey: 'value_proposition', status: 'not_started' as const, aiSummary: null },
+                          { id: 3, dimensionKey: 'commercial_close', status: 'not_started' as const, aiSummary: null },
+                          { id: 4, dimensionKey: 'relationship_penetration', status: 'not_started' as const, aiSummary: null },
+                          { id: 5, dimensionKey: 'tech_validation', status: 'not_started' as const, aiSummary: null },
+                          { id: 6, dimensionKey: 'competitive_defense', status: 'not_started' as const, aiSummary: null },
+                        ]}
+                        actions={actionsData.map((a: any) => ({
+                          id: a.id,
+                          text: a.text,
+                          status: a.status || (a.completed ? 'done' : 'pending'),
+                          dimensionKey: a.dimensionKey || null,
+                        }))}
+                        stakeholders={(stakeholdersData || []).map((s: any) => ({
+                          id: s.id,
+                          name: s.name,
+                          title: s.title || null,
+                          role: s.role,
+                          sentiment: s.sentiment,
+                        }))}
+                        needs={stakeholderNeedsData.map((n: any) => ({
+                          id: n.id,
+                          stakeholderId: n.stakeholderId,
+                          dimensionKey: n.dimensionKey || null,
+                          status: n.status,
+                        }))}
+                        isZh={isZh}
+                        onDimensionClick={(key) => {
+                          setSelectedDimension(key);
+                          setCenterView('actions');
+                        }}
+                        onAiGenerate={() => {
+                          setIsGeneratingNeeds(true);
+                          generateNeedsMutation.mutate({
+                            dealId,
+                            language: language as 'zh' | 'en',
+                            regenerate: stakeholderNeedsData.length > 0,
+                          });
+                        }}
+                        isGenerating={isGeneratingNeeds}
+                      />
                     ) : (
                       <ActionCenter
                         dimensions={dimensionsData.length > 0 ? dimensionsData : [
-                          { id: 1, dimensionKey: 'tech_validation', status: 'not_started' as const, aiSummary: null },
-                          { id: 2, dimensionKey: 'commercial_breakthrough', status: 'not_started' as const, aiSummary: null },
-                          { id: 3, dimensionKey: 'executive_engagement', status: 'not_started' as const, aiSummary: null },
-                          { id: 4, dimensionKey: 'competitive_defense', status: 'not_started' as const, aiSummary: null },
-                          { id: 5, dimensionKey: 'budget_advancement', status: 'not_started' as const, aiSummary: null },
-                          { id: 6, dimensionKey: 'case_support', status: 'not_started' as const, aiSummary: null },
+                          { id: 1, dimensionKey: 'need_discovery', status: 'not_started' as const, aiSummary: null },
+                          { id: 2, dimensionKey: 'value_proposition', status: 'not_started' as const, aiSummary: null },
+                          { id: 3, dimensionKey: 'commercial_close', status: 'not_started' as const, aiSummary: null },
+                          { id: 4, dimensionKey: 'relationship_penetration', status: 'not_started' as const, aiSummary: null },
+                          { id: 5, dimensionKey: 'tech_validation', status: 'not_started' as const, aiSummary: null },
+                          { id: 6, dimensionKey: 'competitive_defense', status: 'not_started' as const, aiSummary: null },
                         ]}
                         actions={actionsData.map((a: any) => ({
                           id: a.id,

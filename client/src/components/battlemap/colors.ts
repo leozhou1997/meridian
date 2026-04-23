@@ -101,41 +101,41 @@ export const NEED_STATUS = {
 // ─── Dimension Colors ───────────────────────────────────────────────
 // Light-theme: subtle tinted backgrounds with professional accent borders
 export const DIMENSION_COLORS: Record<string, { bg: string; border: string; text: string; lightBg: string }> = {
-  technical_validation: {
+  need_discovery: {
+    bg: '#eff6ff',        // blue-50
+    border: '#2563eb',    // blue-600
+    text: '#1e40af',      // blue-800
+    lightBg: '#dbeafe',   // blue-100
+  },
+  value_proposition: {
+    bg: '#ecfdf5',        // emerald-50
+    border: '#059669',    // emerald-600
+    text: '#065f46',      // emerald-800
+    lightBg: '#d1fae5',   // emerald-100
+  },
+  commercial_close: {
+    bg: '#fffbeb',        // amber-50
+    border: '#d97706',    // amber-600
+    text: '#92400e',      // amber-800
+    lightBg: '#fde68a',   // amber-200
+  },
+  relationship_penetration: {
+    bg: '#f5f3ff',        // violet-50
+    border: '#7c3aed',    // violet-600
+    text: '#5b21b6',      // violet-800
+    lightBg: '#ddd6fe',   // violet-100
+  },
+  tech_validation: {
     bg: '#ecfeff',        // cyan-50
     border: '#0891b2',    // cyan-600
     text: '#155e75',      // cyan-800
     lightBg: '#cffafe',   // cyan-100
-  },
-  business_case: {
-    bg: '#f0fdf4',        // green-50
-    border: '#16a34a',    // green-600
-    text: '#166534',      // green-800
-    lightBg: '#dcfce7',   // green-100
   },
   competitive_defense: {
     bg: '#fef2f2',        // red-50
     border: '#dc2626',    // red-600
     text: '#991b1b',      // red-800
     lightBg: '#fecaca',   // red-100
-  },
-  champion_development: {
-    bg: '#fff7ed',        // orange-50
-    border: '#ea580c',    // orange-600
-    text: '#9a3412',      // orange-800
-    lightBg: '#fed7aa',   // orange-100
-  },
-  executive_sponsorship: {
-    bg: '#f5f3ff',        // violet-50
-    border: '#7c3aed',    // violet-600
-    text: '#5b21b6',      // violet-800
-    lightBg: '#ddd6fe',   // violet-100
-  },
-  budget_process: {
-    bg: '#fdf2f8',        // pink-50
-    border: '#db2777',    // pink-600
-    text: '#9d174d',      // pink-800
-    lightBg: '#fbcfe8',   // pink-100
   },
 };
 

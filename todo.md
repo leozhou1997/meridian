@@ -1199,3 +1199,30 @@
 - [x] Remove people/dimension lens toggle — single unified view + cleaned up 8 unused battlemap files
 - [ ] Review penetration path stages (建立据点/扩大战果/收割成果) alignment with new dimensions
 - [x] Visual review and test — 130 tests passing, TypeScript clean
+
+## Subtraction & Optimization Pass (April 23)
+
+### 1. Remove DecisionMap from left sidebar
+- [x] Delete DecisionMap component from DealDetail left column
+- [x] Give full left sidebar space to StakeholderSidebar (decision-maker panel)
+- [x] Clean up DecisionMap.tsx if no longer imported anywhere (kept file, removed from layout)
+
+### 2. Fix DealScorecard overflow
+- [x] Fix center column overflow — added overflow-y-auto with min-h-0
+
+### 3. Rebalance AI Chat panel
+- [x] Shrink input area, maximize AI response display area
+- [x] Input is now compact single-line with inline send button
+
+### 4. Upgrade DealTimeline to rich text editor (Notion-style)
+- [x] Install tiptap editor (@tiptap/react, @tiptap/starter-kit, @tiptap/extension-placeholder)
+- [x] Replace plain textarea with rich text editor (RichTextEditor.tsx component)
+- [x] Support: H2/H3, bold, italic, bullet/ordered lists, blockquote, horizontal rule, undo/redo
+- [ ] Inline editing on existing timeline entries (click to edit) — deferred to next pass
+- [x] Multiple entry types: 会议纪要, 电话记录, 邮件摘要, 现场拜访, 演示/POC, 客户反馈, 内部讨论
+- [x] Entry type selector as tab bar in Add dialog
+
+### 5. Global color audit
+- [x] Reduce color palette — StakeholderSidebar now uses muted monochrome role badges
+- [x] Color hierarchy: primary for actions, green/red/gray for sentiment, semantic colors only in scorecard
+- [x] Removed rainbow dimension chips, replaced with muted gray labels

@@ -53,19 +53,19 @@ type NextAction = {
 };
 import StakeholderMap from '@/components/StakeholderMap';
 import DealInsightPanel from '@/components/DealInsightPanel';
-import { DecisionMap, DIMENSION_CONFIG } from '@/components/DecisionMap';
+
 import { DimensionDetailPanel } from '@/components/DimensionDetailPanel';
 import { StakeholderSidebar } from '@/components/StakeholderSidebar';
 import { DealChatPanel } from '@/components/DealChatPanel';
 import { ActionCenter } from '@/components/ActionCenter';
 import { DealScorecard } from '@/components/DealScorecard';
 import { NeedEditDialog } from '@/components/battlemap/NeedEditDialog';
-import { DIMENSION_CONFIG as DIM_META } from '@/components/DecisionMap';
+
 import DealTimeline from '@/components/DealTimeline';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Globe, Clock, TrendingUp, TrendingDown, AlertTriangle,
-  ChevronRight, User, MessageSquare, FileText, Map, BarChart3, X, ExternalLink,
+  ChevronRight, User, MessageSquare, FileText, BarChart3, X, ExternalLink,
   Mic, Check, Edit2, Save, Camera, GripHorizontal, ChevronDown, ChevronUp,
   Plus, Trash2, Pencil, Calendar, Lightbulb, Lock, Target, Sparkles, Heart, StickyNote, UserCircle, Activity, Users, Loader2, Wand2, Swords
 } from 'lucide-react';
@@ -300,18 +300,7 @@ export default function DealDetail() {
   const updateDimensionMutation = trpc.dimensions.update.useMutation({
     onSuccess: () => utils.dimensions.listByDeal.invalidate({ dealId }),
   });
-  const generateMapMutation = trpc.dimensions.generateMap.useMutation({
-    onSuccess: () => {
-      utils.dimensions.listByDeal.invalidate({ dealId });
-      utils.nextActions.listByDeal.invalidate({ dealId });
-      setIsGeneratingMap(false);
-      toast.success(isZh ? 'Decision Map 已更新' : 'Decision Map updated');
-    },
-    onError: (err) => {
-      setIsGeneratingMap(false);
-      toast.error(isZh ? 'AI 分析失败，请重试' : 'AI analysis failed, please retry');
-    },
-  });
+
   const generateNeedsMutation = trpc.stakeholderNeeds.aiGenerate.useMutation({
     onSuccess: (data) => {
       utils.stakeholderNeeds.listByDeal.invalidate({ dealId });
@@ -398,7 +387,7 @@ export default function DealDetail() {
   const [selectedStakeholder, setSelectedStakeholder] = useState<Stakeholder | null>(null);
   const [activeTab, setActiveTab] = useState('map');
   const [selectedDimension, setSelectedDimension] = useState<string | null>(null);
-  const [isGeneratingMap, setIsGeneratingMap] = useState(false);
+
   const [isGeneratingNeeds, setIsGeneratingNeeds] = useState(false);
   const [centerView, setCenterView] = useState<'battle' | 'actions'>('battle');
   const [editingNeed, setEditingNeed] = useState<{ id: number; title: string; description?: string | null; needType: string; status: string } | null>(null);
@@ -987,9 +976,9 @@ export default function DealDetail() {
             <div className="border-b border-border/30 px-3 md:px-6">
               <TabsList className="bg-transparent h-10 gap-0.5 md:gap-1 p-0">
                 <TabsTrigger value="map" className="data-[state=active]:bg-muted/50 data-[state=active]:shadow-none rounded-lg text-xs font-display gap-1 md:gap-1.5 px-2 md:px-3 h-8">
-                  <Map className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">{isZh ? '决策地图' : 'Decision Map'}</span>
-                  <span className="sm:hidden">{isZh ? '地图' : 'Map'}</span>
+                  <Swords className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{isZh ? '战局总览' : 'Battle Overview'}</span>
+                  <span className="sm:hidden">{isZh ? '战局' : 'Battle'}</span>
                 </TabsTrigger>
                 <TabsTrigger value="timeline" className="data-[state=active]:bg-muted/50 data-[state=active]:shadow-none rounded-lg text-xs font-display gap-1 md:gap-1.5 px-2 md:px-3 h-8">
                   <Activity className="w-3.5 h-3.5" />
@@ -1007,59 +996,8 @@ export default function DealDetail() {
             <TabsContent value="map" className="flex-1 m-0 overflow-hidden min-h-0">
               <div className="h-full flex overflow-hidden">
 
-                {/* ── Left Column: Decision Map (compact) + Stakeholders ── */}
-                <div className="hidden md:flex flex-col w-[280px] shrink-0 border-r border-border/30 bg-card/30">
-                  {/* Compact Decision Map */}
-                  <div className="p-3 border-b border-border/30">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-xs font-semibold text-foreground">
-                        {isZh ? '决策地图' : 'Decision Map'}
-                      </h3>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={isGeneratingMap}
-                        onClick={() => {
-                          setIsGeneratingMap(true);
-                          generateMapMutation.mutate({ dealId, language: isZh ? 'zh' : 'en' });
-                        }}
-                        className="h-6 gap-1 text-[10px] px-2"
-                      >
-                        {isGeneratingMap ? (
-                          <><Loader2 size={10} className="animate-spin" />{isZh ? '分析中' : 'Analyzing'}</>
-                        ) : (
-                          <><Wand2 size={10} />{isZh ? 'AI 分析' : 'AI'}</>
-                        )}
-                      </Button>
-                    </div>
-                    <DecisionMap
-                      companyName={deal.company}
-                      companyLogo={deal.logo}
-                      dimensions={dimensionsData.length > 0 ? dimensionsData : [
-                        { id: 1, dimensionKey: 'need_discovery', status: 'not_started' as const, aiSummary: null, notes: null },
-                        { id: 2, dimensionKey: 'value_proposition', status: 'not_started' as const, aiSummary: null, notes: null },
-                        { id: 3, dimensionKey: 'commercial_close', status: 'not_started' as const, aiSummary: null, notes: null },
-                        { id: 4, dimensionKey: 'relationship_penetration', status: 'not_started' as const, aiSummary: null, notes: null },
-                        { id: 5, dimensionKey: 'tech_validation', status: 'not_started' as const, aiSummary: null, notes: null },
-                        { id: 6, dimensionKey: 'competitive_defense', status: 'not_started' as const, aiSummary: null, notes: null },
-                      ]}
-                      actions={actionsData.map((a: any) => ({
-                        id: a.id,
-                        text: a.text,
-                        status: a.status || (a.completed ? 'done' : 'pending'),
-                        dimensionKey: a.dimensionKey || null,
-                        priority: a.priority,
-                      }))}
-                      onDimensionClick={(key) => {
-                        setSelectedDimension(prev => prev === key ? null : key);
-                        // Scroll to dimension in ActionCenter
-                        const el = document.getElementById(`dim-${key}`);
-                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                      }}
-                      selectedDimension={selectedDimension}
-                    />
-                  </div>
-                  {/* Stakeholders — enriched decision-maker panel */}
+                {/* ── Left Column: Decision Makers ── */}
+                <div className="hidden md:flex flex-col w-[260px] shrink-0 border-r border-border/30">
                   <StakeholderSidebar
                     stakeholders={localStakeholders.map((s: any) => ({
                       id: s.id,
@@ -1092,7 +1030,7 @@ export default function DealDetail() {
                 </div>
 
                 {/* ── Center: Battle Map / Action Center (toggle view) ── */}
-                <div className="flex-1 overflow-auto min-w-0 flex flex-col">
+                <div className="flex-1 overflow-y-auto min-w-0 min-h-0 flex flex-col">
                   {/* View toggle */}
                   <div className="flex items-center gap-1 px-4 pt-3 pb-1 flex-shrink-0">
                     <button
@@ -1204,7 +1142,7 @@ export default function DealDetail() {
                 </div>
 
                 {/* ── Right: AI Chat Panel ── */}
-                <div className="hidden lg:flex flex-col w-[320px] shrink-0 border-l border-border/30">
+                <div className="hidden lg:flex flex-col w-[300px] shrink-0 border-l border-border/30 min-h-0">
                   <DealChatPanel dealId={dealId} />
                 </div>
               </div>

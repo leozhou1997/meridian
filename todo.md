@@ -1226,3 +1226,24 @@
 - [x] Reduce color palette — StakeholderSidebar now uses muted monochrome role badges
 - [x] Color hierarchy: primary for actions, green/red/gray for sentiment, semantic colors only in scorecard
 - [x] Removed rainbow dimension chips, replaced with muted gray labels
+
+## Iteration: Progress Logic + Inline Edit + Overflow Fix (April 23)
+
+### 1. Fix DealScorecard overflow (health score cut off at top)
+- [x] Fix top of center column — made view toggle sticky, scrollable area below
+- [x] Ensure scrollable area starts below the health score header
+
+### 2. Redesign progress bars: stage-based instead of action-completion
+- [x] Changed progress bar to stage-based: not_started=0%, in_progress=40%, completed=100%, blocked=25%
+- [x] Stage progress is monotonically increasing (never goes backward)
+- [x] Action completion shown as secondary "2/4" label, not driving the bar
+- [x] Updated DealScorecard dimension cards + health score to use new logic
+
+### 3. Inline editing for timeline entries + HTML storage
+- [x] Backend already stores summary as text — HTML content works without schema change
+- [x] Edit dialog now uses RichTextEditor (tiptap) instead of plain textarea
+- [ ] Click-to-edit directly within timeline cards (deferred — edit dialog works well for now)
+
+### 4. Fix seed data context
+- [x] Added 3 stakeholder needs for need_discovery (焊装线升级, 灯塔工厂对齐, 车间主任操作需求)
+- [x] Updated need_discovery to in_progress, value_proposition/commercial_close/relationship_penetration also to in_progress

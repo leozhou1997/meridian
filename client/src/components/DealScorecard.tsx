@@ -153,11 +153,23 @@ const STATUS_CONFIG: Record<string, { label: string; labelEn: string; icon: type
   blocked: { label: "阻塞", labelEn: "Blocked", icon: AlertTriangle, color: "#EF4444" },
 };
 
-function computeProgress(actions: ActionInfo[], dimensionKey: string) {
+// Stage-based progress: monotonically increasing, never goes backward
+// not_started=0%, in_progress=50%, completed=100%, blocked=25% (stuck but started)
+function computeStageProgress(status: string): number {
+  switch (status) {
+    case 'completed': return 100;
+    case 'in_progress': return 50;
+    case 'blocked': return 25;
+    default: return 0;
+  }
+}
+
+// Action completion is secondary info (shown as text, not driving the bar)
+function computeActionStats(actions: ActionInfo[], dimensionKey: string) {
   const dimActions = actions.filter((a) => a.dimensionKey === dimensionKey);
   const total = dimActions.length;
   const done = dimActions.filter((a) => a.status === "done").length;
-  return { total, done, pct: total > 0 ? Math.round((done / total) * 100) : 0 };
+  return { total, done };
 }
 
 function getStakeholdersForDimension(
@@ -173,7 +185,7 @@ function getStakeholdersForDimension(
 
 // ─── Health Score ────────────────────────────────────────────────────────────
 
-function computeHealthScore(dimensions: DimensionInfo[], actions: ActionInfo[]): number {
+function computeHealthScore(dimensions: DimensionInfo[]): number {
   // Weighted: critical path 60% (20% each), parallel 25%, side quests 15% (7.5% each)
   const weights: Record<string, number> = {
     need_discovery: 0.20,
@@ -187,14 +199,8 @@ function computeHealthScore(dimensions: DimensionInfo[], actions: ActionInfo[]):
   let score = 0;
   for (const dim of dimensions) {
     const w = weights[dim.dimensionKey] || 0;
-    const prog = computeProgress(actions, dim.dimensionKey);
-    // Status contributes 40%, action progress contributes 60%
-    const statusScore =
-      dim.status === "completed" ? 100 :
-      dim.status === "in_progress" ? 50 :
-      dim.status === "blocked" ? 10 : 0;
-    const dimScore = statusScore * 0.4 + prog.pct * 0.6;
-    score += dimScore * w;
+    // Health score is purely stage-based — monotonically increasing
+    score += computeStageProgress(dim.status) * w;
   }
   return Math.round(score);
 }
@@ -224,7 +230,8 @@ function DimensionCard({
   textColor,
   accentBg,
   status,
-  progress,
+  stageProgress,
+  actionStats,
   relatedStakeholders,
   aiSummary,
   isZh,
@@ -241,7 +248,8 @@ function DimensionCard({
   textColor: string;
   accentBg: string;
   status: string;
-  progress: { total: number; done: number; pct: number };
+  stageProgress: number; // 0-100, stage-based, monotonically increasing
+  actionStats: { total: number; done: number }; // secondary info
   relatedStakeholders: StakeholderInfo[];
   aiSummary?: string | null;
   isZh: boolean;
@@ -289,21 +297,23 @@ function DimensionCard({
         </div>
       </div>
 
-      {/* Progress bar */}
+      {/* Stage progress bar (monotonically increasing) */}
       <div className="mt-2.5">
         <div className="flex items-center justify-between mb-1">
           <span className="text-[10px] text-muted-foreground">
-            {isZh ? "行动进度" : "Actions"}
+            {isZh ? "阶段进度" : "Stage"}
           </span>
-          <span className="text-[10px] font-medium tabular-nums" style={{ color }}>
-            {progress.done}/{progress.total}
+          <span className="text-[10px] text-muted-foreground tabular-nums">
+            {actionStats.total > 0 ? (
+              <>{isZh ? `${actionStats.done}/${actionStats.total} 行动` : `${actionStats.done}/${actionStats.total} actions`}</>
+            ) : null}
           </span>
         </div>
         <div className="h-1.5 rounded-full bg-black/5 overflow-hidden">
           <div
             className="h-full rounded-full transition-all duration-500"
             style={{
-              width: `${Math.max(progress.pct, progress.total > 0 ? 3 : 0)}%`,
+              width: `${Math.max(stageProgress, status !== 'not_started' ? 3 : 0)}%`,
               backgroundColor: status === "blocked" ? "#EF4444" : color,
             }}
           />
@@ -370,8 +380,8 @@ export function DealScorecard({
   }, [dimensions]);
 
   const healthScore = useMemo(
-    () => computeHealthScore(dimensions, actions),
-    [dimensions, actions]
+    () => computeHealthScore(dimensions),
+    [dimensions]
   );
 
   const riskSignals = useMemo(() => {
@@ -486,7 +496,8 @@ export function DealScorecard({
           {CRITICAL_PATH.map((cp, idx) => {
             const dim = dimMap[cp.key];
             const status = dim?.status || "not_started";
-            const progress = computeProgress(actions, cp.key);
+            const stageProgress = computeStageProgress(status);
+            const actionStats = computeActionStats(actions, cp.key);
             const related = getStakeholdersForDimension(needs, stakeholders, cp.key);
 
             return (
@@ -502,7 +513,8 @@ export function DealScorecard({
                   textColor={cp.textColor}
                   accentBg={cp.accentBg}
                   status={status}
-                  progress={progress}
+                  stageProgress={stageProgress}
+                  actionStats={actionStats}
                   relatedStakeholders={related}
                   aiSummary={dim?.aiSummary}
                   isZh={isZh}
@@ -531,7 +543,8 @@ export function DealScorecard({
           const pt = PARALLEL_TRACK;
           const dim = dimMap[pt.key];
           const status = dim?.status || "not_started";
-          const progress = computeProgress(actions, pt.key);
+          const stageProgress = computeStageProgress(status);
+          const actionStats = computeActionStats(actions, pt.key);
           const related = getStakeholdersForDimension(needs, stakeholders, pt.key);
 
           return (
@@ -546,7 +559,8 @@ export function DealScorecard({
               textColor={pt.textColor}
               accentBg={pt.accentBg}
               status={status}
-              progress={progress}
+              stageProgress={stageProgress}
+              actionStats={actionStats}
               relatedStakeholders={related}
               aiSummary={dim?.aiSummary}
               isZh={isZh}
@@ -568,11 +582,13 @@ export function DealScorecard({
           {SIDE_QUESTS.map((sq) => {
             const dim = dimMap[sq.key];
             const status = dim?.status || "not_started";
-            const progress = computeProgress(actions, sq.key);
+            const actionStats = computeActionStats(actions, sq.key);
             const related = getStakeholdersForDimension(needs, stakeholders, sq.key);
 
+            const stageProgress = computeStageProgress(status);
+
             // If no actions and not started, show as N/A
-            const isNA = status === "not_started" && progress.total === 0;
+            const isNA = status === "not_started" && actionStats.total === 0;
 
             return (
               <button
@@ -610,7 +626,7 @@ export function DealScorecard({
                         return <SI size={10} style={{ color: sc.color }} />;
                       })()}
                       <span className="text-[10px] font-medium tabular-nums" style={{ color: sq.color }}>
-                        {progress.done}/{progress.total}
+                        {actionStats.done}/{actionStats.total}
                       </span>
                     </div>
                   )}
@@ -622,7 +638,7 @@ export function DealScorecard({
                       <div
                         className="h-full rounded-full transition-all duration-500"
                         style={{
-                          width: `${Math.max(progress.pct, progress.total > 0 ? 3 : 0)}%`,
+                          width: `${Math.max(stageProgress, status !== 'not_started' ? 3 : 0)}%`,
                           backgroundColor: status === "blocked" ? "#EF4444" : sq.color,
                         }}
                       />

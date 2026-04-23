@@ -39,27 +39,26 @@ function NeedNodeComponent({ data }: NodeProps) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <Handle type="target" position={Position.Left} className="!w-1.5 !h-1.5 !bg-slate-600 !border-0 opacity-0" />
-      <Handle type="source" position={Position.Right} className="!w-1.5 !h-1.5 !bg-slate-600 !border-0 opacity-0" />
-      <Handle type="target" position={Position.Top} id="top" className="!w-1.5 !h-1.5 !bg-slate-600 !border-0 opacity-0" />
-      <Handle type="source" position={Position.Bottom} id="bottom" className="!w-1.5 !h-1.5 !bg-slate-600 !border-0 opacity-0" />
+      <Handle type="target" position={Position.Left} className="!w-1 !h-1 !border-0 !opacity-0" />
+      <Handle type="source" position={Position.Right} className="!w-1 !h-1 !border-0 !opacity-0" />
+      <Handle type="target" position={Position.Top} id="top" className="!w-1 !h-1 !border-0 !opacity-0" />
+      <Handle type="source" position={Position.Bottom} id="bottom" className="!w-1 !h-1 !border-0 !opacity-0" />
 
       <div
-        className="rounded-lg px-3 py-2 transition-all duration-200 cursor-pointer"
+        className="rounded-md px-3 py-2 transition-all duration-150"
         style={{
           background: typeStyle.bg,
-          border: `1px solid ${typeStyle.border}50`,
+          border: `1px solid ${hovered ? typeStyle.border : typeStyle.border + '40'}`,
           opacity: statusStyle.opacity,
-          boxShadow: hovered ? `0 0 12px ${typeStyle.border}30` : 'none',
-          minWidth: 160,
-          maxWidth: 220,
+          boxShadow: hovered ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
+          width: 200,
         }}
       >
         {/* Header row */}
         <div className="flex items-start gap-2">
           {/* Status icon — clickable to cycle */}
           <button
-            className="mt-0.5 flex-shrink-0 transition-colors hover:scale-110"
+            className="mt-0.5 flex-shrink-0 transition-transform hover:scale-110"
             onClick={(e) => {
               e.stopPropagation();
               d.onStatusCycle(d.id);
@@ -73,31 +72,28 @@ function NeedNodeComponent({ data }: NodeProps) {
           </button>
 
           <div className="flex-1 min-w-0">
-            {/* Type badge + title */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px]">{typeStyle.icon}</span>
-              <span
-                className="text-[10px] font-medium"
-                style={{ color: typeStyle.text }}
-              >
-                {typeStyle.label}
-              </span>
-            </div>
-            <div className="text-xs text-slate-200 mt-0.5 leading-tight">{d.title}</div>
+            {/* Type badge */}
+            <span
+              className="text-[9px] font-semibold px-1.5 py-0.5 rounded"
+              style={{ background: typeStyle.border + '15', color: typeStyle.text }}
+            >
+              {typeStyle.label}
+            </span>
+            <div className="text-xs text-gray-700 mt-1 leading-tight line-clamp-2">{d.title}</div>
           </div>
 
           {/* Action buttons — show on hover */}
           {hovered && (
             <div className="flex items-center gap-0.5 flex-shrink-0">
               <button
-                className="p-0.5 rounded hover:bg-slate-700/50 transition-colors"
+                className="p-1 rounded hover:bg-gray-200/60 transition-colors"
                 onClick={(e) => { e.stopPropagation(); d.onEdit(d.id); }}
                 title="编辑"
               >
-                <Pencil className="w-3 h-3 text-slate-400" />
+                <Pencil className="w-3 h-3 text-gray-400" />
               </button>
               <button
-                className="p-0.5 rounded hover:bg-red-900/30 transition-colors"
+                className="p-1 rounded hover:bg-red-50 transition-colors"
                 onClick={(e) => { e.stopPropagation(); d.onDelete(d.id); }}
                 title="删除"
               >
@@ -107,17 +103,10 @@ function NeedNodeComponent({ data }: NodeProps) {
           )}
         </div>
 
-        {/* Description (if exists, truncated) */}
-        {d.description && (
-          <div className="text-[10px] text-slate-400 mt-1 line-clamp-2 leading-tight">
-            {d.description}
-          </div>
-        )}
-
         {/* Linked actions toggle */}
         {d.linkedActionCount > 0 && (
           <button
-            className="flex items-center gap-1 mt-1.5 text-[10px] text-slate-500 hover:text-slate-300 transition-colors"
+            className="flex items-center gap-1 mt-1.5 text-[10px] text-gray-400 hover:text-gray-600 transition-colors"
             onClick={(e) => {
               e.stopPropagation();
               d.onToggleActions(d.id);
@@ -134,13 +123,13 @@ function NeedNodeComponent({ data }: NodeProps) {
 
         {/* Expanded actions list */}
         {d.isActionsExpanded && d.linkedActions.length > 0 && (
-          <div className="mt-1 space-y-0.5 border-t border-slate-700/50 pt-1">
+          <div className="mt-1 space-y-0.5 border-t border-gray-200 pt-1">
             {d.linkedActions.map((action) => (
               <div key={action.id} className="flex items-start gap-1.5 text-[10px]">
-                <span className={action.isDone ? 'text-green-500' : 'text-slate-500'}>
+                <span className={action.isDone ? 'text-green-600' : 'text-gray-300'}>
                   {action.isDone ? '✓' : '○'}
                 </span>
-                <span className={`leading-tight ${action.isDone ? 'text-slate-500 line-through' : 'text-slate-300'}`}>
+                <span className={`leading-tight ${action.isDone ? 'text-gray-400 line-through' : 'text-gray-600'}`}>
                   {action.action}
                 </span>
               </div>

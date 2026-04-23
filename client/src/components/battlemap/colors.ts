@@ -1,64 +1,71 @@
 /**
- * BattleMap Color System
+ * BattleMap Color System v2
  * 
  * Design principles:
- * - Not sci-fi, not plain — professional with clear meaning
- * - Every color conveys specific information
- * - Sufficient contrast on dark backgrounds
- * - Consistent with existing Meridian design tokens
+ * - Light professional theme matching Meridian's design language
+ * - Uses Meridian CSS variables where possible (oklch palette)
+ * - Semantic colors: green=supportive, amber=neutral, red=negative
+ * - Subtle, not flashy — information density over decoration
  */
 
 // ─── Sentiment Colors (Stakeholder stance) ─────────────────────────
-// These appear as node borders and badges
+// Light-theme: colored left border accent + subtle tinted background
 export const SENTIMENT = {
   supportive: {
-    border: '#22c55e',    // green-500 — clear positive
-    bg: 'rgba(34,197,94,0.08)',
-    text: '#4ade80',      // green-400
+    border: '#16a34a',    // green-600 — professional green
+    bg: '#f0fdf4',        // green-50
+    text: '#15803d',      // green-700
     label: '支持',
+    labelEn: 'Supportive',
   },
   neutral: {
-    border: '#f59e0b',    // amber-500 — caution/undecided
-    bg: 'rgba(245,158,11,0.08)',
-    text: '#fbbf24',      // amber-400
+    border: '#d97706',    // amber-600
+    bg: '#fffbeb',        // amber-50
+    text: '#b45309',      // amber-700
     label: '中立',
+    labelEn: 'Neutral',
   },
   negative: {
-    border: '#ef4444',    // red-500 — opposition/blocker
-    bg: 'rgba(239,68,68,0.08)',
-    text: '#f87171',      // red-400
+    border: '#dc2626',    // red-600
+    bg: '#fef2f2',        // red-50
+    text: '#b91c1c',      // red-700
     label: '阻碍',
+    labelEn: 'Blocker',
   },
   unknown: {
-    border: '#6b7280',    // gray-500 — not yet assessed
-    bg: 'rgba(107,114,128,0.08)',
-    text: '#9ca3af',      // gray-400
+    border: '#9ca3af',    // gray-400
+    bg: '#f9fafb',        // gray-50
+    text: '#6b7280',      // gray-500
     label: '未知',
+    labelEn: 'Unknown',
   },
 } as const;
 
 // ─── Need Type Colors ───────────────────────────────────────────────
-// Appear as need card backgrounds and category badges
+// Light-theme pill/badge colors
 export const NEED_TYPE = {
   organizational: {
-    bg: 'rgba(59,130,246,0.12)',      // blue tint
+    bg: '#eff6ff',                     // blue-50
     border: '#3b82f6',                 // blue-500
-    text: '#60a5fa',                   // blue-400
+    text: '#1d4ed8',                   // blue-700
     label: '组织需求',
+    labelEn: 'Org',
     icon: '🏢',
   },
   professional: {
-    bg: 'rgba(139,92,246,0.12)',      // violet tint
+    bg: '#f5f3ff',                     // violet-50
     border: '#8b5cf6',                 // violet-500
-    text: '#a78bfa',                   // violet-400
+    text: '#6d28d9',                   // violet-700
     label: '职业需求',
+    labelEn: 'Prof',
     icon: '📈',
   },
   personal: {
-    bg: 'rgba(249,115,22,0.12)',      // orange tint
+    bg: '#fff7ed',                     // orange-50
     border: '#f97316',                 // orange-500
-    text: '#fb923c',                   // orange-400
+    text: '#c2410c',                   // orange-700
     label: '个人需求',
+    labelEn: 'Personal',
     icon: '👤',
   },
 } as const;
@@ -69,77 +76,84 @@ export const NEED_STATUS = {
     opacity: 1,
     icon: '○',
     label: '未满足',
-    color: '#ef4444',
+    color: '#dc2626',     // red-600
   },
   in_progress: {
-    opacity: 0.75,
+    opacity: 0.85,
     icon: '◐',
     label: '推进中',
-    color: '#f59e0b',
+    color: '#d97706',     // amber-600
   },
   satisfied: {
-    opacity: 0.5,
+    opacity: 0.6,
     icon: '●',
     label: '已满足',
-    color: '#22c55e',
+    color: '#16a34a',     // green-600
   },
   blocked: {
     opacity: 1,
     icon: '⊘',
     label: '受阻',
-    color: '#ef4444',
+    color: '#dc2626',
   },
 } as const;
 
 // ─── Dimension Colors ───────────────────────────────────────────────
-// Used in Dimension Lens view for the six MEDDIC-style dimensions
-export const DIMENSION_COLORS: Record<string, { bg: string; border: string; text: string }> = {
+// Light-theme: subtle tinted backgrounds with professional accent borders
+export const DIMENSION_COLORS: Record<string, { bg: string; border: string; text: string; lightBg: string }> = {
   technical_validation: {
-    bg: 'rgba(6,182,212,0.12)',
-    border: '#06b6d4',    // cyan-500
-    text: '#22d3ee',
+    bg: '#ecfeff',        // cyan-50
+    border: '#0891b2',    // cyan-600
+    text: '#155e75',      // cyan-800
+    lightBg: '#cffafe',   // cyan-100
   },
   business_case: {
-    bg: 'rgba(34,197,94,0.12)',
-    border: '#22c55e',    // green-500
-    text: '#4ade80',
+    bg: '#f0fdf4',        // green-50
+    border: '#16a34a',    // green-600
+    text: '#166534',      // green-800
+    lightBg: '#dcfce7',   // green-100
   },
   competitive_defense: {
-    bg: 'rgba(239,68,68,0.12)',
-    border: '#ef4444',    // red-500
-    text: '#f87171',
+    bg: '#fef2f2',        // red-50
+    border: '#dc2626',    // red-600
+    text: '#991b1b',      // red-800
+    lightBg: '#fecaca',   // red-100
   },
   champion_development: {
-    bg: 'rgba(249,115,22,0.12)',
-    border: '#f97316',    // orange-500
-    text: '#fb923c',
+    bg: '#fff7ed',        // orange-50
+    border: '#ea580c',    // orange-600
+    text: '#9a3412',      // orange-800
+    lightBg: '#fed7aa',   // orange-100
   },
   executive_sponsorship: {
-    bg: 'rgba(139,92,246,0.12)',
-    border: '#8b5cf6',    // violet-500
-    text: '#a78bfa',
+    bg: '#f5f3ff',        // violet-50
+    border: '#7c3aed',    // violet-600
+    text: '#5b21b6',      // violet-800
+    lightBg: '#ddd6fe',   // violet-100
   },
   budget_process: {
-    bg: 'rgba(236,72,153,0.12)',
-    border: '#ec4899',    // pink-500
-    text: '#f472b6',
+    bg: '#fdf2f8',        // pink-50
+    border: '#db2777',    // pink-600
+    text: '#9d174d',      // pink-800
+    lightBg: '#fbcfe8',   // pink-100
   },
 };
 
 // Fallback for custom dimensions
 export const DEFAULT_DIMENSION_COLOR = {
-  bg: 'rgba(148,163,184,0.12)',
-  border: '#94a3b8',
-  text: '#cbd5e1',
+  bg: '#f8fafc',          // slate-50
+  border: '#64748b',      // slate-500
+  text: '#334155',        // slate-700
+  lightBg: '#e2e8f0',    // slate-200
 };
 
 // ─── Edge/Connection Colors ─────────────────────────────────────────
 export const EDGE = {
-  needConnection: '#475569',      // slate-600 — subtle
-  relationship: '#64748b',        // slate-500
-  positive: '#22c55e',            // green
-  negative: '#ef4444',            // red
-  neutral: '#94a3b8',             // gray
+  needConnection: '#cbd5e1',      // slate-300 — very subtle
+  relationship: '#94a3b8',        // slate-400
+  positive: '#16a34a',            // green-600
+  negative: '#dc2626',            // red-600
+  neutral: '#9ca3af',             // gray-400
 } as const;
 
 // ─── Role Priority (for fixed sort order) ───────────────────────────
@@ -158,24 +172,36 @@ export function getRolePriority(role: string): number {
   return ROLE_PRIORITY[role] ?? 99;
 }
 
+// ─── Role display info ──────────────────────────────────────────────
+export const ROLE_INFO: Record<string, { label: string; color: string; bg: string }> = {
+  'Decision Maker': { label: 'DM', color: '#7c3aed', bg: '#f5f3ff' },
+  'Champion': { label: 'CH', color: '#16a34a', bg: '#f0fdf4' },
+  'Economic Buyer': { label: 'EB', color: '#0891b2', bg: '#ecfeff' },
+  'Influencer': { label: 'INF', color: '#2563eb', bg: '#eff6ff' },
+  'Evaluator': { label: 'EV', color: '#d97706', bg: '#fffbeb' },
+  'Gatekeeper': { label: 'GK', color: '#64748b', bg: '#f8fafc' },
+  'User': { label: 'USR', color: '#64748b', bg: '#f8fafc' },
+  'Blocker': { label: 'BLK', color: '#dc2626', bg: '#fef2f2' },
+};
+
 // ─── Phase Colors (for timeline) ────────────────────────────────────
 export const PHASE = {
   establish: {
-    bg: 'rgba(59,130,246,0.06)',
+    bg: '#eff6ff',        // blue-50
     border: '#3b82f6',
-    text: '#60a5fa',
+    text: '#1d4ed8',
     label: '建立据点',
   },
   expand: {
-    bg: 'rgba(139,92,246,0.06)',
+    bg: '#f5f3ff',        // violet-50
     border: '#8b5cf6',
-    text: '#a78bfa',
+    text: '#6d28d9',
     label: '扩大战果',
   },
   harvest: {
-    bg: 'rgba(34,197,94,0.06)',
+    bg: '#f0fdf4',        // green-50
     border: '#22c55e',
-    text: '#4ade80',
-    label: '收割',
+    text: '#15803d',
+    label: '收割成果',
   },
 } as const;

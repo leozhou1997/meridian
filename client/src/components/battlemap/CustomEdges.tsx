@@ -4,7 +4,7 @@ import { EDGE, NEED_TYPE } from './colors';
 
 /**
  * NeedEdge: connects stakeholder → need node
- * Color matches the need type
+ * Subtle line, color matches the need type
  */
 function NeedEdgeComponent(props: EdgeProps) {
   const needType = (props.data?.needType as string) || 'organizational';
@@ -17,7 +17,7 @@ function NeedEdgeComponent(props: EdgeProps) {
     targetY: props.targetY,
     sourcePosition: props.sourcePosition,
     targetPosition: props.targetPosition,
-    borderRadius: 12,
+    borderRadius: 8,
   });
 
   return (
@@ -26,8 +26,8 @@ function NeedEdgeComponent(props: EdgeProps) {
       path={edgePath}
       style={{
         stroke: typeColors.border,
-        strokeWidth: 1.5,
-        strokeOpacity: 0.5,
+        strokeWidth: 1,
+        strokeOpacity: 0.3,
       }}
     />
   );
@@ -35,7 +35,6 @@ function NeedEdgeComponent(props: EdgeProps) {
 
 /**
  * RelationshipEdge: connects stakeholder ↔ stakeholder
- * or dimension ↔ stakeholder
  */
 function RelationshipEdgeComponent(props: EdgeProps) {
   const relType = (props.data?.relationType as string) || 'neutral';
@@ -50,7 +49,7 @@ function RelationshipEdgeComponent(props: EdgeProps) {
     targetY: props.targetY,
     sourcePosition: props.sourcePosition,
     targetPosition: props.targetPosition,
-    borderRadius: 16,
+    borderRadius: 12,
   });
 
   return (
@@ -60,8 +59,8 @@ function RelationshipEdgeComponent(props: EdgeProps) {
       style={{
         stroke: color,
         strokeWidth: 1,
-        strokeOpacity: 0.35,
-        strokeDasharray: '6 4',
+        strokeOpacity: 0.25,
+        strokeDasharray: '4 3',
       }}
     />
   );
@@ -69,6 +68,7 @@ function RelationshipEdgeComponent(props: EdgeProps) {
 
 /**
  * DimensionEdge: connects dimension → stakeholder in dimension lens
+ * Very subtle vertical connector
  */
 function DimensionEdgeComponent(props: EdgeProps) {
   const color = (props.data?.color as string) || EDGE.neutral;
@@ -80,7 +80,7 @@ function DimensionEdgeComponent(props: EdgeProps) {
     targetY: props.targetY,
     sourcePosition: props.sourcePosition,
     targetPosition: props.targetPosition,
-    borderRadius: 12,
+    borderRadius: 6,
   });
 
   return (
@@ -89,8 +89,8 @@ function DimensionEdgeComponent(props: EdgeProps) {
       path={edgePath}
       style={{
         stroke: color,
-        strokeWidth: 1.5,
-        strokeOpacity: 0.4,
+        strokeWidth: 1,
+        strokeOpacity: 0.25,
       }}
     />
   );

@@ -1154,3 +1154,31 @@
 - [x] 星辰具身智能 — 企业级销售流程手册 (4329 chars)
 - [x] All 4 docs seeded to tenant 180001 with processingStatus=completed
 - [x] 星辰具身智能 — 销售手册 (covered by 企业级销售流程手册)
+
+## BattleMap Redesign v2 — Professional Fixed Layout
+
+### Problems with v1 (React Flow free-floating)
+- Dark gray "cartoon" game aesthetic, not professional
+- Nodes overlap with no hierarchy
+- Zoom controls and minimap overlap timeline
+- Free dragging adds no value for sales workflow
+- Visual style inconsistent with Meridian's light professional theme
+
+### v2 Design Principles
+- Fixed hierarchical layout (Decision Maker top → Blocker bottom)
+- Light professional theme matching Meridian design language
+- No dragging, no minimap, minimal zoom controls
+- Proper spacing — no overlaps
+- React Flow retained as rendering engine (good at edges/connections)
+
+### Tasks
+- [x] Audit current Meridian CSS variables and design tokens
+- [x] Redesign layout engine: fixed Y positions by role tier, spread X evenly
+- [x] Redesign StakeholderNode: light bg, colored left border, role badges (DM/CH/INF/EV/BLK)
+- [x] Redesign NeedNode: compact pill/chip style, light theme
+- [x] Redesign DimensionNode: light card with colored progress bar + score
+- [x] Remove minimap, hide zoom controls entirely
+- [x] Fix timeline panel separation from graph area (light border)
+- [x] Edge styling: thin subtle lines (opacity 0.25-0.3)
+- [x] Rewrite NeedEditDialog with light theme
+- [x] Visual review and test — 130 tests passing, TypeScript clean

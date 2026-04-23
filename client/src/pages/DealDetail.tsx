@@ -1059,7 +1059,7 @@ export default function DealDetail() {
                       selectedDimension={selectedDimension}
                     />
                   </div>
-                  {/* Stakeholders */}
+                  {/* Stakeholders — enriched decision-maker panel */}
                   <StakeholderSidebar
                     stakeholders={localStakeholders.map((s: any) => ({
                       id: s.id,
@@ -1069,8 +1069,20 @@ export default function DealDetail() {
                       sentiment: s.sentiment,
                       engagement: s.engagement,
                       avatar: s.avatar,
+                      keyInsights: s.keyInsights,
+                      personalNotes: s.personalNotes,
+                    }))}
+                    needs={stakeholderNeedsData.map((n: any) => ({
+                      id: n.id,
+                      stakeholderId: n.stakeholderId,
+                      needType: n.needType,
+                      title: n.title,
+                      status: n.status,
+                      dimensionKey: n.dimensionKey || null,
+                      priority: n.priority,
                     }))}
                     aiInsights={[]}
+                    isZh={isZh}
                     onStakeholderClick={(id) => {
                       const s = deal.stakeholders.find((st: any) => st.id === id);
                       if (s) handleStakeholderClick(s as Stakeholder);

@@ -1190,12 +1190,12 @@
 - [x] Translate role badges to Chinese (决策者/支持者/影响者/评估者/阻碍者) with isZh support
 
 ## BattleMap Macro Redesign — Critical Path Scorecard
-- [ ] Replace React Flow canvas with fixed modular scorecard (no drag/zoom)
-- [ ] Implement critical path layout: 需求确认 → 价值论证 → 商务突破
-- [ ] Add parallel track: 关系渗透 as continuous bar
-- [ ] Add side quests: 技术验证 + 竞争防御 (conditional, can be N/A)
-- [ ] Add overall deal health score (weighted)
-- [ ] Move people cards from BattleMap into left sidebar "决策人栏"
-- [ ] Remove people/dimension lens toggle — single unified view
+- [x] Replace React Flow canvas with fixed modular scorecard (DealScorecard.tsx, no drag/zoom)
+- [x] Implement critical path layout: 需求确认 → 价值论证 → 商务突破
+- [x] Add parallel track: 关系渗透 as continuous bar
+- [x] Add side quests: 技术验证 + 竞争防御 (conditional, can be N/A)
+- [x] Add overall deal health score (weighted: critical 60%, parallel 25%, side 15%)
+- [x] Enrich StakeholderSidebar as decision-maker panel (role badges, dimension chips, needs detail, engagement bars)
+- [x] Remove people/dimension lens toggle — single unified view + cleaned up 8 unused battlemap files
 - [ ] Review penetration path stages (建立据点/扩大战果/收割成果) alignment with new dimensions
-- [ ] Visual review and test
+- [x] Visual review and test — 130 tests passing, TypeScript clean

@@ -1277,8 +1277,17 @@
 - [ ] AI chat suggestions → one-click create action
 
 ## Visual Polish: Overflow Fix + Avatars + Logo
-- [ ] Fix health score overflow cutoff (circle score + status text being clipped at top)
+- [x] Fix health score overflow cutoff (circle score + status text being clipped at top)
 - [ ] Regenerate realistic diverse avatars for all 8 stakeholders (no repeats, more natural)
 - [ ] Generate Meridian product logo
 - [ ] Upload all assets to CDN and update database
 - [ ] Wire logo into app header/favicon
+
+## Scorecard Digest Redesign
+- [x] Add aiDigest column to dealDimensions DB table
+- [x] Update AI generateMap to produce aiDigest (1-2 sentence condensed summary) alongside full aiSummary
+- [x] Redesign ALL dimension cards: show digest only, with "查看详情" (modal) and "行动项" (jump to todo) buttons
+- [x] Side quest cards also show compressed digest + detail/action buttons
+- [x] Detail modal shows full aiSummary on click
+- [x] Health score removed from DealScorecard (already in sticky sub-header)
+- [x] TypeScript clean build + 130 tests passing

@@ -616,7 +616,7 @@ export async function updateDealDimension(
 export async function bulkUpdateDealDimensions(
   dealId: number,
   tenantId: number,
-  updates: Array<{ dimensionKey: string; status: string; aiSummary?: string; notes?: string }>
+  updates: Array<{ dimensionKey: string; status: string; aiSummary?: string; aiDigest?: string; notes?: string }>
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -625,6 +625,7 @@ export async function bulkUpdateDealDimensions(
       .set({
         status: u.status as any,
         aiSummary: u.aiSummary ?? null,
+        aiDigest: u.aiDigest ?? null,
         notes: u.notes ?? null,
       })
       .where(and(

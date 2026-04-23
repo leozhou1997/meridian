@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   Search,
   TrendingUp,
@@ -14,6 +14,9 @@ import {
   ChevronRight,
   Sparkles,
   Loader2,
+  ListTodo,
+  Eye,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -25,7 +28,8 @@ interface DimensionInfo {
   dimensionKey: string;
   status: "not_started" | "in_progress" | "completed" | "blocked";
   aiSummary?: string | null;
-  [key: string]: any; // Allow extra DB fields
+  aiDigest?: string | null;
+  [key: string]: any;
 }
 
 interface ActionInfo {
@@ -153,8 +157,6 @@ const STATUS_CONFIG: Record<string, { label: string; labelEn: string; icon: type
   blocked: { label: "阻塞", labelEn: "Blocked", icon: AlertTriangle, color: "#EF4444" },
 };
 
-// Stage-based progress: monotonically increasing, never goes backward
-// not_started=0%, in_progress=50%, completed=100%, blocked=25% (stuck but started)
 function computeStageProgress(status: string): number {
   switch (status) {
     case 'completed': return 100;
@@ -164,7 +166,6 @@ function computeStageProgress(status: string): number {
   }
 }
 
-// Action completion is secondary info (shown as text, not driving the bar)
 function computeActionStats(actions: ActionInfo[], dimensionKey: string) {
   const dimActions = actions.filter((a) => a.dimensionKey === dimensionKey);
   const total = dimActions.length;
@@ -183,41 +184,45 @@ function getStakeholdersForDimension(
   return stakeholders.filter((s) => stakeholderIds.has(s.id));
 }
 
-// ─── Health Score ────────────────────────────────────────────────────────────
+// ─── Detail Modal ───────────────────────────────────────────────────────────
 
-function computeHealthScore(dimensions: DimensionInfo[]): number {
-  // Weighted: critical path 60% (20% each), parallel 25%, side quests 15% (7.5% each)
-  const weights: Record<string, number> = {
-    need_discovery: 0.20,
-    value_proposition: 0.20,
-    commercial_close: 0.20,
-    relationship_penetration: 0.25,
-    tech_validation: 0.075,
-    competitive_defense: 0.075,
-  };
-
-  let score = 0;
-  for (const dim of dimensions) {
-    const w = weights[dim.dimensionKey] || 0;
-    // Health score is purely stage-based — monotonically increasing
-    score += computeStageProgress(dim.status) * w;
-  }
-  return Math.round(score);
+function DetailModal({
+  isOpen,
+  onClose,
+  label,
+  aiSummary,
+  textColor,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  label: string;
+  aiSummary: string;
+  textColor: string;
+}) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="bg-white rounded-xl shadow-2xl max-w-lg w-full mx-4 max-h-[80vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+          <h3 className={cn("text-sm font-bold", textColor)}>{label}</h3>
+          <button onClick={onClose} className="p-1 rounded-md hover:bg-gray-100 transition-colors">
+            <X size={16} className="text-gray-400" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-5 py-4">
+          <div className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap prose prose-xs max-w-none">
+            {aiSummary}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-function healthColor(score: number): string {
-  if (score >= 70) return "#10B981"; // green
-  if (score >= 40) return "#F59E0B"; // amber
-  return "#EF4444"; // red
-}
-
-function healthLabel(score: number, isZh: boolean): string {
-  if (score >= 70) return isZh ? "进展良好" : "On Track";
-  if (score >= 40) return isZh ? "需要关注" : "Needs Attention";
-  return isZh ? "风险较高" : "At Risk";
-}
-
-// ─── Sub-Components ──────────────────────────────────────────────────────────
+// ─── Dimension Card ─────────────────────────────────────────────────────────
 
 function DimensionCard({
   dimKey,
@@ -234,8 +239,10 @@ function DimensionCard({
   actionStats,
   relatedStakeholders,
   aiSummary,
+  aiDigest,
   isZh,
-  onClick,
+  onViewDetail,
+  onJumpToTodo,
   compact = false,
 }: {
   dimKey: string;
@@ -248,116 +255,149 @@ function DimensionCard({
   textColor: string;
   accentBg: string;
   status: string;
-  stageProgress: number; // 0-100, stage-based, monotonically increasing
-  actionStats: { total: number; done: number }; // secondary info
+  stageProgress: number;
+  actionStats: { total: number; done: number };
   relatedStakeholders: StakeholderInfo[];
   aiSummary?: string | null;
+  aiDigest?: string | null;
   isZh: boolean;
-  onClick?: () => void;
+  onViewDetail?: () => void;
+  onJumpToTodo?: () => void;
   compact?: boolean;
 }) {
   const statusCfg = STATUS_CONFIG[status] || STATUS_CONFIG.not_started;
   const StatusIcon = statusCfg.icon;
+  const [showDetail, setShowDetail] = useState(false);
+
+  // Display text: prefer aiDigest, fall back to first sentence of aiSummary
+  const digestText = aiDigest || (aiSummary ? aiSummary.split(/[。.！!？?\n]/)[0] + (aiSummary.includes('。') ? '。' : '.') : null);
 
   return (
-    <button
-      className={cn(
-        "w-full text-left rounded-lg border transition-all group",
-        bgLight,
-        borderColor,
-        "hover:shadow-sm hover:border-opacity-80",
-        compact ? "p-2.5" : "p-3.5"
-      )}
-      onClick={onClick}
-    >
-      {/* Header: icon + label + status */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <div
-            className={cn("rounded-md flex items-center justify-center flex-shrink-0", accentBg,
-              compact ? "w-7 h-7" : "w-8 h-8"
-            )}
-          >
-            <Icon size={compact ? 14 : 16} style={{ color }} strokeWidth={2} />
-          </div>
-          <div>
-            <h4 className={cn("font-semibold leading-tight", textColor, compact ? "text-xs" : "text-sm")}>
-              {label}
-            </h4>
-            {description && !compact && (
-              <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">{description}</p>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center gap-1 flex-shrink-0">
-          <StatusIcon size={12} style={{ color: statusCfg.color }} />
-          <span className="text-[10px] font-medium" style={{ color: statusCfg.color }}>
-            {isZh ? statusCfg.label : statusCfg.labelEn}
-          </span>
-        </div>
-      </div>
-
-      {/* Stage progress bar (monotonically increasing) */}
-      <div className="mt-2.5">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-[10px] text-muted-foreground">
-            {isZh ? "阶段进度" : "Stage"}
-          </span>
-          <span className="text-[10px] text-muted-foreground tabular-nums">
-            {actionStats.total > 0 ? (
-              <>{isZh ? `${actionStats.done}/${actionStats.total} 行动` : `${actionStats.done}/${actionStats.total} actions`}</>
-            ) : null}
-          </span>
-        </div>
-        <div className="h-1.5 rounded-full bg-black/5 overflow-hidden">
-          <div
-            className="h-full rounded-full transition-all duration-500"
-            style={{
-              width: `${Math.max(stageProgress, status !== 'not_started' ? 3 : 0)}%`,
-              backgroundColor: status === "blocked" ? "#EF4444" : color,
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Related stakeholders */}
-      {relatedStakeholders.length > 0 && !compact && (
-        <div className="mt-2 flex items-center gap-1 flex-wrap">
-          {relatedStakeholders.slice(0, 4).map((s) => (
-            <span
-              key={s.id}
-              className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground bg-white/60 rounded px-1.5 py-0.5"
+    <>
+      <div
+        className={cn(
+          "w-full text-left rounded-lg border transition-all",
+          bgLight,
+          borderColor,
+          compact ? "p-2.5" : "p-3.5"
+        )}
+      >
+        {/* Header: icon + label + status */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div
+              className={cn("rounded-md flex items-center justify-center flex-shrink-0", accentBg,
+                compact ? "w-7 h-7" : "w-8 h-8"
+              )}
             >
-              <span className={cn(
-                "w-1.5 h-1.5 rounded-full",
-                s.sentiment === "Positive" || s.sentiment === "support" ? "bg-emerald-400" :
-                s.sentiment === "Negative" || s.sentiment === "blocker" ? "bg-red-400" :
-                "bg-gray-300"
-              )} />
-              {s.name}
+              <Icon size={compact ? 14 : 16} style={{ color }} strokeWidth={2} />
+            </div>
+            <div>
+              <h4 className={cn("font-semibold leading-tight", textColor, compact ? "text-xs" : "text-sm")}>
+                {label}
+              </h4>
+              {description && !compact && (
+                <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">{description}</p>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <StatusIcon size={12} style={{ color: statusCfg.color }} />
+            <span className="text-[10px] font-medium" style={{ color: statusCfg.color }}>
+              {isZh ? statusCfg.label : statusCfg.labelEn}
             </span>
-          ))}
-          {relatedStakeholders.length > 4 && (
-            <span className="text-[10px] text-muted-foreground">
-              +{relatedStakeholders.length - 4}
-            </span>
-          )}
+          </div>
         </div>
-      )}
 
-      {/* AI Summary — full text, no truncation */}
-      {aiSummary && !compact && (
-        <p className="mt-2 text-[10px] text-muted-foreground/80 leading-relaxed">
-          {aiSummary}
-        </p>
-      )}
+        {/* Stage progress bar */}
+        <div className="mt-2.5">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] text-muted-foreground">
+              {isZh ? "阶段进度" : "Stage"}
+            </span>
+            <span className="text-[10px] text-muted-foreground tabular-nums">
+              {actionStats.total > 0 ? (
+                <>{isZh ? `${actionStats.done}/${actionStats.total} 行动` : `${actionStats.done}/${actionStats.total} actions`}</>
+              ) : null}
+            </span>
+          </div>
+          <div className="h-1.5 rounded-full bg-black/5 overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${Math.max(stageProgress, status !== 'not_started' ? 3 : 0)}%`,
+                backgroundColor: status === "blocked" ? "#EF4444" : color,
+              }}
+            />
+          </div>
+        </div>
 
-      {/* Click hint */}
-      <div className="mt-2 flex items-center gap-0.5 text-[10px] text-muted-foreground/50 group-hover:text-muted-foreground transition-colors">
-        <ChevronRight size={10} />
-        <span>{isZh ? "查看详情" : "View details"}</span>
+        {/* AI Digest — condensed 1-2 sentence summary */}
+        {digestText && !compact && (
+          <p className="mt-2 text-[10px] text-muted-foreground/80 leading-relaxed line-clamp-2">
+            {digestText}
+          </p>
+        )}
+
+        {/* Related stakeholders */}
+        {relatedStakeholders.length > 0 && !compact && (
+          <div className="mt-1.5 flex items-center gap-1 flex-wrap">
+            {relatedStakeholders.slice(0, 4).map((s) => (
+              <span
+                key={s.id}
+                className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground bg-white/60 rounded px-1.5 py-0.5"
+              >
+                <span className={cn(
+                  "w-1.5 h-1.5 rounded-full",
+                  s.sentiment === "Positive" || s.sentiment === "support" ? "bg-emerald-400" :
+                  s.sentiment === "Negative" || s.sentiment === "blocker" ? "bg-red-400" :
+                  "bg-gray-300"
+                )} />
+                {s.name}
+              </span>
+            ))}
+            {relatedStakeholders.length > 4 && (
+              <span className="text-[10px] text-muted-foreground">
+                +{relatedStakeholders.length - 4}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Action buttons: View Detail + Jump to Todo */}
+        {!compact && (aiSummary || actionStats.total > 0) && (
+          <div className="mt-2.5 flex items-center gap-2">
+            {aiSummary && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowDetail(true); }}
+                className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md hover:bg-black/5"
+              >
+                <Eye size={10} />
+                {isZh ? "查看详情" : "Details"}
+              </button>
+            )}
+            {actionStats.total > 0 && onJumpToTodo && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onJumpToTodo(); }}
+                className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md hover:bg-black/5"
+              >
+                <ListTodo size={10} />
+                {isZh ? "行动项" : "Actions"}
+              </button>
+            )}
+          </div>
+        )}
       </div>
-    </button>
+
+      {/* Detail modal */}
+      <DetailModal
+        isOpen={showDetail}
+        onClose={() => setShowDetail(false)}
+        label={label}
+        aiSummary={aiSummary || ""}
+        textColor={textColor}
+      />
+    </>
   );
 }
 
@@ -379,37 +419,21 @@ export function DealScorecard({
     return m;
   }, [dimensions]);
 
-  const healthScore = useMemo(
-    () => computeHealthScore(dimensions),
-    [dimensions]
-  );
-
   const riskSignals = useMemo(() => {
     const signals: string[] = [];
-    // Check critical path gaps
     for (const cp of CRITICAL_PATH) {
       const dim = dimMap[cp.key];
       if (!dim || dim.status === "not_started") {
-        signals.push(
-          isZh
-            ? `${cp.label}尚未启动`
-            : `${cp.labelEn} not started`
-        );
+        signals.push(isZh ? `${cp.label}尚未启动` : `${cp.labelEn} not started`);
       }
       if (dim?.status === "blocked") {
-        signals.push(
-          isZh
-            ? `${cp.label}被阻塞`
-            : `${cp.labelEn} is blocked`
-        );
+        signals.push(isZh ? `${cp.label}被阻塞` : `${cp.labelEn} is blocked`);
       }
     }
-    // Check relationship coverage
     const relDim = dimMap["relationship_penetration"];
     if (!relDim || relDim.status === "not_started") {
       signals.push(isZh ? "关系渗透尚未启动" : "No relationship progress");
     }
-    // Check if any decision maker is negative
     const negDM = stakeholders.find(
       (s) => s.role === "Decision Maker" && (s.sentiment === "Negative" || s.sentiment === "blocker")
     );
@@ -421,38 +445,10 @@ export function DealScorecard({
 
   return (
     <div className="h-full flex flex-col gap-4 overflow-auto">
-      {/* ── Top: Health Score Bar ── */}
-      <div className="flex items-center justify-between px-1">
-        <div className="flex items-center gap-3">
-          {/* Score circle */}
-          <div className="relative w-12 h-12 flex items-center justify-center">
-            <svg className="w-12 h-12 -rotate-90" viewBox="0 0 48 48">
-              <circle cx="24" cy="24" r="20" fill="none" stroke="#e5e7eb" strokeWidth="3" />
-              <circle
-                cx="24" cy="24" r="20"
-                fill="none"
-                stroke={healthColor(healthScore)}
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeDasharray={`${(healthScore / 100) * 125.6} 125.6`}
-              />
-            </svg>
-            <span className="absolute text-sm font-bold tabular-nums" style={{ color: healthColor(healthScore) }}>
-              {healthScore}
-            </span>
-          </div>
-          <div>
-            <div className="text-sm font-semibold text-foreground">
-              {isZh ? "项目健康度" : "Deal Health"}
-            </div>
-            <div className="text-xs font-medium" style={{ color: healthColor(healthScore) }}>
-              {healthLabel(healthScore, isZh)}
-            </div>
-          </div>
-        </div>
-
-        {/* AI Generate button */}
-        {onAiGenerate && (
+      {/* ── AI Generate button (health score is now in sticky header above) ── */}
+      {onAiGenerate && (
+        <div className="flex items-center justify-between px-1">
+          <div />
           <Button
             size="sm"
             variant="outline"
@@ -466,8 +462,8 @@ export function DealScorecard({
               <><Sparkles size={12} />{isZh ? "AI 分析" : "AI Analysis"}</>
             )}
           </Button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* ── Risk Signals ── */}
       {riskSignals.length > 0 && (
@@ -517,8 +513,10 @@ export function DealScorecard({
                   actionStats={actionStats}
                   relatedStakeholders={related}
                   aiSummary={dim?.aiSummary}
+                  aiDigest={dim?.aiDigest}
                   isZh={isZh}
-                  onClick={() => onDimensionClick?.(cp.key)}
+                  onViewDetail={() => {}}
+                  onJumpToTodo={() => onDimensionClick?.(cp.key)}
                 />
                 {idx < CRITICAL_PATH.length - 1 && (
                   <div className="flex items-center flex-shrink-0 px-0.5">
@@ -563,8 +561,10 @@ export function DealScorecard({
               actionStats={actionStats}
               relatedStakeholders={related}
               aiSummary={dim?.aiSummary}
+              aiDigest={dim?.aiDigest}
               isZh={isZh}
-              onClick={() => onDimensionClick?.(pt.key)}
+              onViewDetail={() => {}}
+              onJumpToTodo={() => onDimensionClick?.(pt.key)}
             />
           );
         })()}
@@ -584,94 +584,170 @@ export function DealScorecard({
             const status = dim?.status || "not_started";
             const actionStats = computeActionStats(actions, sq.key);
             const related = getStakeholdersForDimension(needs, stakeholders, sq.key);
-
             const stageProgress = computeStageProgress(status);
+            const isNA = status === "not_started" && actionStats.total === 0 && !dim?.aiSummary;
 
-            // If no actions and not started, show as N/A
-            const isNA = status === "not_started" && actionStats.total === 0;
+            const statusCfg = STATUS_CONFIG[status] || STATUS_CONFIG.not_started;
+            const StatusIcon = statusCfg.icon;
+
+            // Digest for side quests
+            const digestText = dim?.aiDigest || (dim?.aiSummary ? dim.aiSummary.split(/[。.！!？?\n]/)[0] + (dim.aiSummary.includes('。') ? '。' : '.') : null);
 
             return (
-              <button
+              <SideQuestCard
                 key={sq.key}
-                className={cn(
-                  "w-full text-left rounded-lg border transition-all p-2.5 group",
-                  isNA ? "bg-muted/20 border-border/30" : sq.bgLight,
-                  isNA ? "" : sq.borderColor,
-                  "hover:shadow-sm"
-                )}
-                onClick={() => onDimensionClick?.(sq.key)}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className={cn(
-                      "w-6 h-6 rounded flex items-center justify-center",
-                      isNA ? "bg-muted/40" : sq.accentBg
-                    )}>
-                      <sq.icon size={13} style={{ color: isNA ? "#9CA3AF" : sq.color }} strokeWidth={2} />
-                    </div>
-                    <span className={cn(
-                      "text-xs font-semibold",
-                      isNA ? "text-muted-foreground" : sq.textColor
-                    )}>
-                      {isZh ? sq.label : sq.labelEn}
-                    </span>
-                  </div>
-                  {isNA ? (
-                    <span className="text-[10px] text-muted-foreground/50 font-medium">N/A</span>
-                  ) : (
-                    <div className="flex items-center gap-1">
-                      {(() => {
-                        const sc = STATUS_CONFIG[status] || STATUS_CONFIG.not_started;
-                        const SI = sc.icon;
-                        return <SI size={10} style={{ color: sc.color }} />;
-                      })()}
-                      <span className="text-[10px] font-medium tabular-nums" style={{ color: sq.color }}>
-                        {actionStats.done}/{actionStats.total}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {!isNA && (
-                  <div className="mt-2">
-                    <div className="h-1 rounded-full bg-black/5 overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{
-                          width: `${Math.max(stageProgress, status !== 'not_started' ? 3 : 0)}%`,
-                          backgroundColor: status === "blocked" ? "#EF4444" : sq.color,
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* AI Summary for side quests */}
-                {dim?.aiSummary && !isNA && (
-                  <p className="mt-1.5 text-[10px] text-muted-foreground/80 leading-relaxed">
-                    {dim.aiSummary}
-                  </p>
-                )}
-
-                {/* Related stakeholders for side quests */}
-                {related.length > 0 && !isNA && (
-                  <div className="mt-1.5 flex items-center gap-1 flex-wrap">
-                    {related.slice(0, 3).map((s) => (
-                      <span
-                        key={s.id}
-                        className="text-[9px] text-muted-foreground bg-white/60 rounded px-1 py-0.5"
-                      >
-                        {s.name}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </button>
+                sq={sq}
+                dim={dim}
+                status={status}
+                stageProgress={stageProgress}
+                actionStats={actionStats}
+                related={related}
+                isNA={isNA}
+                digestText={digestText}
+                isZh={isZh}
+                onDimensionClick={onDimensionClick}
+              />
             );
           })}
         </div>
       </div>
     </div>
+  );
+}
+
+// Side quest card as separate component to manage its own detail modal state
+function SideQuestCard({
+  sq,
+  dim,
+  status,
+  stageProgress,
+  actionStats,
+  related,
+  isNA,
+  digestText,
+  isZh,
+  onDimensionClick,
+}: {
+  sq: typeof SIDE_QUESTS[0];
+  dim: DimensionInfo | undefined;
+  status: string;
+  stageProgress: number;
+  actionStats: { total: number; done: number };
+  related: StakeholderInfo[];
+  isNA: boolean;
+  digestText: string | null;
+  isZh: boolean;
+  onDimensionClick?: (key: string) => void;
+}) {
+  const [showDetail, setShowDetail] = useState(false);
+  const statusCfg = STATUS_CONFIG[status] || STATUS_CONFIG.not_started;
+  const StatusIcon = statusCfg.icon;
+
+  return (
+    <>
+      <div
+        className={cn(
+          "w-full text-left rounded-lg border transition-all p-2.5",
+          isNA ? "bg-muted/20 border-border/30" : sq.bgLight,
+          isNA ? "" : sq.borderColor,
+          "hover:shadow-sm"
+        )}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className={cn(
+              "w-6 h-6 rounded flex items-center justify-center",
+              isNA ? "bg-muted/40" : sq.accentBg
+            )}>
+              <sq.icon size={13} style={{ color: isNA ? "#9CA3AF" : sq.color }} strokeWidth={2} />
+            </div>
+            <span className={cn(
+              "text-xs font-semibold",
+              isNA ? "text-muted-foreground" : sq.textColor
+            )}>
+              {isZh ? sq.label : sq.labelEn}
+            </span>
+          </div>
+          {isNA ? (
+            <span className="text-[10px] text-muted-foreground/50 font-medium">N/A</span>
+          ) : (
+            <div className="flex items-center gap-1">
+              <StatusIcon size={10} style={{ color: statusCfg.color }} />
+              <span className="text-[10px] font-medium tabular-nums" style={{ color: sq.color }}>
+                {actionStats.done}/{actionStats.total}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {!isNA && (
+          <div className="mt-2">
+            <div className="h-1 rounded-full bg-black/5 overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${Math.max(stageProgress, status !== 'not_started' ? 3 : 0)}%`,
+                  backgroundColor: status === "blocked" ? "#EF4444" : sq.color,
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* AI Digest for side quests */}
+        {digestText && !isNA && (
+          <p className="mt-1.5 text-[10px] text-muted-foreground/80 leading-relaxed line-clamp-2">
+            {digestText}
+          </p>
+        )}
+
+        {/* Related stakeholders */}
+        {related.length > 0 && !isNA && (
+          <div className="mt-1.5 flex items-center gap-1 flex-wrap">
+            {related.slice(0, 3).map((s) => (
+              <span
+                key={s.id}
+                className="text-[9px] text-muted-foreground bg-white/60 rounded px-1 py-0.5"
+              >
+                {s.name}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Action buttons */}
+        {!isNA && (dim?.aiSummary || actionStats.total > 0) && (
+          <div className="mt-2 flex items-center gap-2">
+            {dim?.aiSummary && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowDetail(true); }}
+                className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors px-1.5 py-0.5 rounded-md hover:bg-black/5"
+              >
+                <Eye size={9} />
+                {isZh ? "详情" : "Details"}
+              </button>
+            )}
+            {actionStats.total > 0 && onDimensionClick && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onDimensionClick(sq.key); }}
+                className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors px-1.5 py-0.5 rounded-md hover:bg-black/5"
+              >
+                <ListTodo size={9} />
+                {isZh ? "行动项" : "Actions"}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      <DetailModal
+        isOpen={showDetail}
+        onClose={() => setShowDetail(false)}
+        label={isZh ? sq.label : sq.labelEn}
+        aiSummary={dim?.aiSummary || ""}
+        textColor={sq.textColor}
+      />
+    </>
   );
 }
 

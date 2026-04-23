@@ -1,0 +1,1 @@
+ALTER TABLE `dealDimensions` ADD `aiDigest` varchar(500);

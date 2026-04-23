@@ -134,6 +134,13 @@
       "when": 1776857096875,
       "tag": "0018_secret_sersi",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "5",
+      "when": 1776930667241,
+      "tag": "0019_tough_dakota_north",
+      "breakpoints": true
     }
   ]
 }

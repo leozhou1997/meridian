@@ -386,6 +386,7 @@ export const dealDimensions = mysqlTable("dealDimensions", {
   ]).default("not_started").notNull(),
   notes: text("notes"),
   aiSummary: text("aiSummary"),
+  aiDigest: varchar("aiDigest", { length: 500 }),
   sortOrder: int("sortOrder").default(0).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

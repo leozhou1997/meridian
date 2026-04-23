@@ -138,10 +138,12 @@ The 6 Decision Dimensions (ordered by strategic importance):
 
 For each dimension, assess:
 - Status: "not_started" (no evidence), "in_progress" (active engagement), "completed" (dimension secured), "blocked" (obstacle identified)
-- Summary: 1-2 sentences grounded in meeting evidence
+- aiSummary: Detailed analysis grounded in meeting evidence (can be multiple paragraphs with markdown)
+- aiDigest: A single sentence (max 2 sentences) that captures the core takeaway. This is the headline shown on the scorecard. Must be punchy and actionable, not generic.
 - Actions: 1-2 specific next steps for this dimension
 
-CRITICAL: Every assessment MUST be grounded in meeting evidence. Do NOT fabricate. If no evidence exists for a dimension, mark it "not_started" and suggest discovery actions.${langInstruction}
+CRITICAL: Every assessment MUST be grounded in meeting evidence. Do NOT fabricate. If no evidence exists for a dimension, mark it "not_started" and suggest discovery actions.
+CRITICAL: aiDigest must be a genuinely condensed insight, NOT a truncation of aiSummary. Think of it as the one thing the sales rep needs to know at a glance.${langInstruction}
 
 Return ONLY valid JSON:
 {
@@ -149,7 +151,8 @@ Return ONLY valid JSON:
     {
       "dimensionKey": "need_discovery",
       "status": "in_progress",
-      "aiSummary": "Evidence-based summary...",
+      "aiSummary": "Detailed evidence-based analysis...",
+      "aiDigest": "One punchy sentence capturing the key takeaway.",
       "actions": [
         { "text": "Specific action with named person", "priority": "high", "status": "pending" }
       ]
@@ -190,6 +193,7 @@ ${meetingEvidence}`;
           dimensionKey: string;
           status: string;
           aiSummary: string;
+          aiDigest?: string;
           actions?: Array<{ text: string; priority?: string; status?: string }>;
         }>;
         quickInsights?: string[];
@@ -214,6 +218,7 @@ ${meetingEvidence}`;
           dimensionKey: d.dimensionKey,
           status: d.status,
           aiSummary: d.aiSummary,
+          aiDigest: d.aiDigest,
         }))
       );
 

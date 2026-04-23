@@ -302,21 +302,54 @@ export default function DealDetail() {
     onSuccess: () => utils.dimensions.listByDeal.invalidate({ dealId }),
   });
 
-  const generateNeedsMutation = trpc.stakeholderNeeds.aiGenerate.useMutation({
-    onSuccess: (data) => {
-      utils.stakeholderNeeds.listByDeal.invalidate({ dealId });
-      if (data.success) {
-        toast.success(isZh ? `已生成 ${data.needsCreated} 个需求分析` : `Generated ${data.needsCreated} needs`);
-      } else {
-        toast.error((data as any).error || (isZh ? '分析失败' : 'Analysis failed'));
+  // ── Unified AI Analysis: generateMap (dimensions + actions) THEN aiGenerate (needs) ──
+  const generateMapMutation = trpc.dimensions.generateMap.useMutation();
+  const generateNeedsMutation = trpc.stakeholderNeeds.aiGenerate.useMutation();
+
+  const runFullAiAnalysis = async () => {
+    setIsGeneratingNeeds(true);
+    try {
+      // Step 1: Generate Decision Map (updates dimension statuses + creates action items)
+      const mapResult = await generateMapMutation.mutateAsync({
+        dealId,
+        language: language as 'zh' | 'en',
+      });
+
+      if (!mapResult.success) {
+        toast.error((mapResult as any).error || (isZh ? '维度分析失败' : 'Dimension analysis failed'));
+        setIsGeneratingNeeds(false);
+        return;
       }
+
+      toast.success(isZh
+        ? `已分析 ${mapResult.dimensionsUpdated} 个维度，创建 ${mapResult.actionsCreated} 个行动项`
+        : `Analyzed ${mapResult.dimensionsUpdated} dimensions, created ${mapResult.actionsCreated} actions`);
+
+      // Step 2: Generate Stakeholder Needs
+      const needsResult = await generateNeedsMutation.mutateAsync({
+        dealId,
+        language: language as 'zh' | 'en',
+        regenerate: stakeholderNeedsData.length > 0,
+      });
+
+      if (needsResult.success) {
+        toast.success(isZh
+          ? `已生成 ${needsResult.needsCreated} 个需求分析`
+          : `Generated ${needsResult.needsCreated} needs`);
+      }
+
+      // Invalidate all related queries to refresh the entire UI
+      await Promise.all([
+        utils.dimensions.listByDeal.invalidate({ dealId }),
+        utils.nextActions.listByDeal.invalidate({ dealId }),
+        utils.stakeholderNeeds.listByDeal.invalidate({ dealId }),
+      ]);
+    } catch (err) {
+      toast.error(isZh ? 'AI 分析失败，请重试' : 'AI analysis failed, please retry');
+    } finally {
       setIsGeneratingNeeds(false);
-    },
-    onError: () => {
-      toast.error(isZh ? '需求分析失败，请重试' : 'Needs analysis failed, please retry');
-      setIsGeneratingNeeds(false);
-    },
-  });
+    }
+  };
   const updateNeedStatusMutation = trpc.stakeholderNeeds.update.useMutation({
     onSuccess: () => utils.stakeholderNeeds.listByDeal.invalidate({ dealId }),
   });
@@ -1095,14 +1128,7 @@ export default function DealDetail() {
                           setSelectedDimension(key);
                           setCenterView('actions');
                         }}
-                        onAiGenerate={() => {
-                          setIsGeneratingNeeds(true);
-                          generateNeedsMutation.mutate({
-                            dealId,
-                            language: language as 'zh' | 'en',
-                            regenerate: stakeholderNeedsData.length > 0,
-                          });
-                        }}
+                        onAiGenerate={() => runFullAiAnalysis()}
                         isGenerating={isGeneratingNeeds}
                       />
                     ) : (

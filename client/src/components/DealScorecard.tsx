@@ -345,9 +345,9 @@ function DimensionCard({
         </div>
       )}
 
-      {/* AI Summary snippet */}
+      {/* AI Summary — full text, no truncation */}
       {aiSummary && !compact && (
-        <p className="mt-2 text-[10px] text-muted-foreground leading-relaxed line-clamp-2 italic">
+        <p className="mt-2 text-[10px] text-muted-foreground/80 leading-relaxed">
           {aiSummary}
         </p>
       )}
@@ -644,6 +644,13 @@ export function DealScorecard({
                       />
                     </div>
                   </div>
+                )}
+
+                {/* AI Summary for side quests */}
+                {dim?.aiSummary && !isNA && (
+                  <p className="mt-1.5 text-[10px] text-muted-foreground/80 leading-relaxed">
+                    {dim.aiSummary}
+                  </p>
                 )}
 
                 {/* Related stakeholders for side quests */}

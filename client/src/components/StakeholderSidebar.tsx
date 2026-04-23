@@ -69,17 +69,17 @@ const ROLE_CONFIG: Record<
   Blocker: { label: "Blocker", labelZh: "阻碍者", icon: Ban, tier: 6 },
 };
 
-// ─── Sentiment: only 3 semantic colors ─────────────────────────────────────
+// ─── Sentiment: border ring colors ────────────────────────────────────────
 
-const SENTIMENT_DOT: Record<string, string> = {
-  Positive: "bg-emerald-500",
-  support: "bg-emerald-500",
-  Neutral: "bg-gray-400",
-  neutral: "bg-gray-400",
-  Negative: "bg-red-500",
-  blocker: "bg-red-500",
-  leaning: "bg-amber-500",
-  unknown: "bg-gray-300",
+const SENTIMENT_RING: Record<string, string> = {
+  Positive: "ring-emerald-500",
+  support: "ring-emerald-500",
+  Neutral: "ring-gray-300",
+  neutral: "ring-gray-300",
+  Negative: "ring-red-500",
+  blocker: "ring-red-500",
+  leaning: "ring-amber-500",
+  unknown: "ring-gray-200",
 };
 
 // ─── Engagement Bars (monochrome) ──────────────────────────────────────────
@@ -146,7 +146,7 @@ function StakeholderCard({
   onClick: () => void;
 }) {
   const roleCfg = ROLE_CONFIG[stakeholder.role] || ROLE_CONFIG.User;
-  const sentimentDot = SENTIMENT_DOT[stakeholder.sentiment] || SENTIMENT_DOT.unknown;
+  const sentimentRing = SENTIMENT_RING[stakeholder.sentiment] || SENTIMENT_RING.unknown;
   const RoleIcon = roleCfg.icon;
 
   // Unique dimensions this stakeholder is involved in
@@ -187,15 +187,14 @@ function StakeholderCard({
     >
       {/* Main row */}
       <div className="flex items-center gap-2.5 px-2.5 py-2 cursor-pointer" onClick={onClick}>
-        {/* Avatar with sentiment dot */}
-        <div className="relative shrink-0">
-          <Avatar className="h-8 w-8">
+        {/* Avatar with sentiment border ring */}
+        <div className="shrink-0">
+          <Avatar className={cn("h-8 w-8 ring-2", sentimentRing)}>
             <AvatarImage src={stakeholder.avatar || undefined} alt={stakeholder.name} />
             <AvatarFallback className="text-[10px] font-medium bg-muted">
               {stakeholder.name.slice(0, 2)}
             </AvatarFallback>
           </Avatar>
-          <div className={cn("absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-card", sentimentDot)} />
         </div>
 
         {/* Name + title */}

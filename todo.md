@@ -1247,3 +1247,31 @@
 ### 4. Fix seed data context
 - [x] Added 3 stakeholder needs for need_discovery (焊装线升级, 灯塔工厂对齐, 车间主任操作需求)
 - [x] Updated need_discovery to in_progress, value_proposition/commercial_close/relationship_penetration also to in_progress
+
+## AI Logic Pipeline Fix + Data Flow Closedloop
+
+### 1. Unified AI Analysis Pipeline
+- [x] Rewired "AI 分析" button to call dimensions.generateMap THEN stakeholderNeeds.aiGenerate
+- [x] generateMap updates dimension statuses + creates action items
+- [x] After both complete, invalidates all relevant queries to refresh UI
+- [x] Loading state with toast notifications for the sequential calls
+
+### 2. Action Completion → Timeline Auto-Logging
+- [x] When user completes a todo/action, auto-creates a system record in DealTimeline
+- [x] Uses "Internal Meeting" type with [系统] prefix and dimension label
+- [ ] Show system records distinctly in timeline (different styling) — deferred
+
+### 3. Scorecard Full Detail Display
+- [x] Removed line-clamp-2 from aiSummary in DimensionCard — shows full text
+- [x] Added aiSummary display to side quest cards (tech_validation, competitive_defense)
+- [x] All dimension cards show stakeholder involvement
+
+### 4. Avatar Sentiment Border Ring
+- [x] Replaced dot indicator with ring-2 colored border on Avatar component
+- [x] Green ring = supporter, Red ring = blocker, Gray ring = neutral, Amber ring = leaning
+- [x] Generated 8 professional headshot avatars and updated database
+
+### 5. Future: Smart Action Matching (deferred)
+- [ ] When user adds timeline entry, AI scans for matching pending actions
+- [ ] Prompt user to mark matched actions as complete
+- [ ] AI chat suggestions → one-click create action

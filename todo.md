@@ -1182,3 +1182,9 @@
 - [x] Edge styling: thin subtle lines (opacity 0.25-0.3)
 - [x] Rewrite NeedEditDialog with light theme
 - [x] Visual review and test — 130 tests passing, TypeScript clean
+
+## BattleMap Bug Fixes (April 23)
+
+- [x] Connect nextActions completion to stakeholderNeeds progress — now bridges via dimensionKey (陈志远 1/4, 王建国 1/2)
+- [x] Fix overflow: added overflow-hidden to BattleMapGraph container
+- [x] Translate role badges to Chinese (决策者/支持者/影响者/评估者/阻碍者) with isZh support

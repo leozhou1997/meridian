@@ -45,6 +45,7 @@ export interface LayoutInput {
   expandedStakeholders: Set<number>;
   expandedNeeds: Set<number>;
   expandedDimensions: Set<string>;
+  isZh: boolean;
   callbacks: {
     onToggleStakeholder: (id: number) => void;
     onStakeholderClick: (id: number) => void;
@@ -97,7 +98,20 @@ export function computePeopleLens(input: LayoutInput): { nodes: Node[]; edges: E
 
   for (const sh of sorted) {
     const shNeeds = input.needs.filter(n => n.stakeholderId === sh.id);
-    const satisfiedCount = shNeeds.filter(n => n.status === 'satisfied').length;
+    // Progress: count completed actions linked to this stakeholder's dimensions
+    const shDimKeys = new Set(shNeeds.map(n => n.dimensionKey).filter(Boolean));
+    const relatedActions = input.actions.filter(a => {
+      if (a.stakeholderId === sh.id) return true; // directly linked
+      if (a.dimensionKey && shDimKeys.has(a.dimensionKey)) return true; // linked via dimension
+      return false;
+    });
+    const totalActions = relatedActions.length;
+    const doneActions = relatedActions.filter(a => a.isDone).length;
+    // Also count satisfied needs
+    const satisfiedNeeds = shNeeds.filter(n => n.status === 'satisfied' || n.status === 'in_progress').length;
+    // Combined progress: use actions if available, fall back to needs
+    const progressTotal = totalActions > 0 ? totalActions : shNeeds.length;
+    const progressDone = totalActions > 0 ? doneActions : satisfiedNeeds;
     const isExpanded = input.expandedStakeholders.has(sh.id);
 
     const shNodeId = `sh-${sh.id}`;
@@ -116,9 +130,10 @@ export function computePeopleLens(input: LayoutInput): { nodes: Node[]; edges: E
         role: sh.role,
         sentiment: sh.sentiment || 'unknown',
         avatarUrl: sh.avatarUrl,
-        needCount: shNeeds.length,
-        satisfiedCount,
+        needCount: progressTotal,
+        satisfiedCount: progressDone,
         isExpanded,
+        isZh: input.isZh,
         onToggleExpand: input.callbacks.onToggleStakeholder,
         onNodeClick: input.callbacks.onStakeholderClick,
       },
@@ -244,7 +259,18 @@ export function computeDimensionLens(input: LayoutInput): { nodes: Node[]; edges
     for (let si = 0; si < sorted.length; si++) {
       const sh = sorted[si];
       const shNeeds = input.needs.filter(n => n.stakeholderId === sh.id);
-      const satisfiedCount = shNeeds.filter(n => n.status === 'satisfied').length;
+      // Progress via actions for dimension lens too
+      const shDimKeys = new Set(shNeeds.map(n => n.dimensionKey).filter(Boolean));
+      const shRelatedActions = input.actions.filter(a => {
+        if (a.stakeholderId === sh.id) return true;
+        if (a.dimensionKey && shDimKeys.has(a.dimensionKey)) return true;
+        return false;
+      });
+      const shTotalActions = shRelatedActions.length;
+      const shDoneActions = shRelatedActions.filter(a => a.isDone).length;
+      const shSatisfiedNeeds = shNeeds.filter(n => n.status === 'satisfied' || n.status === 'in_progress').length;
+      const shProgressTotal = shTotalActions > 0 ? shTotalActions : shNeeds.length;
+      const shProgressDone = shTotalActions > 0 ? shDoneActions : shSatisfiedNeeds;
       const shNodeId = `dim-${dimKey}-sh-${sh.id}`;
       const shX = x + si * 56; // compact spacing for mini avatars
 
@@ -260,9 +286,10 @@ export function computeDimensionLens(input: LayoutInput): { nodes: Node[]; edges
           role: sh.role,
           sentiment: sh.sentiment || 'unknown',
           avatarUrl: sh.avatarUrl,
-          needCount: shNeeds.length,
-          satisfiedCount,
+          needCount: shProgressTotal,
+          satisfiedCount: shProgressDone,
           isExpanded: false,
+          isZh: input.isZh,
           compact: true, // Signal to render as mini avatar
           onToggleExpand: input.callbacks.onToggleStakeholder,
           onNodeClick: input.callbacks.onStakeholderClick,

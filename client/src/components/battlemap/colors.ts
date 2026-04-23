@@ -173,15 +173,15 @@ export function getRolePriority(role: string): number {
 }
 
 // ─── Role display info ──────────────────────────────────────────────
-export const ROLE_INFO: Record<string, { label: string; color: string; bg: string }> = {
-  'Decision Maker': { label: 'DM', color: '#7c3aed', bg: '#f5f3ff' },
-  'Champion': { label: 'CH', color: '#16a34a', bg: '#f0fdf4' },
-  'Economic Buyer': { label: 'EB', color: '#0891b2', bg: '#ecfeff' },
-  'Influencer': { label: 'INF', color: '#2563eb', bg: '#eff6ff' },
-  'Evaluator': { label: 'EV', color: '#d97706', bg: '#fffbeb' },
-  'Gatekeeper': { label: 'GK', color: '#64748b', bg: '#f8fafc' },
-  'User': { label: 'USR', color: '#64748b', bg: '#f8fafc' },
-  'Blocker': { label: 'BLK', color: '#dc2626', bg: '#fef2f2' },
+export const ROLE_INFO: Record<string, { label: string; labelEn: string; color: string; bg: string }> = {
+  'Decision Maker': { label: '决策者', labelEn: 'DM', color: '#7c3aed', bg: '#f5f3ff' },
+  'Champion': { label: '支持者', labelEn: 'CH', color: '#16a34a', bg: '#f0fdf4' },
+  'Economic Buyer': { label: '预算方', labelEn: 'EB', color: '#0891b2', bg: '#ecfeff' },
+  'Influencer': { label: '影响者', labelEn: 'INF', color: '#2563eb', bg: '#eff6ff' },
+  'Evaluator': { label: '评估者', labelEn: 'EV', color: '#d97706', bg: '#fffbeb' },
+  'Gatekeeper': { label: '把关人', labelEn: 'GK', color: '#64748b', bg: '#f8fafc' },
+  'User': { label: '使用者', labelEn: 'USR', color: '#64748b', bg: '#f8fafc' },
+  'Blocker': { label: '阻碍者', labelEn: 'BLK', color: '#dc2626', bg: '#fef2f2' },
 };
 
 // ─── Phase Colors (for timeline) ────────────────────────────────────

@@ -13,6 +13,7 @@ export interface StakeholderNodeData {
   needCount: number;
   satisfiedCount: number;
   isExpanded: boolean;
+  isZh?: boolean;
   compact?: boolean; // Mini avatar mode for dimension lens
   onToggleExpand: (id: number) => void;
   onNodeClick: (id: number) => void;
@@ -75,7 +76,9 @@ function CompactStakeholder({ d }: { d: StakeholderNodeData }) {
  */
 function FullStakeholder({ d }: { d: StakeholderNodeData }) {
   const sentimentStyle = SENTIMENT[d.sentiment] || SENTIMENT.unknown;
-  const roleInfo = ROLE_INFO[d.role] || { label: d.role.slice(0, 3).toUpperCase(), color: '#64748b', bg: '#f8fafc' };
+  const roleInfoRaw = ROLE_INFO[d.role] || { label: d.role, labelEn: d.role.slice(0, 3).toUpperCase(), color: '#64748b', bg: '#f8fafc' };
+  const roleLabel = d.isZh !== false ? roleInfoRaw.label : roleInfoRaw.labelEn;
+  const roleInfo = { ...roleInfoRaw, label: roleLabel };
   const [hovered, setHovered] = useState(false);
   const progress = d.needCount > 0 ? (d.satisfiedCount / d.needCount) * 100 : 0;
 
@@ -132,7 +135,7 @@ function FullStakeholder({ d }: { d: StakeholderNodeData }) {
                 color: roleInfo.color,
               }}
             >
-              {roleInfo.label}
+              {roleLabel}
             </span>
           </div>
           <div className="text-[11px] text-gray-500 truncate mt-0.5">{d.title}</div>

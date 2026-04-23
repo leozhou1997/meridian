@@ -140,6 +140,7 @@ export function BattleMapGraph({
     expandedStakeholders,
     expandedNeeds,
     expandedDimensions,
+    isZh,
     callbacks: {
       onToggleStakeholder: toggleStakeholder,
       onStakeholderClick,
@@ -153,7 +154,7 @@ export function BattleMapGraph({
     },
   }), [
     stakeholders, needs, actions, dimensions,
-    expandedStakeholders, expandedNeeds, expandedDimensions,
+    expandedStakeholders, expandedNeeds, expandedDimensions, isZh,
     toggleStakeholder, onStakeholderClick, onNeedStatusCycle,
     onNeedEdit, onNeedDelete, toggleNeedActions, toggleDimension,
     handleDimensionWeightChange, handleDimensionClick,
@@ -208,7 +209,7 @@ export function BattleMapGraph({
   const showNeedsEmpty = needs.length === 0 && stakeholders.length > 0;
 
   return (
-    <div className="relative w-full h-full" style={{ minHeight: 500 }}>
+    <div className="relative w-full h-full overflow-hidden" style={{ minHeight: 500 }}>
       {/* Toolbar — clean, light, inline with Meridian */}
       <div className="absolute top-3 left-3 z-10 flex items-center gap-1 bg-white border border-gray-200 rounded-lg px-1 py-1 shadow-sm">
         <button

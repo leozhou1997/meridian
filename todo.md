@@ -1275,3 +1275,10 @@
 - [ ] When user adds timeline entry, AI scans for matching pending actions
 - [ ] Prompt user to mark matched actions as complete
 - [ ] AI chat suggestions → one-click create action
+
+## Visual Polish: Overflow Fix + Avatars + Logo
+- [ ] Fix health score overflow cutoff (circle score + status text being clipped at top)
+- [ ] Regenerate realistic diverse avatars for all 8 stakeholders (no repeats, more natural)
+- [ ] Generate Meridian product logo
+- [ ] Upload all assets to CDN and update database
+- [ ] Wire logo into app header/favicon

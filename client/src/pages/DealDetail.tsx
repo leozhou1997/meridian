@@ -1093,7 +1093,35 @@ export default function DealDetail() {
                     </button>
                   </div>
 
-                  <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-5 pt-2">
+                  {/* Health Score - sticky below toggle, only in battle view */}
+                  {centerView === 'battle' && (() => {
+                    const HEALTH_WEIGHTS: Record<string, number> = { need_discovery: 0.20, value_proposition: 0.20, commercial_close: 0.20, relationship_penetration: 0.25, tech_validation: 0.075, competitive_defense: 0.075 };
+                    const healthScore = Math.round(dimensionsData.reduce((acc: number, d: any) => {
+                      const sp = d.status === 'completed' ? 100 : d.status === 'in_progress' ? 50 : d.status === 'blocked' ? 25 : 0;
+                      return acc + sp * (HEALTH_WEIGHTS[d.dimensionKey] || 0);
+                    }, 0));
+                    const hColor = healthScore >= 70 ? '#10B981' : healthScore >= 40 ? '#F59E0B' : '#EF4444';
+                    const hLabel = healthScore >= 70 ? (isZh ? '进展良好' : 'On Track') : healthScore >= 40 ? (isZh ? '需要关注' : 'Needs Attention') : (isZh ? '风险较高' : 'At Risk');
+                    return (
+                      <div className="flex items-center justify-between px-4 md:px-5 py-2 flex-shrink-0 border-b border-border/20">
+                        <div className="flex items-center gap-3">
+                          <div className="relative w-11 h-11 flex items-center justify-center">
+                            <svg className="w-11 h-11 -rotate-90" viewBox="0 0 48 48">
+                              <circle cx="24" cy="24" r="20" fill="none" stroke="#e5e7eb" strokeWidth="3" />
+                              <circle cx="24" cy="24" r="20" fill="none" stroke={hColor} strokeWidth="3" strokeLinecap="round" strokeDasharray={`${(healthScore / 100) * 125.6} 125.6`} />
+                            </svg>
+                            <span className="absolute text-xs font-bold tabular-nums" style={{ color: hColor }}>{healthScore}</span>
+                          </div>
+                          <div>
+                            <div className="text-xs font-semibold text-foreground">{isZh ? '项目健康度' : 'Deal Health'}</div>
+                            <div className="text-[11px] font-medium" style={{ color: hColor }}>{hLabel}</div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  <div className="flex-1 min-h-0 overflow-y-auto px-4 md:px-5 pb-4 md:pb-5 pt-2">
                     {centerView === 'battle' ? (
                       <DealScorecard
                         dimensions={dimensionsData.length > 0 ? dimensionsData : [

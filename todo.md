@@ -1291,3 +1291,13 @@
 - [x] Detail modal shows full aiSummary on click
 - [x] Health score removed from DealScorecard (already in sticky sub-header)
 - [x] TypeScript clean build + 130 tests passing
+
+## Landing Page Redesign v6 - 出海定位
+- [x] Extract visual assets from product intro PDF (logo, chaos scene, feishu mockup)
+- [x] Upload assets to CDN
+- [x] Rewrite i18n.ts with new positioning (EN + ZH) - hero, pain points, product modules, feishu, results, CTA
+- [x] Rewrite Landing.tsx with new section structure matching PDF narrative
+- [x] Update images object in i18n.ts with new CDN URLs
+- [x] Update index.html page title, meta tags, and structured data for 出海 positioning
+- [x] Test and verify landing page in browser - all sections rendering correctly
+- [x] TypeScript clean build + 130 tests passing

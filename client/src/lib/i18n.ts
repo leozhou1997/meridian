@@ -7,17 +7,24 @@ import type { Language } from "@/contexts/LanguageContext";
 export const images = {
   en: {
     hero: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/hero-en-light-v4_24831889.png",
+    chaosDesktop: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/chaos-desktop_e9186459.png",
+    feishuBot: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feishu-bot-mockup_741fbc7a.png",
+    productModules: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/product-modules_83e12ae5.png",
+    productMockup: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/product-mockup-bg-2x_35ae52f0.png",
+    /* keep old feature images for fallback */
     featureInsight: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-insight-en-light-v4_c43b2426.png",
     featureMap: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-map-en-light-v4_d24cd793.png",
     featureRoom: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-room-en-light-v4_580f18fa.png",
-    productMockup: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/product-mockup-bg-2x_35ae52f0.png",
   },
   zh: {
     hero: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/hero-zh-light-v4_ac963f49.png",
+    chaosDesktop: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/chaos-desktop_e9186459.png",
+    feishuBot: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feishu-bot-mockup_741fbc7a.png",
+    productModules: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/product-modules_83e12ae5.png",
+    productMockup: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/product-mockup-bg-2x_35ae52f0.png",
     featureInsight: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-insight-zh-light-v4_a66adf65.png",
     featureMap: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-map-zh-light-v4_9eaf39f4.png",
     featureRoom: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/feature-room-zh-light-v4_95941fac.png",
-    productMockup: "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/product-mockup-bg-2x_35ae52f0.png",
   },
 } as const;
 
@@ -35,61 +42,71 @@ export const translations = {
     nav_request_access: "Request Access",
 
     /* ─── Landing: Hero ─── */
-    hero_title_1: "Navigate every deal.",
-    hero_title_2: "Close with confidence.",
+    hero_title_1: "Give your overseas team",
+    hero_title_2: "an AI sales engine.",
     hero_subtitle:
-      "Meridian is an AI decision engine for complex B2B sales. It tells you who to talk to, what to say, and what to do next.",
+      "Meridian helps Chinese companies going global win every complex deal. Market intelligence, customer mapping, and deal memory — all in one AI-powered platform.",
     hero_cta_primary: "Request Early Access",
 
-    /* ─── Landing: Pain Point ─── */
+    /* ─── Landing: Pain Point (Chaos Scene) ─── */
     pain_label: "The Problem",
-    pain_title_1: "A $500K deal. Nine decision-makers.",
-    pain_title_2: "What's your next move?",
-    pain_desc: "The real intelligence is scattered across chat groups, emails, meeting notes, CRM records, and your head. No single view. No clear path. Just guesswork.",
-    pain_item1_title: "Invisible buying committees",
-    pain_item1_desc: "You don't know who's really deciding, who's blocking, or who you haven't met yet.",
-    pain_item2_title: "Insights trapped in conversations",
-    pain_item2_desc: "Critical signals from calls and emails never make it into your deal strategy.",
-    pain_item3_title: "Reactive deal management",
-    pain_item3_desc: "By the time you realize a deal is at risk, it's already too late.",
+    pain_title_1: "6 markets. 4 languages. 200 leads.",
+    pain_title_2: "Even the best team can't keep up.",
+    pain_desc: "Going global means information overload: Feishu, CRM, WeChat, LinkedIn, Gmail, WhatsApp — scattered across tools, languages, and time zones. Opportunities slip through the cracks every day.",
 
-    /* ─── Landing: Product ─── */
+    /* ─── Landing: Pain Analysis (Two Perspectives) ─── */
+    pain_sales_title: "What your sales reps say:",
+    pain_sales_quote: "HQ gave me no ammo, but expects me to crack this region.",
+    pain_sales_item1: "Can't tell real opportunities from polite inquiries",
+    pain_sales_item2: "Every market has different compliance, customs, and decision chains",
+    pain_sales_item3: "Domestic experience doesn't translate overseas",
+    pain_boss_title: "What the CEO worries about:",
+    pain_boss_quote: "We spent $500K on the market. Has it actually opened?",
+    pain_boss_item1: "Ask the frontline for updates — nobody can give a clear answer",
+    pain_boss_item2: "Long feedback cycles — don't know whether to double down or cut losses",
+    pain_boss_item3: "Local seniors cost $250K/yr and move slowly; trade reps don't understand the market",
+    pain_insight: "It's not that the team isn't trying. The information complexity of cross-cultural deals exceeds any individual's processing capacity.",
+
+    /* ─── Landing: Product Three Modules ─── */
     product_label: "The Product",
-    product_title_1: "Your AI ",
-    product_title_2: "Sales Strategist.",
-    product_desc: "Meridian reads every signal across your deal — then tells you exactly what to do next.",
-    product_cap1_title: "Auto-generate strategy",
-    product_cap1_desc: "Feed it a deal. Get a battle plan based on your sales process.",
-    product_cap2_title: "Multi-thread penetration",
-    product_cap2_desc: "Leverage internal experience and public intel to find breakthrough angles.",
-    product_cap3_title: "Proactive alerts",
-    product_cap3_desc: "When the situation changes, Meridian pushes updates. No waiting for you to ask.",
+    product_title_1: "AI sales engine for ",
+    product_title_2: "going global.",
+    product_desc: "Three modules covering the entire overseas sales pipeline.",
+    product_mod1_num: "01",
+    product_mod1_title: "Market Intelligence",
+    product_mod1_desc: "Target region attractiveness scoring. Agent & distributor tiering. Regional volume and entry difficulty analysis.",
+    product_mod2_num: "02",
+    product_mod2_title: "Customer Deep Profile",
+    product_mod2_desc: "Customer org structure & decision chain mapping. Strategic dynamics & key event tracking. Product-region opportunity matrix.",
+    product_mod3_num: "03",
+    product_mod3_title: "Deal Memory",
+    product_mod3_desc: "Complete context for every deal. Key milestone & follow-up tracking. Cross-cycle knowledge retention and reuse.",
 
-    /* ─── Landing: Decision Map ─── */
-    dmap_label: "Decision Map",
-    dmap_title_1: "See the entire deal.",
-    dmap_title_2: "At a glance.",
-    dmap_item1_title: "Six dimensions",
-    dmap_item1_desc: "Tech validation, business breakthrough, executive push, competitive defense, budget, and case support.",
-    dmap_item2_title: "Stakeholder clarity",
-    dmap_item2_desc: "Every person's role, stance, and influence. Who supports you. Who's blocking.",
-    dmap_item3_title: "Spot the bottleneck",
-    dmap_item3_desc: "Red = blocked. Green = done. Blue = in progress. No more digging through chat logs.",
+    /* ─── Landing: Feishu Integration ─── */
+    feishu_label: "Seamless Integration",
+    feishu_title_1: "Embedded in your ",
+    feishu_title_2: "collaboration platform.",
+    feishu_item1_title: "Proactive, not reactive",
+    feishu_item1_desc: "When new signals appear on a deal, Meridian pushes alerts and recommendations automatically.",
+    feishu_item2_title: "Not just answers — actions done",
+    feishu_item2_desc: "Every alert comes with updated org charts, competitive intel, and specific next steps.",
+    feishu_item3_title: "Zero-friction adoption",
+    feishu_item3_desc: "No new system to install. No habits to change. No training required. Works inside Feishu, DingTalk, or Slack.",
 
     /* ─── Landing: Results ─── */
     results_label: "Results",
-    results_title_1: "After using Meridian",
-    results_stat1_value: "-35%",
-    results_stat1_label: "Sales cycle reduction",
-    results_stat1_desc: "From first contact to close",
-    results_stat2_value: "3mo → 4d",
+    results_title_1: "After deploying Meridian",
+    results_stat1_value: "+45%",
+    results_stat1_label: "Inquiry response quality",
+    results_stat1_desc: "Overseas inquiry response quality improvement",
+    results_stat2_value: "3mo → 3wk",
     results_stat2_label: "New rep ramp-up",
-    results_stat2_desc: "From 3 months to 4 days to work independently",
-    results_stat3_value: "Minutes",
-    results_stat3_label: "Bottleneck detection",
-    results_stat3_desc: "From gut feeling to automatic early warning",
-    results_quote: "The key is those 34 idle days — what should my reps be doing? Meridian gave them a Todo list.",
-    results_quote_attr: "CEO, $100M+ annual revenue customer · 300+ active deals",
+    results_stat2_desc: "From 3 months to 3 weeks to work independently",
+    results_stat3_value: "100%",
+    results_stat3_label: "Agent network visibility",
+    results_stat3_desc: "From black box to full transparency",
+    results_quote: "Our 3-person overseas team can now speak directly to what the client's decision-makers care about. That used to require a 5-year local veteran.",
+    results_quote_attr: "VP of Overseas Business · High-end Equipment Manufacturer",
 
     /* ─── Landing: How It Works ─── */
     how_label: "How It Works",
@@ -108,20 +125,21 @@ export const translations = {
     team_label: "Our Team",
     team_title_1: "Built by people who've ",
     team_title_2: "lived the problem.",
-    team_p1: "We've spent years running complex enterprise deals — managing buying committees, navigating multi-threaded negotiations, and losing sleep over pipeline reviews.",
-    team_p2: "We built Meridian because we believe deal intelligence shouldn't be trapped in spreadsheets and tribal knowledge. Every deal tells a story. We're building the AI that reads it.",
+    team_p1: "We've spent years on the front lines of overseas B2B sales — running complex cross-border deals, navigating multi-cultural buying committees, and bridging the gap between Chinese HQ and global markets.",
+    team_p2: "We built Meridian because we believe the judgment gap in overseas sales shouldn't be filled by hiring more expensive people. AI can deliver senior-level market intuition to every member of your team.",
     team_backed: "Backed by",
 
     /* ─── Landing: Bottom CTA ─── */
-    cta_title_1: "Stop guessing.",
-    cta_title_2: "Make every deal evidence-based.",
-    cta_subtitle: "Join the waitlist for early access. We're onboarding select teams tackling complex, multi-stakeholder deals.",
+    cta_title_1: "Let your overseas team ",
+    cta_title_2: "understand the market like a local — from day one.",
+    cta_subtitle: "Join the waitlist for early access. We're onboarding select Chinese companies going global with complex, high-value deals.",
     cta_button: "Request Early Access",
     cta_subtext: "No credit card required. We'll reach out within 48 hours.",
 
     /* ─── Landing: Footer ─── */
     footer_copyright: "Meridian. All rights reserved.",
     footer_email: "leo@meridianos.ai",
+    footer_wechat: "WeChat: leo971217",
 
     /* ─── Pricing: Hero ─── */
     pricing_badge: "Simple, Transparent Pricing",
@@ -132,7 +150,7 @@ export const translations = {
 
     /* ─── Pricing: Plans ─── */
     plan_pro_name: "Pro",
-    plan_pro_tagline: "For sales teams closing complex, multi-stakeholder deals",
+    plan_pro_tagline: "For overseas sales teams closing complex, high-value deals",
     plan_pro_price: "$149",
     plan_pro_period: "per user / month",
     plan_pro_badge: "Most Popular",
@@ -206,7 +224,7 @@ export const translations = {
       },
       {
         q: "How does the AI work with my data?",
-        a: "Meridian uses state-of-the-art language models to analyze your meeting transcripts, notes, and deal context. Your data is encrypted in transit and at rest, and is never used to train models. Each tenant's data is fully isolated.",
+        a: "Meridian uses state-of-the-art language models to analyze your meeting transcripts, notes, and deal context. Your data is encrypted in transit and at rest, and is never used to train models. Each tenant's data is strictly isolated.",
       },
       {
         q: "What CRM integrations are available?",
@@ -222,7 +240,7 @@ export const translations = {
 
     /* ─── WaitlistDialog ─── */
     waitlist_title: "Request Early Access",
-    waitlist_desc: "Join the waitlist for Meridian's AI decision engine for complex B2B sales.",
+    waitlist_desc: "Join the waitlist for Meridian — the AI sales engine for Chinese companies going global.",
     waitlist_email_label: "Work Email",
     waitlist_name_label: "Full Name",
     waitlist_company_label: "Company",
@@ -255,61 +273,71 @@ export const translations = {
     nav_request_access: "申请体验",
 
     /* ─── Landing: Hero ─── */
-    hero_title_1: "给你的每一笔销售订单，",
-    hero_title_2: "都装上导航。",
+    hero_title_1: "给你的出海团队，",
+    hero_title_2: "装上AI销售引擎。",
     hero_subtitle:
-      "子午线是复杂B2B销售的AI决策引擎。告诉你该找谁、该说什么、下一步该做什么。",
+      "帮助中国出海企业赢下每一笔交易。市场洞察、客户画像、交易记忆——一个AI平台，覆盖出海销售全链路。",
     hero_cta_primary: "申请抢先体验",
 
-    /* ─── Landing: Pain Point ─── */
+    /* ─── Landing: Pain Point (Chaos Scene) ─── */
     pain_label: "痛点",
-    pain_title_1: "¥500万订单，九个决策人，",
-    pain_title_2: "下一步该做什么？",
-    pain_desc: "真正的情报散落在群聊、邮件、会议纪要、CRM 和你的脑子里。没有全局视图，没有清晰路径，只有猜测。",
-    pain_item1_title: "看不见的采购委员会",
-    pain_item1_desc: "你不知道谁在真正做决策、谁在阻碍、谁还没有接触过。",
-    pain_item2_title: "洞察被困在对话中",
-    pain_item2_desc: "来自电话和邮件的关键信号从未进入你的交易策略。",
-    pain_item3_title: "被动的交易管理",
-    pain_item3_desc: "当你意识到交易有风险时，往往已经来不及了。",
+    pain_title_1: "6个海外市场，4种语言，200条线索。",
+    pain_title_2: "再强的团队也看不完。",
+    pain_desc: "出海意味着信息过载：飞书、CRM、微信、LinkedIn、Gmail、WhatsApp——散落在不同工具、不同语言、不同时区。每天都有机会在指缝间溜走。",
 
-    /* ─── Landing: Product ─── */
+    /* ─── Landing: Pain Analysis (Two Perspectives) ─── */
+    pain_sales_title: "一线销售的声音：",
+    pain_sales_quote: "总部没给我弹药，但要我拿下这个区域。",
+    pain_sales_item1: "收到海外询盘，分不清是商机还是客套",
+    pain_sales_item2: "每个市场的合规、习惯、决策链都不一样",
+    pain_sales_item3: "国内经验在海外完全失效",
+    pain_boss_title: "老板的焦虑：",
+    pain_boss_quote: "钱花了，人招了，市场到底打开了没有？",
+    pain_boss_item1: "花了300万铺市场，问一线进展没人说得清",
+    pain_boss_item2: "反馈周期长，不知道该加投入还是止损",
+    pain_boss_item3: "招白人太贵、工作节奏慢；招外贸员不懂当地市场",
+    pain_insight: "不是团队不努力。是出海跨文化交易的信息复杂度，超出了任何个人的处理能力。",
+
+    /* ─── Landing: Product Three Modules ─── */
     product_label: "产品",
-    product_title_1: "你的AI",
-    product_title_2: "销售军师。",
-    product_desc: "子午线读取交易中的每一个信号，然后精确告诉你下一步该做什么。",
-    product_cap1_title: "输入交易，自动生成策略",
-    product_cap1_desc: "给它一笔交易，自动生成基于你的销售流程的作战策略。",
-    product_cap2_title: "多线程渗透策略",
-    product_cap2_desc: "基于内部经验和外部公开信息源检索，寻找突破口，加速交易。",
-    product_cap3_title: "主动推送，不等你来问",
-    product_cap3_desc: "局势变化时自动推送更新，不错过任何关键窗口。",
+    product_title_1: "出海B2B销售智能体",
+    product_title_2: "——帮您丝滑出海。",
+    product_desc: "三个模块，覆盖出海销售全链路。",
+    product_mod1_num: "01",
+    product_mod1_title: "市场洞察",
+    product_mod1_desc: "目标地区吸引力评估。代理商与渠道商分层梳理。区域业务体量与进入难度分析。",
+    product_mod2_num: "02",
+    product_mod2_title: "客户深度画像",
+    product_mod2_desc: "客户组织架构与决策链映射。战略动态与关键事件追踪。产品×区域进入机会矩阵。",
+    product_mod3_num: "03",
+    product_mod3_title: "交易记忆",
+    product_mod3_desc: "每笔交易的完整上下文。关键节点与跟进状态追踪。跨周期知识沉淀与复用。",
 
-    /* ─── Landing: Decision Map ─── */
-    dmap_label: "决策全景图",
-    dmap_title_1: "看清整笔交易。",
-    dmap_title_2: "一目了然。",
-    dmap_item1_title: "六个维度拆解",
-    dmap_item1_desc: "技术验证、商务突破、高层推动、竞对防御、预算推进、案例支撑。",
-    dmap_item2_title: "决策人关系一目了然",
-    dmap_item2_desc: "每个人的角色、态度、影响力。谁支持你，谁在阻碍。",
-    dmap_item3_title: "哪里卡住，一眼看出",
-    dmap_item3_desc: "红色阻塞、绿色完成、蓝色进行中。不需要翻聊天记录。",
+    /* ─── Landing: Feishu Integration ─── */
+    feishu_label: "无缝嵌入",
+    feishu_title_1: "嵌入你的",
+    feishu_title_2: "内部协作平台。",
+    feishu_item1_title: "不等你问，主动告诉你",
+    feishu_item1_desc: "交易出现新信号时，自动推送预警和建议。",
+    feishu_item2_title: "不只是回答，已经帮你做完了",
+    feishu_item2_desc: "推送同时附带最新组织架构、竞对动态、行动建议。",
+    feishu_item3_title: "嵌入飞书，零摩擦接入",
+    feishu_item3_desc: "不装系统、不改习惯、不用培训。支持飞书、钉钉、Slack。",
 
     /* ─── Landing: Results ─── */
     results_label: "效果",
-    results_title_1: "用了子午线后...",
-    results_stat1_value: "-35%",
-    results_stat1_label: "销售周期缩短",
-    results_stat1_desc: "从首次接触到最初成单",
-    results_stat2_value: "3个月→4天",
+    results_title_1: "部署子午线后...",
+    results_stat1_value: "+45%",
+    results_stat1_label: "询盘响应质量",
+    results_stat1_desc: "海外询盘响应质量提升",
+    results_stat2_value: "3个月→3周",
     results_stat2_label: "新人上手时间",
-    results_stat2_desc: "从3个月压缩到4天独立打单",
-    results_stat3_value: "分钟级",
-    results_stat3_label: "卡点判断",
-    results_stat3_desc: "从靠经验判断变为自动预警",
-    results_quote: "关键是这34天空白期，我的销售该做什么？它直接给了Todo。",
-    results_quote_attr: "年营收过亿客户CEO · 300+条在途交易",
+    results_stat2_desc: "从3个月压缩到3周独立打单",
+    results_stat3_value: "100%",
+    results_stat3_label: "代理商网络可见度",
+    results_stat3_desc: "从黑盒到完全透明",
+    results_quote: "我们3人海外团队，跟欧洲客户开会能直接讲到对方决策层关心的点。过去要靠5年本地senior才能做到。",
+    results_quote_attr: "某高端装备出海公司 · 海外业务VP",
 
     /* ─── Landing: How It Works ─── */
     how_label: "如何上线",
@@ -328,20 +356,21 @@ export const translations = {
     team_label: "我们的团队",
     team_title_1: "由",
     team_title_2: "亲历过这些问题的人打造。",
-    team_p1: "我们在企业级销售的战壕中摸爬滚打多年——运营复杂交易、管理采购委员会、为 Pipeline Review 彻夜难眠。",
-    team_p2: "我们创建子午线，是因为我们相信交易智能不应该被困在电子表格和口口相传的经验中。每笔交易都在讲述一个故事。我们正在构建能读懂这个故事的 AI。",
+    team_p1: "我们在海外B2B销售的一线摸爬滚打多年——运营复杂的跨境交易、穿越多文化采购委员会、在中国总部和全球市场之间架起桥梁。",
+    team_p2: "我们创建子午线，是因为我们相信出海销售的判断力差距，不应该靠招更贵的人来填补。AI可以把资深销售的市场直觉，赋予团队的每一个人。",
     team_backed: "投资方",
 
     /* ─── Landing: Bottom CTA ─── */
-    cta_title_1: "别再猜了，",
-    cta_title_2: "让每一笔交易都有据可依。",
-    cta_subtitle: "加入等候名单获取抢先体验资格。我们正在邀请攻克复杂、多决策人交易的精选团队。",
+    cta_title_1: "让你的出海团队，",
+    cta_title_2: "从第一天就像本地人一样懂市场。",
+    cta_subtitle: "加入等候名单获取抢先体验资格。我们正在邀请攻克复杂、高价值出海交易的精选团队。",
     cta_button: "申请抢先体验",
     cta_subtext: "无需信用卡。我们将在 48 小时内联系您。",
 
     /* ─── Landing: Footer ─── */
     footer_copyright: "子午线 Meridian. 保留所有权利。",
     footer_email: "leo@meridianos.ai",
+    footer_wechat: "微信：leo971217",
 
     /* ─── Pricing: Hero ─── */
     pricing_badge: "简洁透明的定价",
@@ -352,7 +381,7 @@ export const translations = {
 
     /* ─── Pricing: Plans ─── */
     plan_pro_name: "Pro",
-    plan_pro_tagline: "适合攻克复杂、多决策人交易的销售团队",
+    plan_pro_tagline: "适合攻克复杂、高价值出海交易的销售团队",
     plan_pro_price: "$149",
     plan_pro_period: "每用户 / 月",
     plan_pro_badge: "最受欢迎",
@@ -372,7 +401,7 @@ export const translations = {
     ],
 
     plan_enterprise_name: "Enterprise",
-    plan_enterprise_tagline: "适合规模化的营收组织",
+    plan_enterprise_tagline: "适合规模化的出海营收组织",
     plan_enterprise_price: "定制",
     plan_enterprise_period: "",
     plan_enterprise_features: [
@@ -442,7 +471,7 @@ export const translations = {
 
     /* ─── WaitlistDialog ─── */
     waitlist_title: "申请抢先体验",
-    waitlist_desc: "加入子午线 AI 决策引擎的等候名单。",
+    waitlist_desc: "加入子午线等候名单——帮助中国出海企业赢下每一笔交易的AI销售引擎。",
     waitlist_email_label: "工作邮箱",
     waitlist_name_label: "姓名",
     waitlist_company_label: "公司",

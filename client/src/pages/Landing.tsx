@@ -7,25 +7,17 @@ import { WaitlistDialog } from "@/components/WaitlistDialog";
 import {
   ArrowRight,
   ChevronRight,
-  Sparkles,
-  Shield,
-  Target,
-  Users,
-  Brain,
-  Layers,
-  MessageSquare,
-  TrendingUp,
-  Zap,
-  CheckCircle2,
   Globe,
   Menu,
   X,
-  Eye,
-  AlertTriangle,
-  Clock,
-  MapPin,
   Lock,
   Quote,
+  Search,
+  Users,
+  Database,
+  Bell,
+  Zap,
+  MessageSquare,
 } from "lucide-react";
 
 /* ─── CDN Assets ─────────────────────────────────────── */
@@ -35,8 +27,6 @@ const MIRACLEPLUS_LOGO =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/miracleplus-logo_11f70a94.png";
 const ANTLER_LOGO =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/antler-logo_e6d05a8f.png";
-const PRODUCT_MOCKUP =
-  "https://d2xsxph8kpxj0f.cloudfront.net/310519663267900177/PHTFs288hUf3yaW9yWMkJw/product-mockup-bg-2x_35ae52f0.png";
 
 /* ─── Intersection Observer Hook ─────────────────────── */
 function useInView(threshold = 0.15) {
@@ -56,13 +46,14 @@ function useInView(threshold = 0.15) {
 }
 
 /* ═══════════════════════════════════════════════════════
-   LANDING PAGE — REDESIGN V5
+   LANDING PAGE — REDESIGN V6
+   出海 AI 销售引擎 positioning
    Deep navy + warm accent, editorial typography,
-   narrative-driven sections aligned with latest PDFs
+   narrative-driven sections aligned with latest product PDF
    ═══════════════════════════════════════════════════════ */
 export default function Landing() {
   const [, navigate] = useLocation();
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
   const { language, setLanguage } = useLanguage();
   const tt = (key: string) => i18t(language, key as any);
   const imgs = i18nImages[language];
@@ -175,7 +166,6 @@ export default function Landing() {
       <section className="relative pt-28 pb-8 md:pt-36 md:pb-12">
         <div className="relative max-w-6xl mx-auto px-6">
           <div className="text-center max-w-3xl mx-auto mb-12 md:mb-16">
-            {/* Headline */}
             <h1 className="text-[2.5rem] sm:text-5xl md:text-[3.5rem] lg:text-[4rem] font-display font-bold leading-[1.08] tracking-tight mb-5 text-[#1a2b5e]">
               {tt("hero_title_1")}
               <br className="hidden sm:block" />
@@ -184,12 +174,10 @@ export default function Landing() {
               </span>
             </h1>
 
-            {/* Subheadline */}
             <p className="text-base md:text-lg text-slate-500 leading-relaxed max-w-xl mx-auto mb-8">
               {tt("hero_subtitle")}
             </p>
 
-            {/* CTA */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-8">
               <button
                 onClick={() => openWaitlist("hero")}
@@ -218,38 +206,29 @@ export default function Landing() {
               </div>
             </div>
           </div>
-
-          {/* Hero Product Mockup */}
-          <div className="relative max-w-5xl mx-auto">
-            <div className="relative rounded-xl overflow-hidden">
-              <img
-                src={PRODUCT_MOCKUP}
-                alt="Meridian AI Decision Engine"
-                className="w-full"
-                loading="eager"
-              />
-            </div>
-          </div>
         </div>
       </section>
 
-      {/* ─── PAIN POINT ──────────────────────────────── */}
-      <PainSection tt={tt} language={language} />
+      {/* ─── CHAOS / PAIN POINT ──────────────────────── */}
+      <ChaosSection tt={tt} imgs={imgs} openWaitlist={openWaitlist} />
 
-      {/* ─── PRODUCT ─────────────────────────────────── */}
-      <ProductSection tt={tt} language={language} imgs={imgs} />
+      {/* ─── TWO PERSPECTIVES ────────────────────────── */}
+      <PerspectivesSection tt={tt} />
 
-      {/* ─── DECISION MAP ────────────────────────────── */}
-      <DecisionMapSection tt={tt} language={language} imgs={imgs} />
+      {/* ─── PRODUCT THREE MODULES ───────────────────── */}
+      <ProductModulesSection tt={tt} imgs={imgs} />
+
+      {/* ─── FEISHU INTEGRATION ──────────────────────── */}
+      <FeishuSection tt={tt} imgs={imgs} />
 
       {/* ─── RESULTS ─────────────────────────────────── */}
-      <ResultsSection tt={tt} language={language} />
+      <ResultsSection tt={tt} />
 
       {/* ─── HOW IT WORKS ────────────────────────────── */}
-      <HowSection tt={tt} language={language} />
+      <HowSection tt={tt} />
 
       {/* ─── TEAM ────────────────────────────────────── */}
-      <TeamSection tt={tt} language={language} />
+      <TeamSection tt={tt} />
 
       {/* ─── CTA ─────────────────────────────────────── */}
       <section id="cta" className="py-20 md:py-28 relative">
@@ -284,9 +263,9 @@ export default function Landing() {
             </a>
             <div className="flex items-center gap-6 text-[13px] text-slate-400">
               <a href={`mailto:${tt("footer_email")}`} className="hover:text-slate-600 transition-colors">{tt("footer_email")}</a>
+              <span className="hover:text-slate-600 transition-colors">{tt("footer_wechat")}</span>
               <button onClick={() => scrollTo("product")} className="hover:text-slate-600 transition-colors">{tt("nav_features")}</button>
               <button onClick={() => scrollTo("team")} className="hover:text-slate-600 transition-colors">{tt("nav_team")}</button>
-              <button onClick={() => navigate("/login")} className="hover:text-slate-600 transition-colors">{tt("nav_login")}</button>
             </div>
             <p className="text-xs text-slate-400">
               &copy; {new Date().getFullYear()} {tt("footer_copyright")}
@@ -310,24 +289,19 @@ export default function Landing() {
    SECTION COMPONENTS
    ═══════════════════════════════════════════════════════ */
 
-/* ─── Pain Point Section ─────────────────────────────── */
-function PainSection({ tt, language }: { tt: (k: string) => any; language: string }) {
+/* ─── Chaos / Pain Point Section ─────────────────────── */
+function ChaosSection({ tt, imgs, openWaitlist }: { tt: (k: string) => any; imgs: any; openWaitlist: (s: string) => void }) {
   const { ref, inView } = useInView(0.1);
-  const painItems = [
-    { icon: Users, titleKey: "pain_item1_title", descKey: "pain_item1_desc" },
-    { icon: Brain, titleKey: "pain_item2_title", descKey: "pain_item2_desc" },
-    { icon: AlertTriangle, titleKey: "pain_item3_title", descKey: "pain_item3_desc" },
-  ];
 
   return (
-    <section className="py-20 md:py-28">
+    <section className="py-16 md:py-24">
       <div
         ref={ref}
-        className={`max-w-4xl mx-auto px-6 transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+        className={`max-w-6xl mx-auto px-6 transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
       >
-        <div className="text-center mb-14">
+        <div className="text-center mb-10">
           <p className="text-[11px] font-semibold text-amber-600 tracking-[0.2em] uppercase mb-4">{tt("pain_label")}</p>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-display font-bold leading-tight mb-5 text-[#1a2b5e]">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-display font-bold leading-tight mb-4 text-[#1a2b5e]">
             {tt("pain_title_1")}
             <br className="hidden sm:block" />
             <span className="text-slate-400 font-semibold">{tt("pain_title_2")}</span>
@@ -337,20 +311,17 @@ function PainSection({ tt, language }: { tt: (k: string) => any; language: strin
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-5">
-          {painItems.map((item, i) => (
-            <div
-              key={item.titleKey}
-              className="p-5 rounded-xl bg-white border border-slate-200/80 transition-all duration-300 hover:border-amber-200 hover:shadow-md"
-              style={{ transitionDelay: `${i * 100}ms` }}
-            >
-              <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center mb-3">
-                <item.icon className="w-4.5 h-4.5 text-amber-600" />
-              </div>
-              <h3 className="font-display font-semibold text-[15px] mb-1.5 text-slate-800">{tt(item.titleKey)}</h3>
-              <p className="text-[13px] text-slate-500 leading-relaxed">{tt(item.descKey)}</p>
-            </div>
-          ))}
+        {/* Chaos desktop image */}
+        <div className="relative max-w-5xl mx-auto mb-6">
+          <div className="absolute -inset-4 bg-gradient-to-r from-amber-100/20 via-orange-100/15 to-amber-100/20 rounded-2xl blur-2xl opacity-40" />
+          <div className="relative rounded-xl overflow-hidden border border-slate-200/60 shadow-xl">
+            <img
+              src={imgs.chaosDesktop}
+              alt="Cross-border sales information chaos"
+              className="w-full"
+              loading="lazy"
+            />
+          </div>
         </div>
       </div>
     </section>
@@ -358,13 +329,109 @@ function PainSection({ tt, language }: { tt: (k: string) => any; language: strin
 }
 
 
-/* ─── Product Section ────────────────────────────────── */
-function ProductSection({ tt, language, imgs }: { tt: (k: string) => any; language: string; imgs: any }) {
+/* ─── Two Perspectives Section (Sales Rep + CEO) ─────── */
+function PerspectivesSection({ tt }: { tt: (k: string) => any }) {
   const { ref, inView } = useInView(0.1);
-  const caps = [
-    { titleKey: "product_cap1_title", descKey: "product_cap1_desc", icon: Zap },
-    { titleKey: "product_cap2_title", descKey: "product_cap2_desc", icon: Target },
-    { titleKey: "product_cap3_title", descKey: "product_cap3_desc", icon: MessageSquare },
+
+  const salesItems = [
+    tt("pain_sales_item1"),
+    tt("pain_sales_item2"),
+    tt("pain_sales_item3"),
+  ];
+  const bossItems = [
+    tt("pain_boss_item1"),
+    tt("pain_boss_item2"),
+    tt("pain_boss_item3"),
+  ];
+
+  return (
+    <section className="py-12 md:py-20">
+      <div
+        ref={ref}
+        className={`max-w-5xl mx-auto px-6 transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+      >
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Sales Rep perspective */}
+          <div className="p-6 md:p-8 rounded-xl bg-white border border-slate-200/80">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                <Users className="w-4 h-4 text-blue-600" />
+              </div>
+              <h3 className="font-display font-semibold text-base text-slate-800">{tt("pain_sales_title")}</h3>
+            </div>
+            <blockquote className="text-[15px] text-slate-700 italic border-l-2 border-blue-300 pl-4 mb-5">
+              "{tt("pain_sales_quote")}"
+            </blockquote>
+            <ul className="space-y-2.5">
+              {salesItems.map((item: string, i: number) => (
+                <li key={i} className="flex items-start gap-2.5 text-[13px] text-slate-500 leading-relaxed">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* CEO perspective */}
+          <div className="p-6 md:p-8 rounded-xl bg-white border border-slate-200/80">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+                <Search className="w-4 h-4 text-amber-600" />
+              </div>
+              <h3 className="font-display font-semibold text-base text-slate-800">{tt("pain_boss_title")}</h3>
+            </div>
+            <blockquote className="text-[15px] text-slate-700 italic border-l-2 border-amber-300 pl-4 mb-5">
+              "{tt("pain_boss_quote")}"
+            </blockquote>
+            <ul className="space-y-2.5">
+              {bossItems.map((item: string, i: number) => (
+                <li key={i} className="flex items-start gap-2.5 text-[13px] text-slate-500 leading-relaxed">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        {/* Insight callout */}
+        <div className="mt-8 p-5 rounded-xl bg-[#1a2b5e]/[0.04] border border-[#1a2b5e]/10 text-center">
+          <p className="text-[15px] text-[#1a2b5e] font-medium leading-relaxed">
+            {tt("pain_insight")}
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+
+/* ─── Product Three Modules Section ──────────────────── */
+function ProductModulesSection({ tt, imgs }: { tt: (k: string) => any; imgs: any }) {
+  const { ref, inView } = useInView(0.1);
+
+  const modules = [
+    {
+      numKey: "product_mod1_num",
+      titleKey: "product_mod1_title",
+      descKey: "product_mod1_desc",
+      icon: Search,
+      accent: "bg-blue-50 text-blue-600",
+    },
+    {
+      numKey: "product_mod2_num",
+      titleKey: "product_mod2_title",
+      descKey: "product_mod2_desc",
+      icon: Users,
+      accent: "bg-indigo-50 text-indigo-600",
+    },
+    {
+      numKey: "product_mod3_num",
+      titleKey: "product_mod3_title",
+      descKey: "product_mod3_desc",
+      icon: Database,
+      accent: "bg-emerald-50 text-emerald-600",
+    },
   ];
 
   return (
@@ -386,30 +453,33 @@ function ProductSection({ tt, language, imgs }: { tt: (k: string) => any; langua
           </p>
         </div>
 
-        {/* Three capabilities */}
+        {/* Three module cards */}
         <div className="grid md:grid-cols-3 gap-6 mb-16">
-          {caps.map((cap, i) => (
+          {modules.map((mod, i) => (
             <div
-              key={cap.titleKey}
+              key={mod.titleKey}
               className="relative p-6 rounded-xl bg-[#F7F8FA] border border-slate-100 transition-all duration-300 hover:shadow-md"
               style={{ transitionDelay: `${i * 100}ms` }}
             >
-              <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center mb-4">
-                <cap.icon className="w-5 h-5 text-blue-600" />
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-2xl font-display font-bold text-[#1a2b5e]/20">{tt(mod.numKey)}</span>
+                <div className={`w-9 h-9 rounded-lg ${mod.accent.split(" ")[0]} flex items-center justify-center`}>
+                  <mod.icon className={`w-4.5 h-4.5 ${mod.accent.split(" ")[1]}`} />
+                </div>
               </div>
-              <h3 className="font-display font-semibold text-base mb-2 text-slate-800">{tt(cap.titleKey)}</h3>
-              <p className="text-[13px] text-slate-500 leading-relaxed">{tt(cap.descKey)}</p>
+              <h3 className="font-display font-semibold text-lg mb-2 text-slate-800">{tt(mod.titleKey)}</h3>
+              <p className="text-[13px] text-slate-500 leading-relaxed">{tt(mod.descKey)}</p>
             </div>
           ))}
         </div>
 
-        {/* Product screenshot — use the latest mockup */}
+        {/* Product modules infographic from PDF */}
         <div className="relative max-w-4xl mx-auto">
           <div className="absolute -inset-4 bg-gradient-to-r from-blue-100/30 via-indigo-100/20 to-blue-100/30 rounded-2xl blur-2xl opacity-50" />
           <div className="relative rounded-xl overflow-hidden border border-slate-200/60 shadow-xl">
             <img
               src={imgs.productMockup}
-              alt="Meridian AI Decision Engine"
+              alt="Meridian Product Dashboard"
               className="w-full"
               loading="lazy"
             />
@@ -421,13 +491,14 @@ function ProductSection({ tt, language, imgs }: { tt: (k: string) => any; langua
 }
 
 
-/* ─── Decision Map Section ───────────────────────────── */
-function DecisionMapSection({ tt, language, imgs }: { tt: (k: string) => any; language: string; imgs: any }) {
+/* ─── Feishu Integration Section ─────────────────────── */
+function FeishuSection({ tt, imgs }: { tt: (k: string) => any; imgs: any }) {
   const { ref, inView } = useInView(0.1);
+
   const items = [
-    { titleKey: "dmap_item1_title", descKey: "dmap_item1_desc", icon: Layers },
-    { titleKey: "dmap_item2_title", descKey: "dmap_item2_desc", icon: Users },
-    { titleKey: "dmap_item3_title", descKey: "dmap_item3_desc", icon: Eye },
+    { titleKey: "feishu_item1_title", descKey: "feishu_item1_desc", icon: Bell },
+    { titleKey: "feishu_item2_title", descKey: "feishu_item2_desc", icon: Zap },
+    { titleKey: "feishu_item3_title", descKey: "feishu_item3_desc", icon: MessageSquare },
   ];
 
   return (
@@ -437,26 +508,26 @@ function DecisionMapSection({ tt, language, imgs }: { tt: (k: string) => any; la
         className={`max-w-6xl mx-auto px-6 transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
       >
         <div className="flex flex-col md:flex-row items-center gap-12 md:gap-16">
-          {/* Image left */}
+          {/* Feishu bot mockup - left */}
           <div className="flex-1 flex justify-center order-2 md:order-1">
-            <div className="relative w-full max-w-lg">
-              <div className="absolute -inset-3 bg-gradient-to-r from-indigo-100/30 to-blue-100/30 rounded-2xl blur-xl opacity-50" />
+            <div className="relative w-full max-w-md">
+              <div className="absolute -inset-3 bg-gradient-to-r from-blue-100/30 to-indigo-100/30 rounded-2xl blur-xl opacity-50" />
               <img
-              src={imgs.featureMap}
-              alt="Meridian Decision Map"
+                src={imgs.feishuBot}
+                alt="Meridian Feishu Bot"
                 className="relative w-full rounded-xl border border-slate-200/60 shadow-xl object-contain"
                 loading="lazy"
               />
             </div>
           </div>
 
-          {/* Text right */}
+          {/* Text - right */}
           <div className="flex-1 order-1 md:order-2">
-            <p className="text-[11px] font-semibold text-indigo-600 tracking-[0.2em] uppercase mb-4">{tt("dmap_label")}</p>
+            <p className="text-[11px] font-semibold text-indigo-600 tracking-[0.2em] uppercase mb-4">{tt("feishu_label")}</p>
             <h2 className="text-2xl sm:text-3xl md:text-[2rem] font-display font-bold leading-tight mb-5 text-[#1a2b5e]">
-              {tt("dmap_title_1")}
+              {tt("feishu_title_1")}
               <br />
-              <span className="text-slate-400">{tt("dmap_title_2")}</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-500">{tt("feishu_title_2")}</span>
             </h2>
 
             <div className="space-y-5">
@@ -481,12 +552,12 @@ function DecisionMapSection({ tt, language, imgs }: { tt: (k: string) => any; la
 
 
 /* ─── Results Section ────────────────────────────────── */
-function ResultsSection({ tt, language }: { tt: (k: string) => any; language: string }) {
+function ResultsSection({ tt }: { tt: (k: string) => any }) {
   const { ref, inView } = useInView(0.1);
   const stats = [
-    { valueKey: "results_stat1_value", labelKey: "results_stat1_label", descKey: "results_stat1_desc", color: "text-blue-600" },
-    { valueKey: "results_stat2_value", labelKey: "results_stat2_label", descKey: "results_stat2_desc", color: "text-indigo-600" },
-    { valueKey: "results_stat3_value", labelKey: "results_stat3_label", descKey: "results_stat3_desc", color: "text-emerald-600" },
+    { valueKey: "results_stat1_value", labelKey: "results_stat1_label", descKey: "results_stat1_desc" },
+    { valueKey: "results_stat2_value", labelKey: "results_stat2_label", descKey: "results_stat2_desc" },
+    { valueKey: "results_stat3_value", labelKey: "results_stat3_label", descKey: "results_stat3_desc" },
   ];
 
   return (
@@ -502,7 +573,6 @@ function ResultsSection({ tt, language }: { tt: (k: string) => any; language: st
           </h2>
         </div>
 
-        {/* Stats grid */}
         <div className="grid md:grid-cols-3 gap-6 mb-14">
           {stats.map((stat, i) => (
             <div
@@ -538,7 +608,7 @@ function ResultsSection({ tt, language }: { tt: (k: string) => any; language: st
 
 
 /* ─── How It Works Section ───────────────────────────── */
-function HowSection({ tt, language }: { tt: (k: string) => any; language: string }) {
+function HowSection({ tt }: { tt: (k: string) => any }) {
   const { ref, inView } = useInView(0.1);
   const weeks = [
     { num: "W1", titleKey: "how_week1_title", descKey: "how_week1_desc" },
@@ -562,7 +632,6 @@ function HowSection({ tt, language }: { tt: (k: string) => any; language: string
 
         {/* Timeline */}
         <div className="relative">
-          {/* Vertical line */}
           <div className="absolute left-6 md:left-1/2 top-0 bottom-0 w-px bg-slate-200 -translate-x-1/2 hidden md:block" />
 
           <div className="space-y-8 md:space-y-0">
@@ -570,13 +639,11 @@ function HowSection({ tt, language }: { tt: (k: string) => any; language: string
               const isLeft = i % 2 === 0;
               return (
                 <div key={week.num} className="relative md:flex md:items-center md:min-h-[120px]">
-                  {/* Desktop: alternating layout */}
                   <div className={`hidden md:flex w-full items-center ${isLeft ? "" : "flex-row-reverse"}`}>
                     <div className={`w-[calc(50%-2rem)] ${isLeft ? "text-right pr-8" : "text-left pl-8"}`}>
                       <h3 className="font-display font-semibold text-base text-slate-800 mb-1">{tt(week.titleKey)}</h3>
                       <p className="text-[13px] text-slate-500 leading-relaxed">{tt(week.descKey)}</p>
                     </div>
-                    {/* Center dot */}
                     <div className="w-16 flex justify-center shrink-0">
                       <div className="w-10 h-10 rounded-full bg-[#1a2b5e] text-white flex items-center justify-center text-xs font-bold font-display">
                         {week.num}
@@ -585,7 +652,6 @@ function HowSection({ tt, language }: { tt: (k: string) => any; language: string
                     <div className="w-[calc(50%-2rem)]" />
                   </div>
 
-                  {/* Mobile: simple list */}
                   <div className="md:hidden flex items-start gap-4">
                     <div className="w-10 h-10 rounded-full bg-[#1a2b5e] text-white flex items-center justify-center text-xs font-bold font-display shrink-0">
                       {week.num}
@@ -613,7 +679,7 @@ function HowSection({ tt, language }: { tt: (k: string) => any; language: string
 
 
 /* ─── Team Section ───────────────────────────────────── */
-function TeamSection({ tt, language }: { tt: (k: string) => any; language: string }) {
+function TeamSection({ tt }: { tt: (k: string) => any }) {
   const { ref, inView } = useInView(0.1);
 
   return (
